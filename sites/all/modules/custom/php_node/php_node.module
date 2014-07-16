@@ -21,7 +21,7 @@ function php_node_menu() {
     'access arguments' => array('access content'),
   );
      $items['phpnode2'] = array(
-    'title' => 'phpnodeq2', 
+    'title' => 'phpnodeq2wwwwwwwwwwwwww', 
     'page callback' => 'php_node_basic2',
     'access arguments' => array('access content'),
   );
