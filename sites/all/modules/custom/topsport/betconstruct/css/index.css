@@ -1,0 +1,2376 @@
+body {
+        background: #ececec;
+}
+@font-face {
+    font-family: "SourceSansPro-Regular";
+    src: url(SourceSansPro-Regular.ttf);
+}
+@font-face {
+    font-family: "Oswald-Regular";
+    src: url(Oswald-Regular.ttf);
+}
+@font-face {
+    font-family: "Oswald-Bold";
+    src: url(Oswald-Bold.ttf);
+}
+@font-face {
+    font-family: "Arial-Narrow";
+    src: url(Arial-Narrow.ttf);
+}
+@font-face {
+    font-family: "SourceSansPro-Semibold";
+    src: url(SourceSansPro-Semibold.ttf);
+}
+@font-face {
+    font-family: "SourceSansPro-Bold";
+    src: url(SourceSansPro-Bold.ttf);
+}
+body.topsport_lt, .topsport_lt * {
+    font-family: "SourceSansPro-Regular";
+    font-size: 13px;
+
+}
+
+.topsport_lt .live_table .game .eventbody.topsport_lt {
+	margin: 0;
+	padding: 0;
+        font-family: SourceSansPro-Regular;
+}
+
+
+.topsport_lt #live_games_wrapper {
+	background: none repeat scroll 0 0 transparent;
+	border: medium none;
+	margin: 0;
+	max-width: 100%;
+	min-width: 240px;
+	padding: 0;
+}
+
+.topsport_lt {
+    /*background: #cbcbcb!important;*/
+
+}
+
+.topsport_lt .top2_header .logo_wrapper {
+    background: none;
+    width: 150px;
+}
+
+.topsport_lt .top2_header .logo {
+    background: none;
+    width: 98px;
+    height: 86px;
+    text-indent: -9999px;
+    float: left;
+    margin-left: 20px;
+}
+
+.topsport_lt .quickbet_settings > div:hover, .betslip_controls1 > div > div:hover
+{
+    color:#F7941D;
+}
+.topsport_lt #show_autohide + label,
+.topsport_lt #show_extra + label {
+    border: 1px outset #a7a9ab;
+    color: white;
+    border-radius: 4px;
+    margin-right: 5px;
+}
+.topsport_lt #betting_settings_button
+{
+    background: url(images/settings.png) no-repeat;
+    height: 20px;
+    padding: 0;
+    margin: 0;
+    border:none;
+    border-radius: 0px;
+    cursor: pointer;
+}
+
+.topsport_lt #show_autohide:checked + label,
+.topsport_lt #show_extra:checked + label {
+    color: white;
+    border: 1px outset white;
+}
+
+.topsport_lt #prematch_header {
+    background: #0055a1;
+    color: #ffffff;
+    border-radius: 5px;
+}
+
+.topsport_lt #prematch,
+.topsport_lt #prematch_sports_filter_wrapper {
+    background: black;
+
+}
+
+.topsport_lt #prematch_sports_filter_wrapper label
+{
+    color: #004E97;
+}
+
+.topsport_lt #prematch_sports_filter_wrapper select,
+.topsport_lt #prematch_sports_filter_wrapper option
+{
+    color: #fff;
+    background: #6c6c6c;
+}
+
+.topsport_lt #prematch #sports_container {
+    background-color: #dadada;
+}
+
+.topsport_lt #prematch #sports_container > li {
+    background: -moz-linear-gradient(top, #e4e4e4, #f0f0f0); 
+    background: -webkit-gradient(top, #e4e4e4, #f0f0f0);
+    background: -webkit-linear-gradient(top, #e4e4e4, #f0f0f0);
+    background: -o-linear-gradient(top, #e4e4e4, #f0f0f0); 
+    background: -ms-linear-gradient(top, #e4e4e4, #f0f0f0); 
+    background: linear-gradient(top, #e4e4e4, #f0f0f0);
+    color: #000;
+}
+
+.topsport_lt #prematch #sports_container li.competition:nth-child(odd) {
+    background: #f9f9f9;
+    color: #3f3f3f;
+}
+
+.topsport_lt #prematch #sports_container li.competition:nth-child(even) {
+    background: -moz-linear-gradient(top, #6a6a6a, #3f3f3f); 
+    background: -webkit-gradient(top, #6a6a6a, #3f3f3f);
+    background: -webkit-linear-gradient(top, #6a6a6a, #3f3f3f);
+    background: -o-linear-gradient(top, #6a6a6a, #3f3f3f); 
+    background: -ms-linear-gradient(top, #6a6a6a, #3f3f3f); 
+    background: linear-gradient(top, #6a6a6a, #3f3f3f);
+    color: #fff;
+}
+
+.topsport_lt #live_games_wrapper {
+	background: none;
+	margin-right: 0px;
+	border: none;
+	padding: 0;
+}
+
+.topsport_lt #livegames_header {
+    border-radius: 0px;
+    background: #1e2023;
+    color: #fff;
+    height:45px;
+    border-top: 1px solid #1a1c1e;
+   /* line-height: 18px;*/
+    border-bottom: none;
+    border-left: 1px solid #000;
+    border-right: 1px solid #000;
+}
+
+
+.topsport_lt #livesports_container .game_score, .topsport_lt #livegames_all_content .game_score,
+.topsport_lt #livesports_container .game_state, .topsport_lt #livegames_all_content .game_state,
+.topsport_lt #livesports_container .game_start_time, .topsport_lt #livegames_all_content .game_start_time,
+.topsport_lt #livesports_container .game_market_count, .topsport_lt #livegames_all_content .game_market_count {
+    font-size: inherit;
+    font-weight: normal;
+    font-family: "SourceSansPro-Semibold";
+}
+
+.topsport_lt #livesports_container .game_market_count, .topsport_lt #livegames_all_content .game_market_count {
+    text-align: right;
+}
+
+.topsport_lt #livegames_all_content {
+	width: auto;
+	padding: 0px;
+}
+.topsport_lt #livegames_all_content .sport_game {
+    background: #fff;
+    color: #2f3339;
+    border: 1px solid #b5b5b5;
+    margin: 0 0 2px;
+    border-top: none;
+    box-shadow: 0 1px 1px #d7d7d7;
+    font-size: 14px;
+}
+
+.topsport_lt #livegames_all_wrapper {
+	background: transparent;
+        border:none;
+}
+
+.topsport_lt table.market tr.market_header {
+    background: #33ab12;
+    color: white;
+}
+
+.topsport_lt div.sport_header , .topsport_lt #livegames_all_content li .sport_header{
+    background: -moz-linear-gradient(top, #eeeeee, #e4e2e2); 
+    background: -webkit-gradient(top, #eeeeee, #e4e2e2);
+    background: -webkit-linear-gradient(top, #eeeeee, #e4e2e2);
+    background: -o-linear-gradient(top, #eeeeee, #e4e2e2); 
+    background: -ms-linear-gradient(top, #eeeeee, #e4e2e2); 
+    background: linear-gradient(top, #eeeeee, #e4e2e2);
+    color: #084996;
+    border-top:  1px solid #fff;
+    border-bottom: 1px solid #ccc;
+    box-shadow: 10px 20px 2px #000;
+    -webkit-box-shadow:10px 20px 2px #000;
+    -moz-box-shadow:10px 20px 2px #000;
+}
+.topsport_lt div.sport_header:after
+{
+        background: url(images/li_effect.png)no-repeat;
+        margin-top: 1px;
+        width:10px;
+        height: 6px;
+        content: "   ";
+        display: block;
+        margin-left: 11px;
+        z-index: 10;
+}
+.topsport_lt #livegames_header,
+.topsport_lt #livesports_container .sport_name, .topsport_lt #livegames_all_content .sport_name{
+    font-weight: normal;
+}
+.topsport_lt #livegames_header .header_text {
+    /*border: 1px solid white;box-shadow: 0;
+    border: 1px solid white;*/
+    box-shadow: none;
+    border-radius: none;
+    border:none;
+    font-size:21px;
+    padding: 5px 5px 5px 16px;
+    font-family:Oswald-Regular;
+  /*  line-height: 21px;*/
+    text-transform: uppercase;
+    line-height:23px;
+}
+
+.topsport_lt .header_text .games_count .count_wrapper
+{
+    font-family:Oswald-Regular;
+    line-height: 21px;
+        font-size:21px;
+}
+.topsport_lt #livegames_all_content li .sport_header
+{
+    box-shadow: none;	
+	line-height: 28px;
+	height: 30px;
+	border-top: 1px solid #d4d4d4;
+	margin:0;
+}
+.topsport_lt #livegames_header .header_text:hover
+{
+    background: none;
+}
+topsport_lt #livegames_all_content li .sport_header .sport_count{
+    
+}
+
+.topsport_lt #livegames_content li .sport_header {
+    box-shadow:none;
+	margin: 0;
+	height: 28px;
+	line-height: 27px;
+	cursor: pointer;
+    background-color:#ededed!important ;
+    border-top: 1px solid #fff;
+}
+
+.topsport_lt #livegames_all_content .market_cells {
+    color: #084996;
+}
+
+.topsport_lt .live_wrapper .live_header .sport_game {
+    /*background: #0055a1;*/
+    background: rgba(0,0,0,0.2);
+    color: #eee;
+}
+
+.topsport_lt .live_wrapper .live_header .sport_game > div .game_name.table .cell {
+    border: 1px solid white;
+    font-family: Oswald-Regular;
+    font-weight: normal;
+}
+
+.topsport_lt .betslip_controls0, 
+.topsport_lt .betslip_controls3 {
+    background: #fff;
+    color: #46484c;
+}
+
+.topsport_lt .flag {
+    background: no-repeat #062c0a;
+}
+
+.topsport_lt .opened .flag {
+    background: no-repeat #062c0a;
+    opacity: 0.7;
+}
+.topsport_lt #livegames_all_header .sport_selector input:checked + label,.topsport_lt  .state_button_panel .state_button input:checked + label {
+    border-radius: 5px;
+    height: 20px;
+    cursor: pointer;
+    padding-left: 10px;
+    padding-right: 10px;
+    background: -moz-linear-gradient(top, #BDBDBD, #666666); 
+    background: -webkit-gradient(top, #BDBDBD, #666666);
+    background: -webkit-linear-gradient(top, #BDBDBD, #666666);
+    background: -o-linear-gradient(top, #BDBDBD, #666666); 
+    background: -ms-linear-gradient(top, #BDBDBD, #666666); 
+    background: linear-gradient(top, #BDBDBD, #666666);
+    opacity: 1;
+    border: 2px solid #161719;
+}
+/*.topsport_lt #livegames_all_header .sport_selector input:checked + label:hover, .topsport_lt  .state_button_panel .state_button input:checked + label:hover
+{
+    background: #1e2023;
+
+}*/
+.topsport_lt #livegames_all_header .sport_selector input + label,.topsport_lt .state_button_panel .state_button input + label
+{
+
+    height: 20px;
+    border-radius: 3px;
+    border: 2px solid #161719;
+    border-bottom: 1px solid #4b5158;
+    background-color: #1e2023;
+    cursor: pointer;
+    padding-left: 10px;
+    padding-right: 10px;
+    opacity: 1;
+}
+/*new classes*/
+#prematch{
+    border:1px solid #cdced0;    
+    border-radius: 5px;
+    -moz-box-shadow: 10px 10px 5px #cacaca;
+    -webkit-box-shadow: 10px 10px 5px #cacaca;
+    box-shadow: 0px 5px 2px #cacaca;
+}
+#prematch_sports_container
+{
+    border-radius: 5px;
+}
+/* new dublicate classes */
+.topsport_lt .top1_header
+{
+    background: -moz-linear-gradient(top, #5e5e5e, #494949); 
+    background: -webkit-gradient(top, #5e5e5e, #494949);
+    background: -webkit-linear-gradient(top, #5e5e5e, #494949);
+    background: -o-linear-gradient(top, #5e5e5e, #494949); 
+    background: -ms-linear-gradient(top, #5e5e5e, #494949); 
+    background: linear-gradient(top, #5e5e5e, #494949);
+
+}
+.topsport_lt .login_wrapper a{
+    color: #cdcdcd!important;
+}
+.topsport_lt .login_wrapper{
+    border-left: 1px solid #808080;
+}
+.topsport_lt .login_wrapper input
+{
+    background: none repeat scroll 0 0 #575757;
+    border: 1px solid #949494;
+    border-radius: 5px;
+    margin-right: 3px;
+}
+.topsport_lt .login_wrapper input[type="submit"]{
+    background-color: #c32626;
+    border: 1px solid #949494;
+    border-radius: 5px;
+    background-image: none;
+}
+.topsport_lt  .login_wrapper input[type="submit"]:hover{
+    background-color: #c32626;
+    border: 1px solid #949494;
+    border-radius: 5px;
+    background-image: none;
+}
+.topsport_lt .top2_header
+{
+    background: -moz-linear-gradient(top, #fafafa, #ececec); 
+    background: -webkit-gradient(top, #fafafa, #ececec);
+    background: -webkit-linear-gradient(top, #fafafa, #ececec);
+    background: -o-linear-gradient(top, #fafafa, #ececec); 
+    background: -ms-linear-gradient(top, #fafafa, #ececec); 
+    background: linear-gradient(top, #fafafa, #ececec);
+}
+.topsport_lt  .top2_header .a_button
+{
+    background: -moz-linear-gradient(top, #fefefe, #d1d1d1); 
+    background: -webkit-gradient(top, #fefefe, #d1d1d1);
+    background: -webkit-linear-gradient(top, #fefefe, #d1d1d1);
+    background: -o-linear-gradient(top, #fefefe, #d1d1d1); 
+    background: -ms-linear-gradient(top, #fefefe, #d1d1d1); 
+    background: linear-gradient(top, #fefefe, #d1d1d1);
+    border: 1px solid #d3d3d3;
+    border-radius: 5px 5px 0px 0px;
+    color:#000000;
+}
+.topsport_lt  .top2_header .a_button:hover{
+
+    background: -moz-linear-gradient(top, #5d5d5d, #383838); 
+    background: -webkit-gradient(top, #5d5d5d, #383838);
+    background: -webkit-linear-gradient(top, #5d5d5d, #383838);
+    background: -o-linear-gradient(top, #5d5d5d, #383838); 
+    background: -ms-linear-gradient(top, #5d5d5d, #383838); 
+    background: linear-gradient(top, #5d5d5d, #383838);
+    border: 1px solid #9c9c9c;
+    border-radius: 5px 5px 0px 0px;
+    color:#ffffff;
+}
+.topsport_lt #prematch, .topsport_lt #prematch_sports_filter_wrapper
+{
+    background: #ecedef;
+}
+.topsport_lt #quickbet_switch + label{
+    background: -moz-linear-gradient(top, #d94242, #bb1313); 
+    background: -webkit-gradient(top, #d94242, #bb1313);
+    background: -webkit-linear-gradient(top, #d94242, #bb1313);
+    background: -o-linear-gradient(top, #d94242, #bb1313); 
+    background: -ms-linear-gradient(top, #d94242, #bb1313); 
+    background: linear-gradient(top, #d94242, #bb1313);
+    border-radius: 5px 5px 0px 0px;
+    color:#ffffff;
+}
+.topsport_lt #quickbet_amount
+{
+    background:#4b4b4b;
+}
+.topsport_lt #livesports_container
+{
+    background: #fff; 
+    color:#46484c;
+    margin-top: 5px;
+    border-radius: 3px;
+    border:1px solid #cccccc;
+    
+}
+/*.gameNumber {
+    color: #289E0B;
+}
+.game_market_count
+{
+    color:#e73224;
+}*/
+.topsport_lt table.market td{
+    border:1px solid #d7d7d7;
+    border-radius: 3px;
+    line-height:  13px;
+    color: #084996;
+    background: -moz-linear-gradient(top, #ffffff, #efefef); 
+    background: -webkit-gradient(top, #ffffff, #efefef);
+    background: -webkit-linear-gradient(top, #ffffff, #efefef);
+    background: -o-linear-gradient(top, #ffffff, #efefef); 
+    background: -ms-linear-gradient(top, #ffffff, #efefef); 
+    background: linear-gradient(top, #ffffff, #efefef);
+    padding: 4px 0 5px 0;
+}
+.topsport_lt .liveg_wrapper table.market tr.market_header
+{
+    background: transparent;
+    height: 18px;
+    text-align: left;
+}
+.topsport_lt .liveg_wrapper table.market tr.market_header td
+{
+    padding: 0 5px 0;
+    color: #2f3338;
+    background:none;
+    border-radius: 0px;
+    text-shadow: 1px 1px 1px #fff;
+}  
+.topsport_lt #livesports_container .sport_game.active
+{
+    border-left: 3px solid #307ab9;
+    padding: 5px 11px 5px 7px;
+} 
+
+.topsport_lt #livesports_container .sport_game:last-child {
+	border-bottom-width: 1px;
+}
+.topsport_lt #livesports_container .sport_header.collapsed .sport_count {
+	display: block;
+}
+
+/*.topsport_lt #show_autohide:checked + label, .topsport_lt #show_extra:checked + label
+{
+    background-color: #333;
+}
+.topsport_lt #quickbet_switch + label:hover
+{
+    color:#fff;
+}*/
+.topsport_lt #show_autohide + label, .topsport_lt #show_extra + label
+{
+    background-color: #757575;
+	top: 13px;
+	position: relative;
+	padding: 5px 12px 5px !important;
+}
+
+.topsport_lt .gameNumber {
+    color: #888888;
+}
+.topsport_lt .live_wrapper .markets_wrapper .market
+{
+    border-color: #d7d7d7;
+    border-radius: 3px 3px 0 0;
+    border-top: 4px solid #6d7073;
+    box-shadow:1px 1px 1px  #c2c2c2;   
+    padding: 10px;
+    background-color: #fff;
+    margin-bottom: 2px;
+    margin-bottom: 4px;
+}
+.topsport_lt .live_wrapper .markets_wrapper .jq-first.jq-column, .topsport_lt .live_wrapper .markets_wrapper .jq-column{
+	width: -webkit-calc( 99%/3.034 ) !important; 
+	padding-right: 2px !important;
+}
+
+
+
+
+.topsport_lt .live_wrapper .markets_wrapper
+{
+    background-color: #ececec;
+	border-top: 10px solid #ececec;
+}
+.topsport_lt .live_wrapper .live_header .sport_game .live_competition_name,  .live_wrapper .live_header .sport_game > div .game_name
+{
+    color:#0266B6;
+    /*text-shadow: 0 0.0555em 0 #000000;*/
+    font-family: Helvetica, Arial, "Nimbus Sans L", "Liberation Sans", FreeSans, clean, sans-serif;
+    margin-top: 16px;
+}
+
+.topsport_lt .live_wrapper .live_header .sport_game .live_competition_name
+{
+    color: #5c5e62;
+    font-family: SourceSansPro-Semibold;
+  /*  font-size: 15px;*/
+}
+
+.topsport_lt .live_wrapper .live_header .sport_game
+{
+    background-color: #fff;
+    color:#000;
+    margin-bottom: 5px;
+    box-shadow: 0px 1px 2px #c2c2c2;
+}
+.topsport_lt .live_wrapper .nonfootball_header .active_set, .topsport_lt  .live_wrapper .football_header .goal
+{
+    color: #0266B3;
+}
+/*.live_table thead:first-child
+{
+    background: -moz-linear-gradient(top, #F6F6F6, #d3d3d3); 
+    background: -webkit-gradient(top, #F6F6F6, #d3d3d3);
+    background: -webkit-linear-gradient(top, #F6F6F6, #d3d3d3);
+    background: -o-linear-gradient(top, #F6F6F6, #d3d3d3); 
+    background: -ms-linear-gradient(top, #F6F6F6, #d3d3d3); 
+    background: linear-gradient(top, #F6F6F6, #d3d3d3);
+}*/
+.topsport_lt .live_table
+{
+    line-height: 40px;
+    border-bottom: 1px solid #c7c7c8;
+}
+.topsport_lt  #livesports_container .game_market_count
+{
+    color:#3fa701;
+    font-family: "SourceSansPro-Semibold";
+}
+.topsport_lt #livesports_container .game_score
+{
+    color:#084996;
+    font-family: "SourceSansPro-Semibold";
+}
+
+.topsport_lt .live_table #line .event_bet, 
+.topsport_lt .live_table #live .event_bet
+
+{
+    background-color: transparent;
+}
+.topsport_lt #live_all .event_bet, .topsport_lt #live_all .event_bet
+{
+    background-color: #0470cb;
+    border:1px solid #064e8b;
+    border-radius: 3px;
+    color: #fff;
+    text-shadow: 1px 1px 1px #012d5d;
+}
+.topsport_lt #livegames_all_content .game_score {
+    background-color: transparent;
+    color:#084996;
+}
+.topsport_lt #livegames_all_content .liveall_sport_container {
+	margin-bottom: 10px;
+}
+
+.topsport_lt #livegames_all_content  .game_name {
+        text-transform: uppercase;
+        font-family: Oswald-Bold;
+}
+.topsport_lt .lang_rus #livegames_all_content  .game_name {
+
+        font-family: Arial-Narrow;
+        text-transform: uppercase;
+        font-size: 14px;
+        font-weight: bold;
+}
+
+.topsport_lt .panelholder 
+{
+    border: none;
+}
+.topsport_lt .flag
+{
+    background: #0055a1;
+}
+.topsport_lt #livegames_all_content ul
+{
+    background: #ECEDEF; 
+    color:#000;
+}
+
+.topsport_lt  #livegames_all_content .main_market table.market .event {
+    padding:0 9px;
+}
+.topsport_lt .live_wrapper .live_header .sport_game > div .game_name.table .cell.score
+{
+    color:#f85505;
+}
+
+.topsport_lt  #livesports_container .game_state, .topsport_lt #livegames_all_content .game_state {
+	font-family: "SourceSansPro-Semibold";
+        color:#5c5e62;
+}
+
+.topsport_lt .live_wrapper .live_header .sport_game > div .game_name.table {
+    display: block;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    border: none;
+    overflow: hidden;
+    text-transform: uppercase;
+}
+
+.topsport_lt .live_wrapper .live_header .sport_game > div .game_name.table .row {
+    display: block;
+}
+
+.topsport_lt .live_wrapper .live_header .sport_game > div .game_name.table .row {
+    float: left;
+    width: 50%;
+}
+
+.topsport_lt .live_wrapper .live_header .sport_game > div .game_name.table .row:nth-child(1) .cell {
+    float: right;
+    text-align: right;
+}
+
+.topsport_lt .live_wrapper .live_header .sport_game > div .game_name.table .row:nth-child(2) .cell {
+    float: left;
+}
+
+.topsport_lt .live_wrapper .live_header .sport_game > div .game_name.table .row .cell {
+    display: block;
+}
+
+.topsport_lt .live_wrapper .live_header .sport_game > div .game_name.table .row .team {
+    width: 95%;
+    white-space: nowrap;
+    overflow: hidden;
+    color: #3F3F3F;
+    margin: 0 5px;
+    padding: 0 10px;
+    max-width: 40vw;
+    font-size: 24px;
+}
+
+
+
+.topsport_lt .live_wrapper .live_header .sport_game > div .game_name.table .row .cell.score {
+    width: auto;
+    clear:both;
+    text-align: center;
+    border: none;
+    padding: 0px;
+    color: #0055A1;
+    margin-top: 0;
+    z-index: 2;
+    font-weight: normal;
+}
+
+.topsport_lt .live_wrapper .live_header .sport_game > div .game_name.table .row:nth-child(1) .cell.score {
+    border: none;
+    position: relative;
+    left: 0.4em;
+}
+
+.topsport_lt .live_wrapper .live_header .sport_game > div .game_name.table .row:nth-child(1) .cell.score:after {
+    content: "-";
+    padding: 0px 5px;
+}
+
+.topsport_lt .markets_wrapper .market .market_header .bindability
+{
+    margin-right: 5px;
+    color: #414449;
+}
+/*.topsport_lt  .live_wrapper .football_header div.team, .topsport_lt  .live_wrapper .nonfootball_header div.team
+{
+    background-color: rgba(128, 128,128, 0.2);
+}*/
+.topsport_lt .live_wrapper .live_header .sport_game > div.game_misc_data > div.game_add_info
+{
+    display: none;
+}
+.topsport_lt .live_wrapper .live_header .sport_game > div.game_misc_data .game_state
+{
+    display: inline;
+}
+
+/* game statstics header with round corners */
+
+/* prevent background pictures to appear, even when loading */
+.topsport_lt .live_wrapper {
+    background: #fff;
+    padding: 5px 0 0 0;
+    border: #D5D9E0 1px solid;
+    border-radius:  0 0 5px 5px;
+    height: auto;
+    width: auto;
+    border-top: 0;
+    border-left: none;
+    border-right: none;
+}
+
+
+.topsport_lt #view_controls {
+  box-shadow: none;
+  border-radius:0 ;
+  border-top: none;
+}
+
+.topsport_lt .live_wrapper .live_header .sport_game > div.game_misc_data {
+    float: none;
+}
+
+
+.topsport_lt .live_wrapper .football_header,
+.topsport_lt .live_wrapper .nonfootball_header {
+  /* box-shadow: 0 0 5px rgba(128,128,128,1);*/
+    margin-bottom: 10px;
+    margin-top: 10px;
+}
+
+
+.topsport_lt .live_wrapper .football_header > div > div, 
+.topsport_lt .live_wrapper .nonfootball_header > div > div {
+    border: none;
+}
+
+
+/*.topsport_lt .live_wrapper .football_header, 
+.topsport_lt .live_wrapper .nonfootball_header {
+    border-radius: 5px;
+}
+*/
+
+.topsport_lt .live_wrapper div > div.names_row > div.team {
+    border-radius: 5px 0 0 0;
+}
+
+.topsport_lt .live_wrapper div > div > div.penalty_failed,
+.topsport_lt .live_wrapper div > div > div.last_column {
+    border-radius: 0 5px 0 0;
+}
+.topsport_lt .ui-widget-content
+{
+    border-radius: 0px;
+    box-shadow: none;
+    background: none;
+    border:none;
+    min-width: 282px;
+    width: 282px;
+    margin-top: 0px;
+}
+.topsport_lt .game_extra_row .event:hover, .topsport_lt .game_add_row .event:hover
+{
+    background-color: transparent ;
+    border-radius: 2px;
+}
+.topsport_lt .markets_wrapper .market .event:hover
+{
+    background-color: #0470CB ;
+    color: #fff;
+    border-radius: 2px;
+
+}
+/*
+.topsport_lt .live_table:before {
+        content: "table above will be removed using components, hold on // Gaspar";
+}
+
+.topsport_lt .live_table {
+        background: pink;
+}
+
+*/
+.topsport_lt .live_wrapper div > div > div.penalty_failed,
+.topsport_lt .live_wrapper div > div.names_row > div.last_column {
+    border-radius: 0 5px 0 0;
+}
+
+
+.topsport_lt table.market .market_header td,  .topsport_lt #livesports_container .market .market_header
+{
+    background-color: #c7c5c6;
+    color: #383637;
+    border-radius: 0px;
+}
+
+.topsport_lt #livesports_container .sport_game .game_name{
+    text-transform: uppercase;    
+     font-family: "SourceSansPro-Bold";  
+     text-shadow: 1px 1px 1px #fff;
+}
+
+.topsport_lt #livesports_container .sport_game
+{
+    border-bottom: 1px solid #ebebeb;
+    color: #46484c;
+    margin: 0;
+    padding: 4px 7px 4px 13px;
+    min-height: 40px;
+
+}
+/*.topsport_lt #live_games_wrapper #livesports_container > li
+{
+    border-top: 1px solid #cbcbcb;
+}*/
+#livesports_container .sport_game:last {
+	border-bottom-width: 2px;
+}
+/*.topsport_lt .sport_game .game_name
+{
+    width:70px;
+    float: left;
+}
+.topsport_lt .sport_game .game_start_time{
+    float: left;
+    width:20px;
+}*/
+.topsport_lt #livesports_container .sport_header .expand_button{
+    width: 27px;
+	display: none;
+}
+
+.topsport_lt  #livesports_container .game_start_time
+{
+    color: #5c5e62;
+    font-weight: normal;
+}
+.topsport_lt #show_future_live, .topsport_lt #show_future_live + label
+{
+    float: right;
+}
+.topsport_lt #livegames_all_content .game_market_count
+{
+    color: #3FA701;
+    padding-right: 8px;
+}
+
+
+.topsport_lt .ui-widget-header
+{
+    background-image: none;
+    background-color: #0470cb;
+    border-radius: 5px 5px 0px 0px;
+    height: 40px;
+    border:3px solid #0470cb;
+    border-bottom: none;
+}
+.topsport_lt .ui-tabs .ui-tabs-nav{
+    padding: 0px;
+}
+.topsport_lt  .ui-tabs
+{
+    padding-top:0px;
+}
+.topsport_lt .ui-tabs .ui-tabs-nav li.ui-tabs-active
+{
+    font-size: 10px;
+    color: #fff;
+    margin-left:0px;
+    margin-right: 0px;
+    background: #fff;
+    border-top: 1px solid #b0b0b0;
+    border-radius: 3px 3px 0 0;
+}
+
+.topsport_lt .ui-state-active, .topsport_lt .ui-widget-content .ui-state-active, .topsport_lt .ui-widget-header .ui-state-active
+{
+
+    border-radius: 0px;
+    color:#5d3f3f;
+}
+.topsport_lt .ui-tabs .ui-tabs-nav li{
+    border-left:none;
+    border-right: none;
+    border-top: none;
+    background:transparent;
+    width: 50%;
+    font-size: 10px;
+    line-height: 35px;
+    color: #3F3F3F;
+    margin-top: 0px;
+    margin-right: 0px;
+    height: 39px;
+    text-align: center;
+}
+.topsport_lt .ui-corner-all, .ui-corner-top, .topsport_lt .ui-corner-right, .ui-corner-tr {
+    border-top-right-radius: 0px;
+}
+.topsport_lt .ui-corner-all, .topsport_lt .ui-corner-top, .ui-corner-left, .topsport_lt .ui-corner-tl {
+    border-top-left-radius: 0px;
+}
+.topsport_lt .ui-state-default, .topsport_lt .ui-widget-content .ui-state-default, .topsport_lt .ui-widget-header .ui-state-default
+{
+    background-image: none;
+
+}
+.topsport_lt .betslip_header
+{
+    background-color: #fff;
+    border-radius: 0 3px 0 0 ;
+    border-top: 1px solid #b0b0b0;
+    border-bottom: 1px solid #767676;
+    height: 33px;
+}
+.topsport_lt #betslip, .topsport_lt #mybets
+{
+    background-color: #fff;
+    color: #46484c;
+    border-radius : 0px 0px 5px 5px;
+    font-size: 10px;
+    border: 3px solid #0470cb;
+    border-top: none;
+}
+.topsport_lt .betslip_controls1
+{
+    border-bottom: 1px solid #d7d7d7;
+    border-top:1px solid #d7d7d7;
+    border-left: none;
+    border-right: none;
+
+}
+.topsport_lt .betslip_controls2{
+    background:none;
+}
+.topsport_lt  #betting_possible_win_amount
+{
+    background-color: #fff;
+    color: #000;
+    border: 1px solid #c6c6c6;
+    border-radius: 3px;
+}
+.topsport_lt #betting_clear_all, .topsport_lt #show_future_live
+
+{
+    background: -moz-linear-gradient(top, #ffffff, #efefef); 
+    background: -webkit-gradient(top, #ffffff, #efefef);
+    background: -webkit-linear-gradient(top, #ffffff, #efefef);
+    background: -o-linear-gradient(top, #ffffff, #efefef); 
+    background: -ms-linear-gradient(top, #ffffff, #efefef); 
+    background: linear-gradient(top, #ffffff, #efefef);
+    border: 1px solid #d7d7d7;
+    border-radius: 3px;
+    color: #084996;
+    cursor: pointer;
+    padding: 2px 12px 1px 12px;
+    margin-top: 5px;
+}
+.topsport_lt #betting_place_bet
+{
+    background: -moz-linear-gradient(top, #2760a6, #01357a); 
+    background: -webkit-gradient(top, #2760a6, #01357a);
+    background: -webkit-linear-gradient(top, #2760a6, #01357a);
+    background: -o-linear-gradient(top, #2760a6, #01357a); 
+    background: -ms-linear-gradient(top, #2760a6, #01357a); 
+    background: linear-gradient(top, #2760a6, #01357a);
+    border: 3px solid  #bbc0c7;
+    border-radius: 3px;
+    color: #fff;
+    margin: 5px 3px;
+    padding: 9px 0 8px 0;
+    width: 260px;
+    cursor: pointer;
+    font-family: Oswald-Regular;
+    font-size: 15px;
+}
+.topsport_lt .lang_rus #betting_place_bet
+{
+        background: -moz-linear-gradient(top, #2760a6, #01357a); 
+    background: -webkit-gradient(top, #2760a6, #01357a);
+    background: -webkit-linear-gradient(top, #2760a6, #01357a);
+    background: -o-linear-gradient(top, #2760a6, #01357a); 
+    background: -ms-linear-gradient(top, #2760a6, #01357a); 
+    background: linear-gradient(top, #2760a6, #01357a);
+    border: 3px solid  #bbc0c7;
+    border-radius: 3px;
+    color: #fff;
+    margin-top: 10px;
+    padding: 10px 0;
+    margin-left: 0px;
+    width: 264px;
+    float: right;
+    cursor: pointer;
+    font-family: Arial-Narrow;
+}
+.topsport_lt #betting_place_bet[disabled] 
+{
+       opacity: 1;
+}
+.topsport_lt #show_future_live + label, .topsport_lt #show_autohide:checked + label, .topsport_lt #show_extra:checked + label
+{
+  background: -moz-linear-gradient(top, #275fa6, #01357a); 
+    background: -webkit-gradient(top, #275fa6, #01357a);
+    background: -webkit-linear-gradient(top, #275fa6, #01357a);
+    background: -o-linear-gradient(top, #275fa6, #01357a); 
+    background: -ms-linear-gradient(top, #275fa6, #01357a); 
+    background: linear-gradient(top, #275fa6, #01357a);
+    border: 2px solid #1a1b1e;
+    border-radius: 5px;
+    color: #fff;
+    position: relative;
+    margin-right: 2px;
+    cursor: pointer;
+   text-shadow: 1px 2px #042551;
+   text-decoration: none;
+   padding: 4px 18px 6px;
+   margin-top: 5px;
+   font-weight: normal;
+   margin-left: 3px;
+   font-size: 14px;
+}
+.topsport_lt #mybets_header
+{
+    background: none;
+    border-bottom: 1px solid #8c8c8c;
+    padding-bottom: 60px;
+}
+
+.topsport_lt #mybets .mybet_loggedout
+{
+    background: none;
+    color:#46484C;
+    font-size: 10px;
+}
+
+.topsport_lt .betslip_content .bet
+{
+    background-color: #fff;
+    color: #46484C;
+/*    border: 4px solid #b6bac1;*/
+    border-bottom: 2px solid #b6bac1;
+    /*width: calc(100% - 8px);*/
+}
+.topsport_lt .betslip_content{
+    background-color: #b6bac1;
+    padding: 0px 2px;
+    min-height: 0px;
+}
+.topsport_lt #mybets .mybet_nobets
+{
+    background: none;
+}
+/*.topsport_lt #line .event_bet, .topsport_lt #live .event_bet, .topsport_lt #live_all .event_bet, .topsport_lt #livesports_container .event.event_bet
+{
+    background-color: #0470CB;
+    padding-bottom: 2px;
+    border-radius: 3px;
+    color: #fff;
+}*/
+
+
+.topsport_lt  .live_all_mode #view_controls, .topsport_lt .panelrow #view_controls
+{
+    margin: 0px;
+    border: none;
+    -webkit-transition: height 0.25s;
+    border:none;
+    background-color:  #2f3338;
+    margin-bottom:0px;
+    border-left: 1px solid #43484e;
+    border-right: 1px solid #43484e;
+    width: calc(100% + 285px);
+    height: 40px;
+    font-family:Oswald-Regular;
+}
+.topsport_lt  .panelrow #view_controls{
+        margin: 0px;
+    border: none;
+    -webkit-transition: height 0.25s;
+    border:none;
+    margin-bottom:0px;
+        font-family:Oswald-Regular;
+}
+
+.topsport_lt .live_all_mode #show_future_live + label {
+    background: -moz-linear-gradient(top, #275fa6, #01357a); 
+    background: -webkit-gradient(top, #275fa6, #01357a);
+    background: -webkit-linear-gradient(top, #275fa6, #01357a);
+    background: -o-linear-gradient(top, #275fa6, #01357a); 
+    background: -ms-linear-gradient(top, #275fa6, #01357a); 
+    background: linear-gradient(top, #275fa6, #01357a);
+    border: 2px solid #1a1b1e;
+    border-radius: 5px;
+    color: #fff;
+    position: relative;
+    -webkit-transition: right 0.5s;
+    cursor: pointer;
+   text-shadow: 1px 2px #042551;
+   text-decoration: none;
+   margin-top: 4px;
+   margin-right: 2px;
+    cursor: pointer;
+   text-shadow: 1px 2px #042551;
+   text-decoration: none;
+   padding: 4px 18px 6px;
+   font-weight: normal;
+   font-size: 14px;
+   
+}
+.topsport_lt  #show_future_live, #show_future_live + label{
+    padding: 8px 13px;
+}
+.topsport_lt #livesports_container table.market tr.line_event td,   .topsport_lt #livesports_container table.market tr.market_cells,   .topsport_lt #livesports_container table.market tbody, .topsport_lt #livesports_container table.market:hover
+{
+    background-color: #fff;
+    color: #000;
+
+}
+
+.topsport_lt .ui-state-active a, .ui-state-active a:link,   .topsport_lt .ui-state-active a:visited
+{
+    color: #084996;
+}
+
+.topsport_lt #livesports_container .sport_count .count_wrapper:after, .topsport_lt #livegames_header .count_wrapper:after, .topsport_lt #livegames_all_content .sport_count .count_wrapper:after, .topsport_lt #future_live_list .sport_count .count_wrapper:after,.topsport_lt #future_live_list .day_count .count_wrapper:after {
+    content: "";
+}
+.topsport_lt #livesports_container .sport_count .count_wrapper:before, .topsport_lt #livegames_header .count_wrapper:before, .topsport_lt #livegames_all_content .sport_count .count_wrapper:before, .topsport_lt #future_live_list .sport_count .count_wrapper:before, .topsport_lt #future_live_list .day_count .count_wrapper:before{
+    content: "";
+}
+.topsport_lt  #show_future_live + label:active{
+    left:auto;
+}
+.topsport_lt .betslip_content .betting_betmax
+{
+    color: #fff;
+}
+.topsport_lt #livesports_container div.sport_game.active > div
+{
+    margin-left: 3px;
+}
+.topsport_lt .mybet_outcome_0,.topsport_lt .mybet_outcome_1,.topsport_lt .mybet_outcome_2,.topsport_lt .mybet_outcome_3{
+    background:#fff;
+
+    color:#5c5e62;
+}
+.topsport_lt #livesports_container .game_start_time, .topsport_lt #livegames_all_content .game_start_time
+{
+    font-family: "SourceSansPro-Semibold";
+    color: #5c5e62;
+}
+.topsport_lt #livesports_container .game_start_time:before
+{
+    content: "(";
+}
+.topsport_lt #livesports_container .game_start_time:after
+{
+    content: ")";
+}
+.topsport_lt .live_table tr.game td.col, .topsport_lt  .live_table .header_col, .topsport_lt  .live_table tr.game_extra_row td, .topsport_lt .live_table tr.game_add_row td
+{
+    /*border:1px solid #bbb;*/
+    border:none;
+}
+.topsport_lt .live_wrapper .live_table .game
+{
+    border:none;
+
+}
+.topsport_lt .live_table .header_col
+{
+    background: none repeat scroll 0 0 rgba(0, 0, 0, 0);
+
+}
+.topsport_lt .betting_terms
+{
+    font-size: 10px;
+    color: #46484c;
+}
+
+.topsport_lt #betslip .error_message
+{
+    font-size: 13px;
+    position: relative;
+}
+
+.topsport_lt .live_monitor_logo {
+	background-image: url(images/logotopsport.png);
+	width: 7em;
+	height: 2em;
+        background-color: transparent;
+}
+.topsport_lt .mybets_full .panelrow #view_controls
+{
+    position: relative;
+    height: 17px;
+    right: 0px;
+    top: 0px;
+    min-height: 40px;
+}
+.topsport_lt .state_button_panel
+{
+    border-top: none;
+}
+.topsport_lt #livesports_container > li:first-child .sport_header
+{
+    border-radius: 3px 3px 0 0 ;
+}
+.topsport_lt #livesports_container .sport_header .sport_icon
+{
+    margin-left: 8px;
+    margin-top: -1px;
+}
+.topsport_lt #livegames_all_wrapper
+{
+    margin-top: 5px;
+    margin-left: 5px;
+    width:calc(100% - 10px);
+    padding:0;
+}
+.topsport_lt #livegames_all_header
+{
+    position: absolute;
+    top:10px;
+    height: 31px;
+    overflow: hidden;
+}
+.topsport_lt #livegames_all_content .sport_name, .topsport_lt #future_live .sport_header
+{
+    background-color: #6d7073;
+    color:#fff;
+    border:1px solid #6d7073;
+    border-bottom: 1px solid #505356;
+    border-radius: 3px 3px 0 0 ;
+    text-shadow: 1px 1px 1px #222;
+}
+.topsport_lt #livegames_all_content .sport_count .count_wrapper
+{
+    color: #fff;
+}
+.topsport_lt #livegames_all_content .main_market table.market {
+    border-collapse: separate;
+    border-spacing: 2px;
+    border:none;
+}
+.topsport_lt table.market .market_header td
+{
+    background-color: #d7d7d7;
+    color: #46484c;
+    border-radius: 0px;
+    height: 1px;
+    line-height: 0;
+    padding: 0;
+    border:none;
+    border-bottom: 7px solid #fff;
+}
+.topsport_lt #livesports_container .market .market_header, .topsport_lt #livegames_all_wrapper .market .market_header,.topsport_lt .markets_wrapper .market .market_header
+{
+    height: 0px;
+}
+.topsport_lt table.market .market_header td .name{
+    background-color: #fff;
+    padding: 0 10px;
+}
+.topsport_lt table.market tr:nth-child(2) td:hover{
+    background: #046ec6;
+    color: #fff;
+    border-bottom: 1px solid #045192;
+    border-top: 1px solid #04589f;
+    border-left: 1px solid #0462b0;
+    border-right: 1px solid #0462b0;
+    text-shadow: 0px 0px 1px #111;
+}
+
+.topsport_lt #livegames_all_content .main_market .market_header .bindability
+{
+    display: none;
+}
+.topsport_lt .ui-state-default a
+{
+    color: #fff;
+    text-shadow: 1px 1px 1px #012d5d;
+    margin: 0;
+}
+.topsport_lt .ui-state-active a
+{
+    color: #084996;
+    text-shadow: none;
+}
+.topsport_lt  #betting_bettype
+{
+    border:1px solid #c6c6c6;
+    background-color: red;
+    border-radius: 3px;
+    background: -moz-linear-gradient(top,  #FFFFFF, #EFEFEF); 
+    background: -webkit-gradient(top, #FFFFFF, #EFEFEF);
+    background: -webkit-linear-gradient(top, #FFFFFF, #EFEFEF);
+    background: -o-linear-gradient(top, #FFFFFF, #EFEFEF); 
+    background: -ms-linear-gradient(top, #FFFFFF, #EFEFEF); 
+    background: linear-gradient(top, #FFFFFF, #EFEFEF);
+    color: #46484c;
+    width: 110px;
+    height: 24px;
+    margin-top: 5px;
+}
+.topsport_lt .betslip_controls1 > div > div:hover
+{
+    background: none;
+    color: #084996;
+}
+.topsport_lt #livesports_container .sport_header.collapsed
+{
+    background: url(images/plus.png) no-repeat scroll 220px 8px transparent;
+    opacity: 1;
+}
+.topsport_lt #livegames_content li .sport_header
+{
+    background: url(images/minus.png) no-repeat scroll 220px 8px transparent;
+}
+
+.topsport_lt #livesports_container .sport_count
+{
+    padding: 0 26px;
+}
+.topsport_lt #livegames_all_content .sport_count
+{
+    padding:0 12px;
+}
+.topsport_lt #betting_possible_koeff
+{
+    color: #084996;
+    display: block;
+    position: relative;
+    top: -38px;
+    width: 42%;
+}
+.topsport_lt #betting .betting_express_maxbet, .topsport_lt  .event_price
+{
+    color: #084996;
+    text-transform: uppercase;
+}
+.topsport_lt .betslip_content .event_close:after
+{
+    background: url(images/close.png) no-repeat;
+       content: "";
+    display: block;
+    height: 15px;
+    margin-left: 3px;
+    width: 10px;
+}
+
+.topsport_lt #live .live_wrapper
+{
+    width: calc(100% - 4px);
+    margin-left: 3px;     
+    margin-top: 5px;
+    border-radius:0px;
+}
+.topsport_lt #right_wrapper
+{
+    margin-top: 55px;
+}
+.topsport_lt  .live_table .header:nth-child(1)
+{
+    background-color: #6d7073;
+    color: #fff;
+    text-align: left;
+    line-height: 28px;
+    text-transform: uppercase;
+}
+.topsport_lt .live_table thead .header:nth-child(2n)
+{
+    background-color: #505356;
+    color: #fff;
+    line-height: 20px;
+    text-shadow: 1px 1px 1px #28292b;
+    
+}
+.topsport_lt .liveg_wrapper table.market .market_header td .name
+{
+    background-color: transparent;
+    padding: 0;
+}
+.topsport_lt .markets_wrapper .market .market_cells
+{
+    background-color: transparent;
+}
+.topsport_lt .live_table .header .header_col.name:after {
+    background-color: #505356;
+    border-top: 1px solid #28292b;
+    content: " ";
+    display: block;
+    line-height: 22px;
+    margin-top: 1px;
+    width: 100%;
+}
+.topsport_lt .live_table .header .header_col.name
+{
+    vertical-align: top;
+    text-indent: 10px;
+}
+.topsport_lt .team div.name
+{
+    margin-left: 3px;
+    float: right;
+    font-size: 15px;
+    line-height: 17px;
+}
+.topsport_lt .live_wrapper .football_header .team1_row >div, .topsport_lt .live_wrapper .football_header .team2_row >div,
+.topsport_lt .live_wrapper .nonfootball_header .team1_row >div, .topsport_lt .live_wrapper .nonfootball_header .team2_row >div{
+    border-right: 1px solid #d7d7d7;
+    line-height: 10px;
+}
+.topsport_lt .live_wrapper .football_header .team1_row >div:first-child, .topsport_lt .live_wrapper .football_header .team2_row >div:first-child,
+.topsport_lt .live_wrapper .nonfootball_header .team1_row >div:first-child, .topsport_lt .live_wrapper .nonfootball_header .team2_row >div:first-child
+
+{
+    border-right: none;
+}
+.topsport_lt .live_wrapper .football_header .team1_row,.topsport_lt .live_wrapper .nonfootball_header .team1_row
+{
+    border-bottom: 10px solid #fff;
+
+}
+.topsport_lt .live_wrapper .football_header .team1_row > div, .topsport_lt .live_wrapper .football_header .team2_row > div, .topsport_lt .live_wrapper .nonfootball_header .team1_row > div, .topsport_lt .team div.name,
+.topsport_lt .live_wrapper .nonfootball_header .team2_row > div,.topsport_lt .live_wrapper .nonfootball_header  .names_row > div, .topsport_lt .live_wrapper .nonfootball_header  .names_row > div >span
+{
+    font-family: Oswald-Regular;
+    font-size: 14px;
+    font-weight: normal;
+}
+.topsport_lt .live_wrapper .football_header .name, .topsport_lt .live_wrapper .nonfootball_header .name
+{
+    text-transform: uppercase;
+    color: #2f3338;
+}
+.topsport_lt .live_header_game_info .row:after {
+    background-color: #d7d7d7;
+    content: " ";
+    display: block;
+    height: 2px;
+    z-index: 1;
+    
+    margin-top: 53px;
+    position: relative;
+    width: 100%;
+    margin-left: 3em;
+}
+
+.topsport_lt .live_header_game_info .row:nth-child(1):after{
+    width: 100%;
+    margin-left: calc(100% - 100% - 3em);
+}
+
+.topsport_lt  .live_wrapper .football_header div.names_row, .topsport_lt .live_wrapper .nonfootball_header div.names_row
+    {
+    background:transparent;
+        
+}
+.topsport_lt .live_wrapper .nonfootball_header .current_pass, .topsport_lt .live_wrapper .nonfootball_header .current_pass.pass_active
+{
+    background: transparent;
+}
+.topsport_lt #sport_844, .topsport_lt .sport_844
+{
+    background: url(images/844.png);
+}
+.topsport_lt #sport_846, .topsport_lt .sport_846
+{
+    background: url(images/846.png);
+}
+.topsport_lt #sport_848, .topsport_lt .sport_848
+{
+    background: url(images/848.png);
+}
+.topsport_lt #sport_850, .topsport_lt .sport_850
+{
+    background: url(images/850.png);
+}
+.topsport_lt #sport_852, .topsport_lt .sport_852
+{
+    background: url(images/852.png);
+}
+.topsport_lt #sport_854, .topsport_lt .sport_854
+{
+    background: url(images/854.png);
+}
+.topsport_lt #sport_856, .topsport_lt .sport_856
+{
+    background: url(images/856.png);
+}
+.topsport_lt #sport_870, .topsport_lt .sport_870
+{
+    background: url(images/870.png);
+}
+.topsport_lt #sport_79937770, .topsport_lt .sport_79937770
+{
+    background: url(images/79937770.png);
+}
+.topsport_lt #sport_317282829, .topsport_lt .sport_317282829
+{
+    background: url(images/317282829.png);
+}
+.topsport_lt #sport_866, .topsport_lt .sport_866
+{
+    background: url(images/866.png);
+}
+.topsport_lt #sport_894, .topsport_lt .sport_894
+{
+    background: url(images/894.png);
+}
+.topsport_lt #sport_890, .topsport_lt .sport_890
+{
+    background: url(images/890.png);
+}
+.topsport_lt #sport_876, .topsport_lt .sport_876
+{
+    background: url(images/876.png);
+}
+.topsport_lt #sport_87620077, .topsport_lt .sport_87620077
+{
+    background: url(images/87620077.png);
+}
+.topsport_lt #sport_914, .topsport_lt .sport_914
+{
+    background: url(images/914.png);
+}
+.topsport_lt #sport_882, .topsport_lt .sport_882
+{
+    background: url(images/882.png);
+}
+.topsport_lt #sport_898, .topsport_lt .sport_898
+{
+    background: url(images/898.png);
+}
+.topsport_lt #sport_87241228, .topsport_lt .sport_87241228
+{
+    background: url(images/87241228.png);
+}
+.topsport_lt #sport_858, .topsport_lt .sport_858
+{
+    background: url(images/858.png);
+}
+
+.topsport_lt  #livegames_all_header .sport_selector .sport_name, .topsport_lt #future_live_header .sport_name
+{
+    display: block;
+    color: #fff;
+    float: left;
+    margin-left: 6px;
+    text-shadow: 1px 1px 1px #555;
+    font-size: 14px;
+    line-height: 16px;
+}
+.topsport_lt #livegames_all_header .sport_selector
+{
+    border:none;
+    background: transparent;
+}
+.topsport_lt #livegames_all_header .icon_16
+{
+    float: left;
+    
+}
+
+.topsport_lt #livegames_all_header .sport_selector:hover
+{
+    background: transparent;
+}
+.topsport_lt .live_table .topsport_lt .game_extra_row .event:hover, .topsport_lt .game_add_row .event:hover .price,  .topsport_lt .live_table .event .price
+{
+    background: -moz-linear-gradient(top, #ffffff, #efefef);
+	background: -webkit-gradient(top, #ffffff, #efefef);
+	background: -webkit-linear-gradient(top, #ffffff, #efefef);
+	background: -o-linear-gradient(top, #ffffff, #efefef);
+	background: -ms-linear-gradient(top, #ffffff, #efefef);
+	background: linear-gradient(top, #ffffff, #efefef);
+    border:1px solid #d7d7d7;
+    border-radius: 3px;
+    color: #084996;
+    padding: 1px 14px;
+    min-width: 47px;
+    font-family: Oswald-Bold;
+    font-style: normal;
+    /*box-shadow: 1px 1px 2px #e3e3e3;*/
+}
+.topsport_lt .live_table .event .price:hover{
+	color: #fff;
+	background: #0470CB;
+	border-bottom: 1px solid #045192;
+	border-top: 1px solid #04589f;
+	border-left: 1px solid #0462b0;
+	border-right: 1px solid #0462b0;
+	text-shadow: 0px 0px 1px #111;
+}
+
+
+
+.topsport_lt .live_table .base_value
+{
+    color:#2f3338;
+    /*background-color: #f5f5f5;*/
+    /*border:1px solid #d7d7d7;*/
+   /* border-radius: 3px;*/
+    padding: 4px 14px 1px;
+    min-width: 47px;
+    font-family: SourceSansPro-Semibold;
+    font-style: normal;
+    /*box-shadow: 1px 1px 2px #e3e3e3;*/
+    font-size:14px;
+}
+.topsport_lt #show_autohide:checked + label, .topsport_lt #show_extra:checked + label{
+    top: 12px;
+}
+.topsport_lt .header_col.p1, .topsport_lt .header_col.h1_base, .topsport_lt .header_col.t_base, .topsport_lt .num.col.p1,.topsport_lt .num.col.h1_base, .topsport_lt .num.col.t_base
+{
+    border-left: 1px solid #c7c7c8;
+}
+.topsport_lt .header_col.p2, .topsport_lt .num.col.p2
+{
+    border-right: 1px solid #c7c7c8;
+}
+.topsport_lt .header_col.p1
+{
+    border-bottom: 1px solid #28292b;
+    text-indent: 10px; 
+}
+.topsport_lt .header_col.p1:nth-child(1)
+{
+    border-bottom: none;
+    
+}
+.topsport_lt #livesports_container .sport_name, .topsport_lt #livegames_all_content .sport_name, .topsport_lt .ui-state-default.ui-corner-top.ui-tabs-active.ui-state-active span,
+.topsport_lt .ui-state-default.ui-corner-top span,.topsport_lt #future_live_list .sport_name
+{
+    font-family: Oswald-Regular;
+    font-size: 15px;
+}
+
+.topsport_lt .live_header_game_info .row .cell.score
+{
+    font-size: 23px;
+}
+.topsport_lt .live_table tr:nth-child(2n)
+{
+    background-color: #ececec;
+}
+.topsport_lt .live_header_game_info .cell.score
+{
+    background-color: #fff;
+}
+.topsport_lt .mybets_full #view_controls > label
+{
+    display: none;
+}
+.topsport_lt #mybets_show_all_button
+{
+    border:1px solid #d7d7d7;
+    background: -moz-linear-gradient(top, #ffffff, #efefef); 
+    background: -webkit-gradient(top, #ffffff, #efefef);
+    background: -webkit-linear-gradient(top, #ffffff, #efefef);
+    background: -o-linear-gradient(top, #ffffff, #efefef); 
+    background: -ms-linear-gradient(top, #ffffff, #efefef); 
+    background: linear-gradient(top, #ffffff, #efefef);
+    border: 1px solid #d7d7d7;
+    border-radius: 3px;
+    color: #084996;
+    cursor: pointer;
+    margin-top: 10px;
+    width: 100%;
+    padding: 5px 62px;
+    margin-bottom: 20px;
+    text-decoration: none;
+}
+.topsport_lt #mybets_header > select{
+    width: 100%;
+    border:1px solid #c6c6c6;
+    border-radius: 3px;
+    background-color: #fafafa;
+    color: #46484c;
+}
+.topsport_lt #mybets .mybet
+{
+    margin: 0;
+    border:3px solid #fff;
+}
+.topsport_lt .mybet_won
+{
+    color: #084996;
+    font: 14px/16px 'Oswald-Bold';
+    text-shadow: 1px 1px 1px #fff;
+    margin: 0 10px 0 0;
+}
+.topsport_lt .bet_events
+{
+    border-top: 1px solid #d7d7d7;
+}
+.topsport_lt .mybet .game_name,.topsport_lt .mybet .mybet_type
+{
+    color: #414449;
+    font-weight: bold;
+}
+.topsport_lt #mybets_full_header
+{
+    position: relative;
+    top: -47px;
+    background: transparent;
+    border:none;
+}
+.topsport_lt #mybets_full h3
+{
+    font-family:Oswald-Regular;
+    font-size:  21px;
+    color: #fff;
+    text-transform: uppercase;
+    margin-right: 10px;
+}
+.topsport_lt #mybets_full_header > input{
+    float: left;
+    border:2px solid #000;
+    border-radius: 3px;
+    background: -moz-linear-gradient(top, #e5e5e5, #cac8c8); 
+    background: -webkit-gradient(top, #e5e5e5, #cac8c8);
+    background: -webkit-linear-gradient(top, #e5e5e5, #cac8c8);
+    background: -o-linear-gradient(top, #e5e5e5, #cac8c8); 
+    background: -ms-linear-gradient(top, #e5e5e5, #cac8c8); 
+    background: linear-gradient(top, #e5e5e5, #cac8c8);
+    color: #084996;
+    padding: 7px 13px;
+    margin-left: 5px;
+}
+.topsport_lt #mybets_full_header > select
+{
+    float: left;
+    border:2px solid #000;
+    border-radius: 3px;
+    background: -moz-linear-gradient(top, #e5e5e5, #cac8c8); 
+    background: -webkit-gradient(top, #e5e5e5, #cac8c8);
+    background: -webkit-linear-gradient(top, #e5e5e5, #cac8c8);
+    background: -o-linear-gradient(top, #e5e5e5, #cac8c8); 
+    background: -ms-linear-gradient(top, #e5e5e5, #cac8c8); 
+    background: linear-gradient(top, #e5e5e5, #cac8c8);
+    color: #084996;
+    padding: 7px 13px;
+    margin-left: 5px;
+    font-family: SourceSansPro-Regular;
+}
+.topsport_lt  #mybets_full .mybet_wrapper
+{
+    border:1px solid #d7d7d7;
+    margin-left: 5px;
+    width: calc(100% - 10px);
+}
+.topsport_lt  #mybets_full .mybet_wrapper:first-child
+{
+    border-top: 4px solid  #6d7073;
+    border-radius:3px 3px 0 0 ;
+    box-shadow: 1px 1px 0 #B5B5B5;
+}
+.topsport_lt #mybets_full_content
+{
+    margin-top: -29px;
+}
+.topsport_lt .mybet_outcome_3 .bet_event_outcome span
+{
+    color: #084996;
+}
+.topsport_lt .mybet_outcome_1 .bet_event_outcome span
+{
+    color: #de4747 !important;
+}
+.topsport_lt  #future_live_header
+{
+    position: relative;
+    top:-44px;
+}
+.topsport_lt  #future_live .sport_header
+{
+    box-shadow: none;
+    border-radius: 3px 3px 0 0 ;
+}
+.topsport_lt #future_live div.sport_header:after
+{
+    background: none;
+    height: 0px;
+}
+.topsport_lt #future_live .state_button_panel
+{
+       border: none; 
+       height: 38px;
+}
+.topsport_lt #future_live_list
+{
+    margin-top: -32px;
+}
+.topsport_lt #panelholder.lang_rus #livegames_header .header_text, .topsport_lt #panelholder.lang_rus .header_text .games_count .count_wrapper, .topsport_lt  #panelholder.lang_rus .live_all_mode #view_controls, .topsport_lt #panelholder.lang_rus .panelrow #view_controls, .topsport_lt #panelholder.lang_rus  .panelrow #view_controls, .topsport_lt #panelholder.lang_rus .panelrow #view_controls,
+.topsport_lt #panelholder.lang_rus #livesports_container .sport_name, .topsport_lt #panelholder.lang_rus #livegames_all_content .sport_name, .topsport_lt #panelholder.lang_rus .ui-state-default.ui-corner-top.ui-tabs-active.ui-state-active span,
+.topsport_lt #panelholder.lang_rus .ui-state-default.ui-corner-top span,
+.topsport_lt #panelholder.lang_rus #mybets_full h3
+{
+    font-family: Arial-Narrow;
+}
+.topsport_lt #right .ui-tabs-nav li a{
+    padding: .1em 0em;
+    text-transform: uppercase;
+}
+.topsport_lt .ui-tabs .ui-tabs-nav li a
+{
+    float: none;
+}
+
+.topsport_lt #livegames_header .bets_icon
+{
+    display: none;
+}
+
+.topsport_lt #livegames_header .games_count {
+    position: relative;
+    left: 134px;
+}
+.topsport_lt #livesports_container .sport_name, .topsport_lt #livegames_all_content .sport_name, .topsport_lt #future_live .sport_header
+{
+    text-transform: uppercase;
+
+}
+.topsport_lt #livesports_container .sport_name{
+    text-shadow: 1px 1px 1px #fff;
+}
+.topsport_lt #livesports_container .count_wrapper,.topsport_lt #livegames_all_content .count_wrapper
+{
+    font-size: 14px;
+}
+.topsport_lt #betting_place_bet{
+    text-transform: uppercase;
+    text-shadow: 1px 1px 1px #042550;
+}
+.topsport_lt #betting_bet_setting_header > span
+{
+    color: #084996;
+    text-transform: uppercase;
+}
+.topsport_lt .betslip_content .game_name
+{
+    text-transform: uppercase;
+    font-weight: bold;
+}
+.topsport_lt #betting_possible_win > span
+{
+    color: #46484c;
+    text-transform: uppercase;
+    line-height: 23px;
+    font-weight: normal;
+}
+
+.topsport_lt .liveg_wrapper table.market tr.market_header td .name
+{
+    text-transform: uppercase;
+    font-family: Oswald-Bold;
+    font-weight: normal;
+    font-size: 14px;
+    text-shadow: 1px 1px 1px #fff;
+}
+.topsport_lt .lang_rus .liveg_wrapper table.market tr.market_header td .name
+{
+    text-transform: uppercase;
+    font-family: Arial-Narow;
+    font-weight: bold;
+    font-size: 15px;
+}
+
+.topsport_lt   #live .event_bet .odd_up:before, .topsport_lt   #live .event_bet .price.odd_up.pulseAnimation,.topsport_lt   #live .event_bet .price odd_up
+{
+    color:#38B838;
+}
+.topsport_lt #future_live
+{
+    background-color: transparent;
+}
+.topsport_lt .live_sport_wrapper.fillWidth
+{
+    background-color: #fff;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+    box-shadow: 2px 3px 6px -3px #808080;
+    border-radius: 5px 5px 0 0;
+}
+.topsport_lt #future_live .sport_game:nth-child(2n)
+{
+    background-color: transparent;
+}
+.topsport_lt #future_live .sport_game:nth-child(2n+1)
+{
+    background-color: #f3f3f3;
+}
+.topsport_lt #future_live .sport_game .game_start
+{
+    color: #084996;
+}
+.topsport_lt .state_button_panel .state_button
+{
+    background-color: transparent;
+}
+
+.topsport_lt #future_live .day_header:after
+{
+    /* background-color: #d7d7d7;*/
+    content: " ";
+    display: block;
+    height: 1px;
+    position: relative;
+    top: -10px;
+    width: 36%;
+}
+
+
+.topsport_lt #future_live .day_header .day_name:after {
+  /*  background-color: #d7d7d7;*/
+    content: " ";
+    display: block;
+    height: 1px;
+    left: 260px;
+    position: relative;
+    top: -10px;
+    width: 41%;
+}
+.topsport_lt #future_live .day_header .day_name {
+font-weight: 700;
+padding: 0;
+text-align: center;
+white-space: nowrap;
+text-align: right;
+background: rgb(255, 255, 255);
+float: right;
+padding: 0 0 0 10px;
+}
+.topsport_lt #future_live .day_header
+{
+    background-color: transparent;
+    color: #084996;
+    font-family: SourceSansPro-Regular;
+    height: 7px;
+    margin: 0 0 8px;
+    border-bottom: 1px solid #d7d7d7;
+}
+.topsport_lt #future_live .day_header .day_count:after
+{
+    content: ')';
+}
+.topsport_lt #future_live .day_header .day_count:before
+{
+    content: '(';
+}
+.topsport_lt #future_live .day_header .day_count {
+    position: relative;
+    right: 166px;
+    width: 3em;
+    text-align: right;
+    background: #fff;
+    padding: 0 10px 0 0;
+ }
+.topsport_lt .betslip_content .bet.disabled
+{
+    /*color: #ddd;*/
+}
+
+.topsport_lt .betslip_controls3 {
+    padding-top: 10px;
+}
+
+/* error message */
+.topsport_lt #betslip  .bet.error_message {
+ border: 4px solid #d54d4d;
+ width: calc(100% - 8px);
+ margin-top: 3px;
+ color: #414449;
+
+}
+
+.topsport_lt .betslip_content .bet.error_message>.message {
+    border: 2px solid #d54d4d;
+    background-color: #d54d4d;
+    box-shadow: 0 1px 0 #808388;
+        padding: 5px 0 5px 8px;
+}
+/* message text color & size
+.topsport_lt #betslip .message.error_message
+{
+    font-size: 20px;
+    color: red;
+}*/
+
+
+/* okay message */
+.topsport_lt #betslip .bet.ok_message {
+ border: 4px solid #48ae4a;
+ width: calc(100% - 8px);
+ margin-top: 3px;
+ color: #414449;
+ position:relative;
+ box-shdow :1px 0 1px  #000;
+}
+
+.topsport_lt .betslip_content .bet.ok_message>.message {
+    border: 2px solid #48ae4a;
+    background-color: #48ae4a;
+}
+
+
+/* message text color & size */
+.topsport_lt #betslip .message.ok_message
+{
+    /*color: #61D118;*/
+    font-size: 13px;
+    color: #fff;
+    text-align: left;
+    text-transform: uppercase;
+    padding: 5px 0 5px 8px;
+    font: 13/15px 'SourceSansPro-Bold';
+    text-shadow: 0 1px 1px #1a811c;
+    box-shadow: 0 1px 0 #808388;
+        text-transform: uppercase;
+}
+
+/* bottom message selector */
+.topsport_lt #betslip .betslip_controls3  .message.ok_message {
+    color: #48ae4a;
+    text-shadow: 1px 1px 1px #fff;
+}
+.topsport_lt .betslip_content .bet
+{
+    border-top: none;
+    position: relative;
+}
+
+.topsport_lt #live_all .sport_selector:nth-child(5) ~ .sport_selector label .sport_name,
+.topsport_lt #future_live .state_button:nth-child(5) ~ .state_button label .sport_name {
+    width: 1em;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+
+.topsport_lt #live_all .sport_selector:nth-child(5) ~ .sport_selector:hover label .sport_name,
+.topsport_lt #future_live .state_button:nth-child(5) ~ .state_button:hover label .sport_name {
+    width: auto;
+}
+.topsport_lt  #betslip .message.error_message
+{
+    color: #fff;
+    font: 13/15px 'SourceSansPro-Bold';
+    text-shadow: 0 1px 1px #b11818;
+    text-align: left;
+    text-transform: uppercase;
+}
+.topsport_lt #betting_express_error_wrap #betting_express_error .message.error_message{
+    text-shadow: 1px 1px 1px #FFF;
+    color: #d54d4d;
+    margin: 0 0 0 7px;
+}
+.topsport_lt .betslip_content .bet .bet_entry_col1
+{
+    padding-top: 15px;
+}
+
+.topsport_lt .betslip_content .bet > div.bet_entry_col2
+{
+    display: block;
+    position: absolute;
+    top:0;
+    left: 0;
+}
+.topsport_lt .betslip_content .bet > div.bet_entry_col2 .event_price_label
+{
+    display: block;
+    text-transform: uppercase;
+    color: #5c5e62;
+    float: left;
+    margin-left: 3px;
+}
+.topsport_lt .betslip_content .bet .bet_entry_col2{
+    width: 24%;
+}
+.topsport_lt #livegames_all_content .main_market table.market .event .price
+{
+    font-family: Oswald-Regular;
+	padding: 0 5px 0 4px !important;
+}
+.topsport_lt .betslip_controls0 #betting_possible_win #betting_possible_win_amount
+{
+    float: right;
+}
+.topsport_lt #betting_bet_setting_header #betting_bet_setting_text
+{
+    float: left;
+    width:100%;
+    padding-left: 30px;
+    line-height: 25px;
+}
+.topsport_lt #betting_bet_setting_header
+{
+    overflow: hidden;
+    position: relative;
+}
+.topsport_lt #betting_settings_button
+{
+    float: left;
+    position: absolute;
+    top:20px;
+}
+.topsport_lt .live_wrapper .live_header .sport_game > div.game_misc_data 
+{
+    color: #5c5e62;
+    font-size: 15px;
+    font-weight: normal;
+}
+.topsport_lt .live_wrapper .football_header .team, .topsport_lt .live_wrapper .nonfootball_header .team
+{
+    width: 20%;
+    
+}
+.topsport_lt .live_wrapper .football_header, .topsport_lt .live_wrapper .nonfootball_header
+{
+    min-width: 61%;
+}
+
+.topsport_lt .betslip_content .bet .bet_entry_col1  .event_name b
+{
+    font-weight: normal;
+}
+.topsport_lt #betting .betting_express_maxbet
+{
+    font-weight: normal;
+    font-size: 10px;
+    position: relative;
+    right: 5px;
+    top: 2px;
+}
+.topsport_lt .live_table .header:nth-child(1) td
+{
+    font-family: Oswald-Regular; 
+    font-weight: normal;
+    text-shadow: 1px 1px 1px #363839;
+
+}
+.topsport_lt .lang_rus .live_table .header:nth-child(1) td
+{
+    font-family: Arial-Narrow; 
+    font-weight: normal;
+    text-shadow: 1px 1px 1px #363839;
+
+}
+.topsport_lt .live_table .header td{
+        font-size: 14px;
+}
+.topsport_lt .live_table .teamnames, .topsport_lt .competition_table_view tr.game_add_row td.add_market, .topsport_lt .live_table tr.game_add_row td.add_market,
+.topsport_lt .whole_game_label
+{
+    font-family: Oswald-Regular;
+    text-transform: uppercase;
+    margin-left: 5px;
+    color: #2f3338;
+}
+.topsport_lt .whole_game_label
+{
+    margin-left: 8px !important;
+}
+.topsport_lt table.market td .event .price
+{
+    font-family: Oswald-Regular;
+}
+.topsport_lt .game .event,.topsport_lt .markets_wrapper .market .event, .topsport_lt .game_extra_row .event, .topsport_lt .game_add_row .event
+{
+    margin: -5px 0;
+    padding: 5px;
+}
+ .topsport_lt #livegames_all_content .main_market,.topsport_lt #livegames_all_content .main_market table,.topsport_lt .competition table.market.fillWidth, 
+.topsport_lt .live_wrapper .live_header,.topsport_lt .live_wrapper .live_header_wrapper,.topsport_lt .live_table, .live_wrapper table.fillWidth
+{
+    width: 100%;
+}
+
+/*.topsport_lt #line .event_bet span, .topsport_lt #live .event_bet span{
+    
+}*/
+.topsport_lt #livesports_container .sport_count .count_wrapper, .topsport_lt #livegames_all_content .sport_count .count_wrapper
+{
+    font-family: Oswald-Regular;
+    text-shadow: 1px 1px 1px #f8f8f8;
+}
+.topsport_lt #livesports_container .sport_count .count_wrapper{
+     text-shadow: 0px 0px 1px #fff;
+}
+.topsport_lt #livegames_all_content .sport_count .count_wrapper
+{
+    text-shadow: 1px 1px 1px #363839;
+}
+.topsport_lt table.market .market_name
+{
+    font-size: 14px;
+	float: left;
+	max-width: 80%;
+}
+.betslip_controls3 label
+{
+    color: #5c5e62;
+}
+.topsport_lt #future_live_list .sport_count .count_wrapper
+{
+    font-family: Oswald-Regular;
+    font-size: 14px;
+    text-shadow: 1px 1px 1px #363839;
+}
+.topsport_lt #future_live_list .sport_name
+{
+    font-weight: normal;
+}
+.topsport_lt #future_live_list .sport_game >div
+{
+    font-family: Oswald-Regular;
+    font-weight: normal;
+    font-size: 14px;
+    color: #2f3338;
+    text-shadow: 1px 1px 1px #fff;
+}
+.topsport_lt .lang_rus #future_live_list .sport_game >div
+{
+    font-family: Arial-Narrow;
+    font-weight: normal;
+    font-size: 14px;
+    color: #2f3338;
+}
+
+.topsport_lt  #live .live_table .event_bet
+{
+    background:transparent;
+    
+}
+.topsport_lt  #live .live_table .event_bet span{
+    background: #0470CB;
+    border-radius: 3px;
+    color: #FFFFFF;
+    text-shadow: 1px 1px 1px #012D5D;
+    border: 1px solid #064E8B;
+    margin: -5px -1px -6px;
+    padding: 1px 15px;
+}
+.topsport_lt  #live .markets_wrapper .event_bet{
+    background-color: #0470CB;
+    border-radius: 3px;
+    color: #FFFFFF;
+    text-shadow: 1px 1px 1px #012D5D;
+    border: 1px solid #064E8B;
+    margin: -5px -1px -6px;
+    padding: 4px 5px 5px;
+}
+.topsport_lt #betting_possible_win > span{
+    padding: 2px 8px 3px;
+}
+.topsport_lt #future_live .day_header label 
+{
+    float:left;
+    width: 52%;
+    padding: 0 0 0 6px;
+}
+
+.topsport_lt .liveg_wrapper .live_header
+{
+    background: transparent;
+}
+.topsport_lt .live_legal_disclaimer
+{
+    font-size: 0.9em;
+	float: left;
+	padding: 10px;
+}
+
+
+.topsport_lt #future_live .sport_icon
+{
+    margin: 3px 5px;
+}
+
+.topsport_lt #livegames_all_content .main_market table.market .event {
+padding: 5px 9px;
+margin: -5px -1px -6px -1px;
+}
+
+/* bets hispory page*/
+.topsport_lt .mybet_type_2, .topsport_lt  .mybet_type_3, .topsport_lt .mybet_type_4
+{
+    display: none;
+}
+.topsport_lt .mybet .bet_event .bet_event_price, .topsport_lt #mybets_full .mybet .bet_event .bet_event_text
+{
+    font: 14px/16px 'Oswald-Bold';
+    color:#2f3338;
+}
+.topsport_lt #mybets_full .mybet .bet_event .competition_name
+{
+    font: 13px/15px 'SourceSansPro-Semibold';
+    color:#5c5e62;
+}
+.topsport_lt  #mybets_full .mybet .bet_event_selected
+{
+    font: 13px/15px 'SourceSansPro-Semibold';
+    color:#5c5e62;
+    margin: 0 30px 0 20px;
+}
+.topsport_lt #mybets_full .mybet .bet_event_outcome
+{
+     font: 13px/15px 'SourceSansPro-Semibold';
+    color:#5c5e62;
+}
+.topsport_lt #mybets_full .mybet .bet_event_outcome span{
+    color: #084996;
+}
+.topsport_lt #mybets_full .mybet .bet_id span{
+    color:#5c5e62;
+    font:  14px/16px 'Oswald-Bold';
+    text-shadow:1px 1px 1px #fff;
+}
+.topsport_lt .mybet mybet_outcome_2   .bet_event_outcome
+{
+    color: red;
+}
+.live_header .football_header .team svg{
+	width: 25px;
+	height: 25px;
+	float: left;
+	position: relative;
+	left: -8px;
+	top: -21px;
+}

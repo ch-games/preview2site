@@ -1,0 +1,232 @@
+<?php
+// $Id$
+
+/**
+ * Implements hook_menu().
+ */
+function popday_menu() {
+	$items = array();
+
+	$items['admin/config/content/popular-bets-charts'] = array(
+    'title' 		   => 'Populiariausi dienos įvykių grafikai',
+    'description' 	   => 'Galima kontroliuoti maksimalų grafikų išvedimo kiekį ir iškelti į viršų pageidaujamus mačus.',
+    'page callback'    => 'drupal_get_form',
+  	'page arguments'   => array('popday_admin'),
+    'access arguments' => array('administer site configuration'),
+    'type' 			   => MENU_NORMAL_ITEM,
+	);
+
+	return $items;
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function popday_block_info() {
+	$blocks['popday']['info'] = t('Dienos statymai');
+	$blocks['popday']['cache'] = DRUPAL_CACHE_CUSTOM;
+	return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ *
+ * Generates a block containing the popday offers.
+ */
+function popday_block_view($delta = '') {
+	$cid_parts[] = 'offers';
+	$cid_parts[] = $delta;
+	$cid_parts[] = 'europeview-'.(int)offers_show_europeview();
+	$cid_parts = array_merge($cid_parts, drupal_render_cid_parts(DRUPAL_CACHE_GLOBAL));
+	$cid = implode(':', $cid_parts);
+	if($cache = cache_get($cid, 'cache_block')){
+		return $cache->data;
+	}
+	global $language;
+	$block['subject'] = t('Dienos statymai');
+	$block['content'] = '';
+
+	$important_events = variable_get('popday_top_events_list', array());
+
+	$popdayEvents = array();
+	$minCache = strtotime('+ 30 min');
+	$topEvents = topsport_getTopBetEvents(5);
+	if(isset($topEvents['Areas']['Area'])){
+		if(isset($topEvents['Areas']['Area']['AreaId'])){
+			$topEvents['Areas']['Area'] = array('0' => $topEvents['Areas']['Area']);
+		}
+		foreach($topEvents['Areas']['Area'] as $topEventArea){
+			if(isset($topEventArea['Events']['Event']['EventId'])){
+				$topEventArea['Events']['Event'] = array('0' => $topEventArea['Events']['Event']);
+			}
+			foreach($topEventArea['Events']['Event'] as $topEvent){
+				$eventOffer = offers_getEventById($topEvent['EventId']);
+				if($eventOffer){
+					if( $eventOffer->date > strtotime('+ 18 hours') AND !in_array($eventOffer->eid, $important_events)) continue; // add only today matches and ignore the past matches....
+					$eventOffer->event_stats = $topEvent;
+					$most = 0;
+					$most_key = '';
+					if(popday_isWhoWillWin($eventOffer->event_stats['Counters'])){
+						if(isset($eventOffer->event_stats['Counters']['Counter1']['Percent'])){
+							if(isset($eventOffer->event_stats['Counters']['Counter4']['Percent'])){
+								$eventOffer->event_stats['Counters']['Counter1']['Percent'] += $eventOffer->event_stats['Counters']['Counter4']['Percent'];
+							}
+						}
+						if(isset($eventOffer->event_stats['Counters']['Counter3']['Percent'])){
+							if(isset($eventOffer->event_stats['Counters']['Counter5']['Percent'])){
+								$eventOffer->event_stats['Counters']['Counter3']['Percent'] += $eventOffer->event_stats['Counters']['Counter5']['Percent'];
+							}
+						}
+						$eventOffer->allowed_selections = array(1, 2, 3);
+					}else {
+						$eventOffer->allowed_selections = array(1, 2, 3, 4, 5, 6);
+					}
+					foreach($eventOffer->allowed_selections as $oddcode){
+						if(!isset($eventOffer->event_stats['Counters']['Counter'.$oddcode])){ continue; }
+						if((float)$eventOffer->event_stats['Counters']['Counter'.$oddcode]['Percent'] > $most){
+							$most = (float)$eventOffer->event_stats['Counters']['Counter'.$oddcode]['Percent'];
+							$most_key = $oddcode;
+						}
+					}
+					$eventOffer->event_stats['Counters']['Counter'.$most_key]['most'] = true;
+					$popdayEvents[ (in_array( $topEvent['EventId'], $important_events) ? 'a' : '') . $topEvent['GlobalPosition'] ] = $eventOffer;
+					if($eventOffer->date < $minCache){
+						$minCache = $eventOffer->date;
+					}
+				}
+			}
+		}
+	}
+	ksort($popdayEvents);								// sorting by global key
+	$popdayEvents = array_slice( $popdayEvents, 0, variable_get('popday_total_number_charts', 2) ); 	// slice first 2 rows
+	if(sizeof($popdayEvents) > 0){
+		foreach($popdayEvents as $event){
+			$gameType = offers_getGameType($event->gtid);
+
+			$child_cnt = offers_getEventChildCount($event->eid); $eventPage = 0;
+			if($child_cnt){  $eventPage = offers_getEventNodeId($event->eid, $event->cid); $eventPage = $eventPage['nid']; }
+
+			$block['content'] .= '<div class="content-block-line">
+        <h5>'.($event->aid ? '<span class="icon"><img width="18px" src="/sites/all/img/icons/area/'.$event->aid .'.png" alt="" /></span>&nbsp;&nbsp;' : '').$event->title.' ('.$gameType->title.')'.($eventPage ? ' '.l('+'.$child_cnt, 'node/'.$eventPage, array('query' => array('full' => 1))) : '').  offers_enetpulse_icon($event->eid).'</h5>
+        <p class="info-data">
+          '.offers_dateTimeFormat($event->date).' '.$event->category. '
+        </p>
+        <table class="poll">';
+			foreach($event->allowed_selections as $odd){
+				if(!isset($event->event_stats['Counters']['Counter'.$odd])){ continue; }
+				$selection = $event->event_stats['Counters']['Counter'.$odd]['Selection'];
+				if(offers_show_europeview()){
+					$patterns = offers_getPatterns();
+					$gameType = offers_getGameType($event->gtid);
+					$pattern = isset($patterns[$gameType->patternid]) ? $patterns[$gameType->patternid] : null;
+					$offerPattern = offers_event_pattern_data($event);
+					$selection = (strtr($pattern->{'cn'.$odd}, $offerPattern));
+				}
+				$block['content'] .= '
+          <tr id="'.'e_'.$event->eid.'_'.$odd.'_day" '.($event->{'c'.$odd} > 1 ? 'onclick="Drupal.betAction(this, '.$event->eid.', '.$odd.');"' : '').' class="'.($event->{'c'.$odd} > 1 ? 'betaction' : 'nobetaction').' '.(isset($bets_active[$event->eid.'_'.$odd]) ? 'active' : '').'">
+            <td width="'.(offers_show_europeview() ? '150' : '30').'">'.$selection.'</td>
+            <td width="25">'.$event->{'c'.$odd}.'</td>
+            <td class="poll-graph '.(isset($event->event_stats['Counters']['Counter'.$odd]['most']) ? 'most' : '').'">
+              <div style="display: block;float: left;width: 95%;">
+                <div class="poll-left">&nbsp;</div>
+                <div class="vote" percent="'.((float)$event->event_stats['Counters']['Counter'.$odd]['Percent']).'" style="width: 0%;"></div>
+                <div class="poll-right">&nbsp;</div>
+              </div>
+            </td>
+            <td width="20" class="value">0.00&nbsp;%</td>
+          </tr>
+          ';
+			}
+			$block['content'] .= '</table>
+        </div>';
+		}
+	}
+	cache_set($cid, $block, 'cache_block', $minCache);
+	return $block;
+}
+
+function popday_isWhoWillWin($list) {
+	$selections = array();
+	$posible_selections = array('1','0','2','10','02');
+	$aproved = 0;
+	for($i=1; $i < 7; $i++){
+		if(isset($list['Counter'.$i]['Selection'])){
+			if (in_array($list['Counter'.$i]['Selection'] , $posible_selections, true)) {
+				$aproved++;
+			}
+		}
+	}
+	if($aproved == 5){ // if contains 5 events with selection 1 0 2 10 02 its who will win game type, so we turning on the simple view
+		return true;
+	} else {
+		return false;
+	}
+}
+
+function popday_admin($form, &$form_state){
+	$ListTopEvents = array();
+	$form['popday_total_number_charts'] = array(
+		'#type' 		 => 'select',
+		'#options' 		 => drupal_map_assoc(array(1, 2, 3, 4, 5)),
+		'#title' 		 => t('Kiek grafikų norėtumėte atvaizduoti vartotojams?'),
+		'#default_value' => variable_get('popday_total_number_charts', 2),
+		'#description'   => t('Pasiūlos grafikai bus atvaizduojami tik pagrindiniame puslapyje, mes rekomenduojame naudoti ne daugiau, kaip 3 grafikus.')
+	);
+	$topEvents = topsport_getTopBetEvents(10);
+	if(isset($topEvents['Areas']['Area'])){
+		if(isset($topEvents['Areas']['Area']['AreaId'])){
+			$topEvents['Areas']['Area'] = array('0' => $topEvents['Areas']['Area']);
+		}
+		foreach ($topEvents['Areas']['Area'] as $topEventArea){
+			if(isset($topEventArea['Events']['Event']['EventId'])){
+				$topEventArea['Events']['Event'] = array('0' => $topEventArea['Events']['Event']);
+			}
+			foreach($topEventArea['Events']['Event'] as $topEvent){
+				$stats_string = '';
+				foreach ($topEvent['Counters'] as $counter){
+					$stats_string .= '<strong>'.$counter['Selection'] . '</strong> - ' . $counter['Percent'] . '%, ';
+				}
+				$ListTopEvents[ $topEvent['GlobalPosition'] ] = array(
+					'id'			 => $topEvent['EventId'],
+					'GlobalPosition' => $topEvent['GlobalPosition'],
+					'AreaName'		 => $topEventArea['AreaName']['Default'],
+					'EventString' 	 => $topEvent['EventString']['Default'],
+					'Counters'       => $stats_string					
+				);
+			}
+		}
+		ksort($ListTopEvents);
+
+		$tmp_ListTopEvents = array();
+		foreach ($ListTopEvents as $list_top_event){
+			$tmp_ListTopEvents[$list_top_event['id']] = $list_top_event;
+		}
+		$header = array(
+		  'GlobalPosition' => t('Svarbumas'),
+		  'AreaName'	   => t('Sporto šaka'),
+		  'EventString'	   => t('Pavadinimas'),
+		  'Counters'	   => t('Statymų pasiskirstymas %'),
+		);
+		$form['top_events_list'] = array (
+			'#type' 		 => 'tableselect',
+			'#header' 		 => $header,
+			'#options' 	 	 => $tmp_ListTopEvents,
+			'#multiple'		 => TRUE,
+			'#default_value' => variable_get('popday_top_events_list', array()),
+			'#prefix' 		 => '<div><strong>'.t('Pažymėkite svarbiausius įvykius').'</strong>',
+			'#suffix' 	     => t('Sistema pagal nutylėjimą įvykius atvaizduoja nuo viršaus žemyn, jei Jūsų norimas įvykis yra žemiau nei norėtumėte pažybėję, jį ir jis bus rodomas prioriteto tvarka. <br/> PASTABA: Sistema gali ignoruoti nuo viršaus tuos įvykius kurie nepatenka į artimiausių 18 valandų rėžį.').'</div><br/>',
+		);
+	}
+	$form['popday_submit'] = array(
+			'#type' => 'submit',
+			'#value' => t('Patvirtinti ir publikuoti'),
+	);
+	return $form;
+}
+
+function popday_admin_submit($form, &$form_state){
+	variable_set('popday_total_number_charts', $form['popday_total_number_charts']['#value']);
+	variable_set('popday_top_events_list',  $form['top_events_list']['#value']);
+	cache_clear_all('*', 'cache_block', true);
+	drupal_set_message(t('Pasirinkimai išsaugoti ir išpublikuoti vartotojams'));
+}

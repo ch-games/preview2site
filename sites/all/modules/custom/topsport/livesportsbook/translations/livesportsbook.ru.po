@@ -1,0 +1,249 @@
+# $Id$
+#
+# Rusų kalba translation of Drupal (general)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from files:
+#  livesportsbook.admin.inc: n/a
+#  livesportsbook.service.inc: n/a
+#  livesportsbook.module: n/a
+#  livesportsbook.info: n/a
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2011-09-26 13:10+0300\n"
+"PO-Revision-Date: 2011-09-27 13:31+0200\n"
+"Last-Translator: Irmantas Linkauskas <irmantas@topsport.lt>\n"
+"Language-Team: Rusų kalba <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=((((n%10)==1)&&((n%100)!=11))?(0):((((n%10)>=2)&&(((n%100)<10)||((n%100)>=20)))?(1):2));\n"
+
+#: livesportsbook.admin.inc:13
+msgid "Global live betting status controller"
+msgstr ""
+
+#: livesportsbook.admin.inc:14
+msgid "This option let control access to live betting operations"
+msgstr ""
+
+#: livesportsbook.admin.inc:16
+msgid "Enabled"
+msgstr "Включено"
+
+#: livesportsbook.admin.inc:16
+msgid "Disabled"
+msgstr "Отключено"
+
+#: livesportsbook.service.inc:167;204;216
+msgid "Nepavyko pervesti nurodytos sumos, bandykite vėliau."
+msgstr "Не в состоянии оплатить сумму, указанную, пожалуйста, повторите попытку позже."
+
+#: livesportsbook.service.inc:221
+msgid "Jūsų nurodytos sumos nepavyko perverti, bandykite vėliau."
+msgstr "Не работает, попробуйте еще раз позже."
+
+#: livesportsbook.service.inc:235
+msgid "Jūsų nurodyta suma: @amount @currency, buvo sėkingai pervesta į \"lažybos gyvai\" balansą."
+msgstr "В свое живое пари было успешно передано @amount @currency."
+
+#: livesportsbook.service.inc:240
+msgid "Jūsų nurodyta suma: @amount @currency, buvo sėkingai pervesta atgal į Jūsų balansą."
+msgstr "В Вашем балансе было успешно передано @amount @currency."
+
+#: livesportsbook.service.inc:246
+msgid "Jūsų operacija nurodyta suma nurašyta, tačiau Jūs viršijote pinigų pervedimo limitą 2,300EUR. Pervedimo operacijos į lažybas gyvai yra pristabdyta 24 valandoms."
+msgstr "Ваша сделка на сумму списанных, но вы превысили лимит денежных переводов 2,300 евро. Переводные операции в живых пари приостанавливается на 24 часа после паузы, то он будет автоматически выполняться."
+
+#: livesportsbook.service.inc:249
+msgid "Jūsų pavedimas buvo atšauktas."
+msgstr "Ваш заказ был отменен."
+
+#: livesportsbook.service.inc:252
+msgid "Dėl perdidelio sistemos apkrovimo Jūsų operacija įrašyta į opeacijų eilę, kurios bus artimiausiu metu bandomos vykdyti."
+msgstr "Слишком большое количество заторов на работу вашего opeacijų вступил в серии, которые вскоре будут протестированы на."
+
+#: livesportsbook.service.inc:61
+#: livesportsbook.module:683
+msgid "livesportsbook_OM_request"
+msgstr ""
+
+#: livesportsbook.service.inc:61;121;166;215;290;379
+#: livesportsbook.module:499;594;683
+msgid "!message"
+msgstr ""
+
+#: livesportsbook.service.inc:121
+msgid "OM_register_fail"
+msgstr ""
+
+#: livesportsbook.service.inc:140
+msgid "customerLogout.do"
+msgstr ""
+
+#: livesportsbook.service.inc:140
+msgid "@user made log out <b>response from OM:</b><br/><pre>@response</pre>"
+msgstr "@user сделал выхода <b>ответ от OM:</b><br/><pre>@response</pre>"
+
+#: livesportsbook.service.inc:166
+msgid "walletTransfer.do"
+msgstr ""
+
+#: livesportsbook.service.inc:215
+msgid "livesportsbook_walletTransfer"
+msgstr ""
+
+#: livesportsbook.service.inc:290
+msgid "GETOMwalletBalance"
+msgstr ""
+
+#: livesportsbook.service.inc:379
+msgid "saveOMwalletOperation"
+msgstr ""
+
+#: livesportsbook.module:119;120;84
+msgid "Live gyvai globalus valdymas"
+msgstr "Ставки глобального управления"
+
+#: livesportsbook.module:130;145;25
+msgid "Lažybos gyvai"
+msgstr "Пари он лайн"
+
+#: livesportsbook.module:196
+msgid "Daugiau įvykių (@count)"
+msgstr "Другие события (@count)"
+
+#: livesportsbook.module:212;287
+msgid "Atsiprašome už nepatogumus, tačiau lažybų gyvai galimybė yra laikinai pristabdyta, bandykite prisijungti vėliau."
+msgstr "Извините за неудобства, но возможность жить ставки временно приостановлено, пожалуйста, повторите попытку позже."
+
+#: livesportsbook.module:282
+msgid "Lažybų gyvai balanso pildymas"
+msgstr "Заполнение баланса ставки Live"
+
+#: livesportsbook.module:299
+msgid "Atsiprašome, nepavyskta pasiekti Jūsų \"lažybų gyvai\" balanso, bandykite vėliau."
+msgstr "К сожалению, не можем связаться с вами \"Ставки\" бухгалтерский баланс, пожалуйста, повторите попытку позже."
+
+#: livesportsbook.module:307
+msgid "Pirma reikia pasirašyti i-lažybų sutartį."
+msgstr "Для того, чтобы ставки Live, вы должны подписать контракт я-ставку."
+
+#: livesportsbook.module:311
+msgid "Privalote būti prisijungęs prie sistemos"
+msgstr "Пожалуйста, <a href=\"/user/login\">войдите</a> к системе."
+
+#: livesportsbook.module:332
+msgid ""
+"Lažybos gyvai skiltis reikalauja, kad klientas persivestų į virtualę lažybos gyvai piniginę\r\n"
+"\t\t\t\tnorimą pinigų sumą iš savo balanso, norint atlikti statymus, \r\n"
+"\t\t\t\tkadangi lažybos gyvai rezultatai paaiškėja po varžybų ir laimėjimai užskaitomi ir išmokami netrukus, laimėjimai pervedami į virtualę lažybos gyvai piniginę. \r\n"
+"\t\t\t\tNorit išsimokėti laimėjimus Jums reikia įvesti sumą ir pasrinkti operacijos tipą - \"Grąžinti į balansą\", \r\n"
+"\t\t\t\tkurią norite gražintis į savo pagrindinį balansą ir tuomet įprastais būdais galite <a href=\"/mano-paskyra/pinigu-ismokejimas\">išsigryninti pinigus</a>."
+msgstr "Ставки раздел требует, чтобы клиент persivestų жить виртуальный кошелек, который вы хотите поставить сумму денег с вашего счета, переводить деньги будут использованы, чтобы сделать ставки. <br/> <br/> Жить ставку показывает результаты после гонки и достижения подсчитываются и в скором времени будет уплачена, выигрыш переведены в виртуальную ставки наличными жить. Вы хотите, чтобы достижения вам нужно заплатить, чтобы ввести необходимую сумму и вид операции Выберите - \"Чтобы вернуться к балансу\" Система сразу же вернулся к главной вершине баланс спорта, а затем обычным способом вы можете <a href=\"/moe-prostranstvo/popolnenie-scheta\">снять деньги</a>."
+
+#: livesportsbook.module:342
+msgid "Jūsų balansas:"
+msgstr "Ваш баланс:"
+
+#: livesportsbook.module:343;348
+msgid "...bandykite vėliau..."
+msgstr "...повторите позже..."
+
+#: livesportsbook.module:347
+msgid "\"Lažybų gyvai\" balansas:"
+msgstr "\"Ставки Live\" Баланс:"
+
+#: livesportsbook.module:352
+msgid "Pasirinkite operaciją"
+msgstr "Выберите операцию"
+
+#: livesportsbook.module:353
+msgid "Pervesti į lažybas gyvai"
+msgstr "В живых пари"
+
+#: livesportsbook.module:353
+msgid "Grąžinti į balansą"
+msgstr "В баланс"
+
+#: livesportsbook.module:358
+msgid "Pervedama suma"
+msgstr "Переводимая сумма"
+
+#: livesportsbook.module:360
+msgid "Ši suma bus naudojama \"lažybos gyvai\" statymams atlikti."
+msgstr "Эта сумма будет использована для \"живой ставки\" ставки, или вы баланс основных заполнения."
+
+#: livesportsbook.module:367
+msgid "Atgal"
+msgstr "Назад"
+
+#: livesportsbook.module:372
+msgid "Patvirtinti"
+msgstr "Подтвердить"
+
+#: livesportsbook.module:390
+msgid "Jūsų reikšmė nepanaši į sumą."
+msgstr "Ваше значение не похож на сумму."
+
+#: livesportsbook.module:394
+msgid "Pervedama suma turi būti mažesnė, nei nustatyta maksimali @amount @currency"
+msgstr "Сумма перевода не должна превышать максимальную @amount @currency."
+
+#: livesportsbook.module:403
+msgid "Pervedama suma turi būti didesnė, nei nustatyta minimali @amount @currency"
+msgstr "Сумма перевода должна быть больше минимального @amount @currency."
+
+#: livesportsbook.module:409
+msgid "Jūsų balansas nepakankamas, prašome papildyti <a href=\"/mano-paskyra/saskaitos-papildymas\">balansą</a>."
+msgstr "Ваше суммы рассрочки превышает доступное \"Ставки\" баланс! Введите ниже суммы платежа."
+
+#: livesportsbook.module:414
+msgid "Jūsų pageidaujama išsimokėjimo suma viršija Jūsų turimą \"lažybų gyvai\" balansą! Įveskite mažesnę išmokėjimo sumą."
+msgstr "Ваше суммы рассрочки превышает доступное \"Ставки\" баланс! Введите ниже суммы платежа."
+
+#: livesportsbook.module:418
+msgid "Atlikti operacijos negalime, nes Jūsų balansas yra tuščias."
+msgstr "Выполнить операцию не представляется возможным, т.к. ваш баланс пуст."
+
+#: livesportsbook.module:425
+msgid "Pervedama suma turi būti mažesnė, nei nustatyta maksimali @amount @currency."
+msgstr "Сумма перевода не должна превышать максимальную @amount @currency."
+
+#: livesportsbook.module:432
+msgid "Prašome pasirinkti operacijos tipą ir bandyti dar kartą."
+msgstr "Пожалуйста, выберите тип операции и повторите попытку."
+
+#: livesportsbook.module:499
+msgid "livesportsbook_api_customer_info"
+msgstr ""
+
+#: livesportsbook.module:594
+msgid "live xml feed update"
+msgstr ""
+
+#: livesportsbook.module:34
+msgid "Lažybos gyvai piniginė"
+msgstr "Ставки кошелек"
+
+#: livesportsbook.module:46;53;60;67;75
+msgid "OM logon user INIT"
+msgstr ""
+
+#: livesportsbook.module:83
+msgid "Global settings of live odds"
+msgstr "Глобальные настройки живых шансов"
+
+#: livesportsbook.info:0
+msgid "Lažybos gyvai (OM edition)"
+msgstr "Ставки Live (OM System)"
+
+#: livesportsbook.info:0
+msgid "Pilnai automatizuotas lažybų gyvai modulis"
+msgstr "Полностью автоматизированная ставки жить модуль"
+
+#: livesportsbook.info:0
+msgid "TopSport"
+msgstr "bet TOP sport"
+

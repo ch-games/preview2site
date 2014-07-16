@@ -1,0 +1,710 @@
+<?php
+
+// $Id$
+
+
+/**
+ * Implements hook_menu().
+ */
+function live_menu() {
+	$items['live'] = array(
+    'title' => 'Lažybos gyvai',
+    'description' => '"Lažybos gyvai" pasiūla ir statymai sporto varžybų metu',
+    'page callback' => 'live_page',
+    'access arguments' => array('access content'),
+	);
+
+	$items['live-ajax-block'] = array(
+    'title' => 'Lažybos gyvai blokelis',
+    'page callback' => 'live_ajax_block',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+	);
+
+	return $items;
+}
+
+
+/**
+ * Implements hook_block_info().
+ */
+function live_block_info() {
+	$blocks['live'] = array(
+    'info' => t('Live events block'),
+    'properties' => array(
+      'administrative' => FALSE,
+	),
+    'region' => 'right',
+    'status' => 1,
+    'visibility' => 0,
+    'weight' => 5,
+    'cache' => DRUPAL_NO_CACHE,
+	);
+	return $blocks;
+}
+
+
+/**
+ * Implements hook_block_view().
+ *
+ * Generates a block containing the bet slip.
+ */
+function live_block_view($delta = '') {
+	$block['subject'] = t('Lažybos gyvai');
+	$block['content'] = '';
+	$lives = live_getEvents(false, 1);
+	if(!$lives) return;
+	$liveBlocks = array('online' => array(), 'offline' => array());
+	foreach($lives as $live){
+		$liveStatus = 'offline';
+		if($live->start_date <= time()){ $liveStatus = 'online'; }
+		$liveBlocks[$liveStatus][] = '<div class="live-block-event" onClick="window.location=\''.url('live/'.$live->lid).'\'">
+      <div class="live-title">'.
+		(file_exists(DRUPAL_ROOT.'/sites/all/img/live/icons/'.$live->laid.'.png') ? '<img src="/sites/all/img/live/icons/'.$live->laid.'.png" alt="" />' : '').
+        '<div class="title">'.i18n_string_translate(array('live', 'item', $live->lid, 'title'), $live->title).'</div>
+        '.($liveStatus != 'online' ? '<div class="start-time">'.offers_dateTimeFormat($live->start_date, false).'</div>' : '').'
+      </div>
+      <div class="live-items">
+        <div class="item">'.l(i18n_string_translate(array('live', 'item', $live->lid, 'item1name'), $live->item1name), 'live/'.$live->lid).' <div class="results '.($live->result1 > $live->result2 ? 'more' : 'less').'">'.$live->result1.'</div></div>
+        <div class="item">'.l(i18n_string_translate(array('live', 'item', $live->lid, 'item2name'), $live->item2name), 'live/'.$live->lid).' <div class="results '.($live->result2 > $live->result1 ? 'more' : 'less').'">'.$live->result2.'</div></div>
+      </div>
+    </div>';
+	}
+	foreach($liveBlocks as $key => $liveBlock){
+		if(count($liveBlock)){
+			$block['content'] .= '<div class="live-block-events '.$key.'">';
+			foreach($liveBlock as $liveEvent){
+				$block['content'] .= $liveEvent;
+			}
+			$block['content'] .= '</div>';
+		}
+	}
+	$js_variables = array('live' => array('urlblock' => url('live-ajax-block')));
+	drupal_add_js($js_variables, "setting");
+	drupal_add_js(drupal_get_path('module', 'live') . '/live.js');
+
+	$block['content'] .= l(t('Daugiau įvykių'), 'live', array('attributes' => array('class' => array('all-live-link'))));
+	return $block;
+}
+
+function live_ajax_block(){
+
+	$block = live_block_view();
+
+	drupal_json_output(array('block' => $block));
+
+}
+
+function live_event_form($form, &$form_state, $live = null) {
+
+	$edit = false;
+
+	if(isset($live) and $live->lid){
+		$form['#live'] = $live;
+		$edit = true;
+	}
+
+	$form['live-event-information'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Live įvykio informacija',
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#tree' => FALSE,
+	);
+	$form['live-event-status'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Live įvykio statusas ir komanda',
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#tree' => FALSE,
+	);
+	$form['live-event-more-info'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Live įvykio papildoma informacija',
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#tree' => FALSE,
+	);
+
+	$form['live-event-information']['status'] = array(
+    '#type' => 'radios',
+    '#title' => t('Aktyvumas'),
+    '#default_value' => ($edit ? $live->status : 0),
+    '#options' => array(t('Nerodome'), t('Rodome')),
+    '#required' => TRUE,
+	);
+
+	$form['live-event-information']['show_date'] = array(
+    '#type' => 'textfield',
+    '#title' => t('LIVE rodymo pradžia'),
+    '#default_value' => ($edit ? date('Y-m-d H:i', $live->show_date) : date('Y-m-d H:01')),
+    '#size' => 13,
+    '#maxlength' => 20,
+    '#required' => TRUE,
+	);
+
+	$form['live-event-information']['start_date'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Įvykio pradžia'),
+    '#default_value' => ($edit ? date('Y-m-d H:i', $live->start_date) : date('Y-m-d H:01')),
+    '#size' => 13,
+    '#maxlength' => 20,
+    '#required' => TRUE,
+	);
+
+	$form['live-event-information']['end_date'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Live rodymo pabaiga'),
+    '#default_value' => ($edit ? date('Y-m-d H:i', $live->end_date) : date('Y-m-d H:01')),
+    '#size' => 13,
+    '#maxlength' => 20,
+    '#required' => TRUE,
+	);
+
+	$areas = live_getArea();
+	$areaOptions = array('0' => '----');
+	foreach($areas as $area){
+		$areaOptions[$area->laid] = t($area->title);
+	}
+	$form['live-event-information']['laid'] = array(
+    '#type' => 'select',
+    '#title' => t('Sporto šaka'),
+    '#default_value' => ($edit ? $live->laid : key($areaOptions)),
+    '#options' => $areaOptions,
+    '#description' => '',
+    '#required' => FALSE,
+    '#ajax' => array('callback' => 'live_event_form_statuses', 'wrapper' => 'live_event_form_statuses', 'progress' => array('type' => null))
+	);
+
+	$form['live-event-information']['leid'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Live įvykio numeris'),
+    '#default_value' => ($edit ? $live->leid : '0'),
+    '#size' => 10,
+    '#maxlength' => 128,
+    '#required' => TRUE,
+	);
+
+	$form['live-event-information']['eid'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Įvykis paprastas'),
+    '#default_value' => ($edit ? $live->eid : '0'),
+    '#size' => 10,
+    '#maxlength' => 128,
+    '#required' => FALSE,
+	);
+
+	$form['live-event-information']['title'] = array(
+    '#prefix' => '<div class="form-item-title">',
+    '#suffix' => '</div>',
+    'title' => array(
+      '#type' => 'textfield',
+      '#title' => t('Pavadinimas'),
+      '#default_value' => ($edit ? $live->title : ''),
+      '#size' => 50,
+      '#maxlength' => 255,
+      '#required' => TRUE,
+	),
+    'translations' => array(
+      '#tree' => TRUE,
+	),
+	);
+
+	$statuses = live_getStatus(1);
+	$statusOptions = array('0' => '----');
+	foreach($statuses as $status){
+		$statusOptions[$status->sid] = t($status->title);
+	}
+	if($edit OR isset($form_state['values']['laid'])){
+		$statuses = live_getStatus((isset($form_state['values']['laid']) ? $form_state['values']['laid'] : $live->laid));
+		foreach($statuses as $status){
+			$statusOptions[$status->sid] = t($status->title);
+		}
+	}
+	$form['live-event-status']['sid'] = array(
+    '#type' => 'select',
+    '#title' => t('Statusas'),
+    '#options' => $statusOptions,
+    '#default_value' => ($edit ? $live->sid : key($statusOptions)),
+    '#required' => TRUE,
+    '#prefix' => '<div id="live_event_form_statuses">',
+    '#suffix' => '</div>',
+	);
+	$form['live-event-status']['itemresult'] = array(
+    '#tree' => FALSE,
+    '#prefix' => '<div id="itemresult">',
+    '#suffix' => '</div>',
+    'translations' => array(
+      '#tree' => TRUE,
+      '#weight' => 10,
+	),
+	);
+	$form['live-event-status']['itemresult']['item1name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Komanda(1)'),
+    '#default_value' => ($edit ? $live->item1name : ''),
+    '#size' => 30,
+    '#maxlength' => 255,
+    '#required' => TRUE,
+	);
+
+	$form['live-event-status']['itemresult']['result1'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Taškai(1)'),
+    '#default_value' => ($edit ? $live->result1 : '0'),
+    '#size' => 10,
+    '#maxlength' => 255,
+    '#required' => TRUE,
+	);
+
+	$form['live-event-status']['itemresult']['result2'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Taškai(2)'),
+    '#default_value' => ($edit ? $live->result2 : '0'),
+    '#size' => 10,
+    '#maxlength' => 255,
+    '#required' => TRUE,
+	);
+
+	$form['live-event-status']['itemresult']['item2name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Komanda(2)'),
+    '#default_value' => ($edit ? $live->item2name : ''),
+    '#size' => 30,
+    '#maxlength' => 255,
+    '#required' => TRUE,
+	);
+
+
+	$languages = language_list('language');
+	$langcode_default = language_default('language');
+	foreach($languages as $langcode => $lang){
+		if($lang->enabled AND $langcode_default != $langcode){
+			$form['live-event-information']['title']['translations'][$langcode]['title'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Pavadinimas').' ('.$lang->name.')',
+        '#default_value' => ($edit ? i18n_string_translate(array('live', 'item', $live->lid, 'title'), $live->title, array('langcode' => $langcode)) : ''),
+        '#size' => 50,
+        '#maxlength' => 255,
+        '#required' => FALSE,
+			);
+
+			$form['live-event-status']['itemresult']['translations'][$langcode] = array(
+        '#prefix' => '<div class="itemresult-translation">',
+        '#suffix' => '</div>', 
+        'item1name' => array(
+          '#type' => 'textfield',
+          '#title' => t('Komanda(1)').' ('.$lang->name.')',
+          '#default_value' => ($edit ? i18n_string_translate(array('live', 'item', $live->lid, 'item1name'), $live->item1name, array('langcode' => $langcode)) : ''),
+          '#size' => 30,
+          '#maxlength' => 255,
+          '#required' => FALSE,
+          '#attributes' => array(
+            'class' => array('form-input-item1name'),
+			),
+			),
+        'item2name' => array(
+          '#type' => 'textfield',
+          '#title' => t('Komanda(2)').' ('.$lang->name.')',
+          '#default_value' => ($edit ? i18n_string_translate(array('live', 'item', $live->lid, 'item2name'), $live->item2name, array('langcode' => $langcode)) : ''),
+          '#size' => 30,
+          '#maxlength' => 255,
+          '#required' => FALSE,
+			),
+			);
+		}
+	}
+
+
+	$form['live-event-more-info']['url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Nuoroda'),
+    '#default_value' => ($edit ? $live->url : ''),
+    '#size' => 35,
+    '#maxlength' => 255,
+    '#required' => FALSE,
+	);
+
+	$form['live-event-more-info']['url_name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Nuorodos pavadinimas'),
+    '#default_value' => ($edit ? $live->url_name : ''),
+    '#size' => 25,
+    '#maxlength' => 255,
+    '#required' => FALSE,
+	);
+
+	//   $photo_file = false;
+	//   if($edit && $live->file){
+	//     $photo = file_load($live->file);
+	//     if($photo){
+	//       $photo_file = str_replace('sites', 'control/sites', file_create_url($photo->uri));
+	//     }
+	//   }
+	//   $form['photo'] = array(
+	//     '#tree' => false,
+	//     '#prefix' => '<div id="live-photo">',
+	//     '#suffix' => '</div>',
+	//   );
+	//     $form['photo']['file'] = array(
+	//       '#type' => 'file',
+	//       '#title' => t('Teminė nuotrauka'),
+	//       '#size' => 40,
+	//     );
+	//   if($photo_file){
+	//     $form['photo']['file_markup'] = array(
+	//       '#type' => 'markup',
+	//       '#markup' => l('Nuotrauka', $photo_file, array('attributes' => array('target' => '_blank'))),
+	//     );
+	//     $form['photo']['remove_photo'] = array(
+	//       '#type' => 'checkbox',
+	//       '#title' => t('Pašalinti'),
+	//     );
+	//   }
+
+	$form['submit_action'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+    '#attributes' => array('class' => array('button')),
+	);
+	if($edit){
+		$form['live-events'] = array(
+      '#type' => 'fieldset',
+      '#title' => 'Live įvykiai',
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE,
+      '#prefix' => '<div id="live-events">',
+      '#suffix' => '</div>',
+      '#tree' => TRUE,
+		);
+		//     $form['live-events']['markup'] = array(
+		//       '#markup' => '<h4>Įvykiai</h4>',
+		//     );
+		$form['live-events']['time'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Laikas'),
+      '#default_value' => '',
+      '#size' => 5,
+      '#maxlength' => 255,
+      '#required' => FALSE,
+		);
+		$form['live-events']['item1title'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Komanda (1)'),
+      '#default_value' => '',
+      '#size' => 25,
+      '#maxlength' => 255,
+      '#required' => FALSE,
+		);
+		$form['live-events']['item2title'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Komanda (2)'),
+      '#default_value' => '',
+      '#size' => 25,
+      '#maxlength' => 255,
+      '#required' => FALSE,
+		);
+
+		$form['live-events']['submit_action'] = array(
+      '#type' => 'submit',
+      '#value' => t('Save'),
+      '#attributes' => array('class' => array('button')),
+		);
+
+		if(isset($_GET['remove_item'])){
+			live_removeEventDetails(intval($_GET['remove_item']));
+		}
+
+		$details = live_getEventDetails($live->lid);
+		$rows = array();
+		foreach($details as $detail){
+			$rows[] = array(
+			array('data' => $detail->time, 'class' => array('time')),
+			array('data' => $detail->item1name, 'class' => array('item')),
+			array('data' => $detail->result1,  'class' => array('result')),
+			array('data' => $detail->result2,  'class' => array('result')),
+			array('data' => $detail->item2name,  'class' => array('item')),
+			array('data' => '<a href="live-event.php?record_id='.$_GET["record_id"].'&remove_item='.$detail->leid.'">Trinti</a>'),
+			);
+		}
+		$header = array(
+      'Laikas',
+      'Komanda (1)',
+      'Taškai (1)',
+      'Taškai (2)',
+      'Komanda (2)',
+      'Veiksmai',
+		);
+		$form['live-events']['items']['#markup'] = theme('table', array('rows' => $rows, 'header' => $header,'attributes' => array('class' => array('live-event-items'))));
+	}
+
+	return $form;
+}
+
+function live_event_form_validate($form, &$form_state){
+	//   $file = file_save_upload('file');
+	//   if ($file === FALSE) {
+	//     form_set_error('file', t("Failed to upload the file"));
+	//   }elseif ($file !== NULL) {
+	//     $form_state['values']['file'] = $file;
+	//   }
+	$form_state['values']['show_date'] = strtotime($form_state['values']['show_date']);
+	$form_state['values']['start_date'] = strtotime($form_state['values']['start_date']);
+	$form_state['values']['end_date'] = strtotime($form_state['values']['end_date']);
+}
+
+function live_event_form_submit($form, &$form_state){
+	global $base_url;
+	if(!isset($form['#live'])){
+		$form_state['redirect'] = url($base_url.'/is/live.php', array('absolute' => TRUE));
+	}else{
+		$form_state['redirect'] = url($base_url.'/is/live-event.php', array('absolute' => TRUE, 'query' => array('record_id' => $_GET['record_id'])));
+	}
+	$fields = array(
+    'laid' => $form_state['values']['laid'],
+    'leid' => intval($form_state['values']['leid']),
+    'eid' => intval($form_state['values']['eid']),
+    'show_date' => $form_state['values']['show_date'],
+    'start_date' => $form_state['values']['start_date'],
+    'end_date' => $form_state['values']['end_date'],
+    'title' => $form_state['values']['title'],
+    'sid' => $form_state['values']['sid'],
+    'item1name' => $form_state['values']['item1name'],
+    'item2name' => $form_state['values']['item2name'],
+    'result1' => $form_state['values']['result1'],
+    'result2' => $form_state['values']['result2'],
+    'url' => $form_state['values']['url'],
+    'url_name' => $form_state['values']['url_name'],
+    'status' => $form_state['values']['status'],
+	);
+
+	//   if(isset($form_state['values']['remove_photo'])){
+	//     if($form['#live']->file && $form_state['values']['remove_photo']){
+	//       $file_remove = file_load($form['#live']->file);
+	//       if($file_remove){
+	//         file_delete($file_remove, true);
+	//       }
+	//       $fields['file'] = null;
+	//     }
+	//   }
+	/*
+	 $file = $form_state['values']['file'];
+	 if($file !== NULL){
+	 if (!empty($file->fid)) {
+	 if (($file->status & FILE_STATUS_PERMANENT) == 0){
+	 $info = image_get_info($file->uri);
+	 $directory = 'public://live';
+	 $test = file_prepare_directory($directory, FILE_CREATE_DIRECTORY);
+	 $destination = file_stream_wrapper_uri_normalize($directory . '/' . $file->filename);
+	 if ($file = file_move($file, $destination, FILE_EXISTS_RENAME)){
+	 $file->status |= FILE_STATUS_PERMANENT;
+	 $file = file_save($file);
+	 $fields['file'] = $file->fid;
+	 }
+	 }
+	 }
+	 }*/
+	if(!isset($form['#live'])){
+		$lid = db_insert('live')->fields($fields)->execute();
+	}else{
+		$lid = $form['#live']->lid;
+		db_update('live')->fields($fields)->condition('lid', $form['#live']->lid)->execute();
+	}
+	//apply translations
+	$context = array('live', 'item', $lid);
+	$stringsTranslatable = array(
+    'title' => $form_state['values']['title'],
+    'item1name' => $form_state['values']['item1name'],
+    'item2name' => $form_state['values']['item2name']
+	);
+	i18n_string_update($context, $stringsTranslatable);
+	foreach($form_state['values']['translations'] as $langcode => $translations){
+		i18n_string_translation_update($context, $translations, $langcode);
+	}
+
+	if(isset($form['#live']) AND $form_state['values']['live-events']['time'] != '' AND ($form_state['values']['live-events']['item1title'] != '' OR $form_state['values']['live-events']['item2title'] != '')){
+		db_insert('live_events')->fields(array(
+      'lid' => $form['#live']->lid,
+      'time' => $form_state['values']['live-events']['time'],
+      'item1name' => $form_state['values']['live-events']['item1title'],
+      'item2name' => $form_state['values']['live-events']['item2title'],
+      'result1' => $form_state['values']['result1'],
+      'result2' => $form_state['values']['result2'],
+		))->execute();
+	}
+}
+
+
+function live_page($lid = false, $ajax = 'nojs'){
+	$html = '';
+	$lives = live_getEvents((is_numeric($lid) ? $lid : false), 1);
+	if($lives){
+		if(is_numeric($lid)){
+			$live = $lives[0];
+			drupal_set_title(t('Lažybos gyvai').' - '.i18n_string_translate(array('live', 'item', $live->lid, 'title'), $live->title));
+		}
+		foreach($lives as $live){
+			if(isset($_GET['online']) AND $live->start_date > REQUEST_TIME){ continue; }
+			$html .= live_drawLiveEventTable($live, !is_numeric($lid), is_numeric($lid));
+		}
+	}else{
+		if(is_numeric($lid)){ drupal_goto('live'); }
+		return '<strong>'.t('Šiuo metu lažybų gyvai pasiūlos nepateikiame, peržiūrėkite šį puslapį vėliau').'</strong>';
+	}
+	if($ajax == 'ajax' OR $lid == 'ajax'){
+		$commands[] = ajax_command_html('#live-list',  $html);
+		print ajax_render($commands);
+		exit;
+	}else{
+		$js_variables = array('live' => array('page' => TRUE, 'url' => url('live/'.(is_numeric($lid) ? $lid.'/' : '').'ajax', array('query' => (isset($_GET['online']) ? array('online' => 1) : array('full' => 1))))));
+		drupal_add_js($js_variables, "setting");
+		drupal_add_js(drupal_get_path('module', 'live') . '/live.js');
+		$html = '<div id="live-list">'.$html.'</div>';
+		if(!is_numeric($lid)){
+			$links = '
+      <div id="offers_filter">
+        <ul class="filter-selection">
+          <li '.(!isset($_GET['online']) ? 'class="active"' : '').'>'.l(t('Visos lažybos'), $_GET["q"]).'</li>
+          <li '.(isset($_GET['online']) ? 'class="active"' : '').'>'.l(t('Rodyti tik dabar vykstančias'), $_GET["q"], array('query' => array('online' => 1))) .'</li>
+        </ul>
+      </div>';
+			$html = $links . $html;
+		}else{
+			$links = l(t('Daugiau įvykių'), 'live', array('attributes' => array('class' => array('all-live-link'))));
+			$html = $links . $html . $links;
+		}
+		return $html;
+	}
+}
+
+function live_drawLiveEventTable($live, $more = true, $expand = false){
+	if($live){
+		$status = live_getStatus(false, $live->sid);
+		$status = $status[0];
+		$lives_area = live_getArea($live->laid);
+
+		$liveDetails = '';
+
+		$details = live_getEventDetails($live->lid);
+		if(!empty($details)){
+			$rows = array();
+			foreach($details as $detail){
+				$rows[] = array(
+				array('data' => $detail->time, 'class' => array('time')),
+				array('data' => $detail->item1name, 'class' => array('item')),
+				array('data' => $detail->result1,  'class' => array('result')),
+				array('data' => $detail->result2,  'class' => array('result')),
+				array('data' => $detail->item2name,  'class' => array('item')),
+				);
+			}
+			$liveDetails .= theme('table', array('rows' => $rows, 'attributes' => array('class' => array('live-event-items'))));
+		}
+		if($live->url AND $live->url_name){
+			$liveDetails .= '<div class="live-details-link"><a target="_blank" href="'.$live->url.'">'.$live->url_name.'</a></div>';
+		}
+		$event = offers_getEventByEventName(($live->leid ? $live->leid : $live->eid));
+		if($event){
+			$_GET['full'] = 1;
+			$data = offers_get_offers_data('all', null, $event->aid, $event->cid, $event->mid, $event->eid);
+			$liveDetails .= offers_display_offers_table_html($data, $event->aid, $event->cid, $event->mid, $event->eid);
+		}
+		$more = ($more AND (!empty($details) OR $event));
+		$expanded = array();
+		if(isset($_GET['more'])){
+			$expanded = explode(',', trim($_GET['more'], ','));
+		}
+		$html = '
+    <div id="live_'.$live->lid.'" class="live-event'.((in_array('live_'.$live->lid, $expanded) OR $expand) ? ' expanded' : '').($live->start_date <= time() ? ' online' : ' offline').'">
+      <div class="live-event-data'.($more ? ' expand' : '').'">
+        <div class="live-title">'.(file_exists(DRUPAL_ROOT.'/sites/all/img/live/icons/'.$live->laid.'.png') ? '<img src="/sites/all/img/live/icons/'.$live->laid.'.png" alt="" />' : '').t($lives_area[0]->title).'<br/><br/>'.i18n_string_translate(array('live', 'item', $live->lid, 'title'), $live->title).'</div>
+        <div class="live-infos">
+          <div class="live-date"><span>'.offers_dateTimeFormat($live->start_date, false).'</span></div>
+          <div class="live-status"><span>'.t($status->title).'</span></div>
+          '.($more ? '<div class="live-more '.(in_array('live_'.$live->lid, $expanded) ? 'less' : '').'">'.(in_array('live_'.$live->lid, $expanded) ? t('Suskleisti') : t('Plačiau')).'</div>' : '').'
+        </div>
+        <div class="live-items">
+          <div class="item">
+            <div class="results '.($live->result1 > $live->result2 ? 'more' : 'less').'">'.$live->result1.'</div>
+            <div class="name">'.i18n_string_translate(array('live', 'item', $live->lid, 'item1name'), $live->item1name).'</div>
+          </div>
+          <div class="item">
+            <div class="results '.($live->result2 > $live->result1 ? 'more' : 'less').'">'.$live->result2.'</div>
+            <div class="name">'.i18n_string_translate(array('live', 'item', $live->lid, 'item2name'), $live->item2name).'</div>
+          </div>
+        </div>
+      </div>
+      <div class="live-event-details" '.(((in_array('live_'.$live->lid, $expanded) OR $expand) AND $liveDetails) ? 'style="display: block;"' : '').'>
+        '.$liveDetails.'
+        '.(!$expand ? '<div class="live-less"><div><span class="icon"></span><span>'.t('Suskleisti pasiūlą').'</span><span class="icon"></span></div></div>' : '').'
+      </div>
+    </div>';
+		return $html;
+	}
+}
+
+function live_getEvents($lid = false, $status = false, $laid = false){
+	$livesData = &drupal_static(__FUNCTION__);
+	if($lid){
+		if(isset($livesData[$lid])){
+			return $livesData[$lid];
+		}
+	}
+	$lives = db_select('live', 'l')
+	->fields('l');
+	if($lid){
+		$lives = $lives->condition('lid', $lid);
+	}
+	if($status){
+		$lives->condition('status', $status);
+		$lives->condition('show_date', REQUEST_TIME, '<=');
+		$lives->condition('end_date', REQUEST_TIME, '>=');
+	}
+	if($laid){
+		$lives->condition('laid', $laid);
+	}
+	$lives = $lives->orderBy('start_date', 'ASC')->execute()->fetchAll();
+	if($lid){
+		$livesData[$lid] = $lives;
+	}
+	return $lives;
+}
+
+function live_getEventDetails($lid){
+	return db_select('live_events', 'l')
+	->fields('l')
+	->condition('lid', $lid)
+	->execute()
+	->fetchAll();
+}
+
+function live_removeEventDetails($leid){
+	db_delete('live_events')
+	->condition('leid', $leid)
+	->execute();
+}
+function live_event_form_statuses($form, &$form_state){
+	return $form['sid'];
+}
+
+function live_getArea($laid = false){
+	$area = db_select('live_area', 'lv')->fields('lv', array());
+	if($laid){
+		$area = $area->condition('laid', $laid);
+	}
+	$area = $area->orderBy('title', 'asc')->execute()->fetchAll();
+	return $area;
+}
+
+
+function live_getStatus($laid = false, $sid = false){
+	$status = db_select('live_status', 'ls')->fields('ls', array());
+	if($sid){
+		$status = $status->condition('sid', $sid);
+	}
+	if($laid){
+		$status = $status->condition('laid', $laid);
+	}
+	$status = $status->orderBy('title', 'asc')->execute()->fetchAll();
+
+	return $status;
+}

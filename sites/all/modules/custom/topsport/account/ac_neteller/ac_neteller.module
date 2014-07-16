@@ -1,0 +1,306 @@
+<?php
+// $Id: account.module Exp $
+/**
+ * The Merchant ID you were assigned when your NETELLER merchant account was created
+ * @var unknown_type
+ */
+//define('AC_NETELLER_ID',  '456115522530');
+
+/**
+ * The Merchant Key you were assigned when your NETELLER merchant account was created.
+ * @var unknown_type
+ */
+//define('AC_NETELLER_MERCH_KEY',  '');
+//define('AC_NETELLER_MODE', 		 1); // 1 - TESTING MODE; 0 - LIVE PAYMENTS
+//define('AC_NETELLER_SECRET_KEY', 'TzOM3dbxdf');
+
+
+/**
+ * @return multitype:string boolean
+ */
+/*function ac_neteller_menu(){
+	$items['payment-neteller-callback'] = array(
+    'title' 		  => 'Payment Neteller Callback',
+    'access callback' => TRUE,
+    'page callback'   => 'ac_neteller_payment_callback',
+    'type' 			  => MENU_CALLBACK,
+	);
+	return $items;
+}*/
+
+/**
+ * @return multitype:string number multitype: The Ambigous <The, unknown, string, A, Returns, multitype:Ambigous <> , multitype:Optional >
+ */
+function ac_neteller_account_payment_method(){
+	global $base_url;
+	$icons 			   = $base_url.'/'.drupal_get_path('module', 'ac_neteller').'/icons/';
+	$methods['neteller'] = array(
+    'id' 		 => 'neteller',
+    'name' 		 => t('Neteller'),
+    'title' 	 => '<img src="'.$icons.'neteller-logo.png" title="'.t('Neteller').'" />'  ,
+    'komisiniai' => '0%',
+    'update' 	 => t('Iš karto'),
+    'limit' 	 => t('Min. 10 Lt').'<br/>'.t('Max.&nbsp;50&nbsp;000&nbsp;Lt'),
+    'limit_min'  => 10,
+    'limit_max'  => 50000,
+    'callback'   => 'ac_neteller_payment_start',
+    'weight' 	 => 2,
+    'category' 	 => 'ewallet',
+    'countries'	 => array(),
+	);
+	return $methods;
+}
+
+/**
+ * @return string
+ */
+function ac_neteller_lang(){
+	global $language;
+	switch ($language->language){
+		case 'ru':
+			return $language->language;break;
+		default:
+			return 'en'; break;
+	}
+}
+
+/**
+ * @param unknown_type $form
+ * @param unknown_type $form_state
+ * @return Ambigous <multitype:string, multitype:string multitype:string  unknown_type multitype:multitype:string  multitype:string number boolean The   multitype:string Ambigous <An, string>  multitype:string multitype:multitype:multitype:boolean    Ambigous <The, unknown, string, A, Returns, multitype:Ambigous <> , multitype:Optional >  >
+ */
+function ac_neteller_payment_start($form, &$form_state){
+	return ac_neteller_payment_form($form, $form_state);
+}
+
+/**
+ * @param unknown_type $form
+ * @param unknown_type $form_state
+ * @return multitype:string multitype:string  unknown multitype:multitype:string  multitype:string number boolean The   multitype:string Ambigous <An, string>  multitype:string multitype:multitype:multitype:boolean    Ambigous <The, unknown, string, A, Returns, multitype:Ambigous <> , multitype:Optional >
+ */
+function ac_neteller_payment_form($form, &$form_state){
+	$account 				   = $form['#user'];
+	
+	// adding check for blocked from user payment gateway
+	$method = 'neteller';
+	$title = t('Neteller');
+	account_deposit_is_active($method, array('@PaymentName' => $title)); 		
+	
+	$payment_form 		   = array();
+	$payment_form['#user']   = $account;
+	$payment_form['#action'] = 'https://api.topsport.lt/payments/neteller/';
+
+	$oid 			   = account_createOrderUser($form, $form_state);
+	
+	//$amount_in_euros = account_currency_api_convert($form_state['values']['currency'], 'EUR', $form_state['values']['amount']);
+
+	$request = array(
+		'uid'=>$account->uid,
+		'amount'=>$form_state['values']['amount'],
+		'currency' => $form_state['values']['currency'],
+		'lang' => ac_neteller_lang(),
+		'orderid' => $oid,		
+		'sucess_uri' => url('account/deposits/accept', array('absolute' => TRUE))
+			);
+	/*
+	$request = array(
+	//  ---------------------------------
+	//  ------ Merchant Details ---------
+	'version' 			 => '4.1',
+  	'test'				 => AC_NETELLER_MODE,
+  	'encoding'			 => 'UTF-8',
+    'merchant_id'    	 => AC_NETELLER_ID, 		// The Merchant ID you were assigned when your NETELLER merchant account was created
+    'merch_key' 	 	 => AC_NETELLER_MERCH_KEY, 	// Your Merchant Key
+    'merch_transid' 	 => $oid, 					// Unique Transaction ID
+	'language_code' 	 => ac_neteller_lang(), 	// Client Language
+	'merch_name'	 	 => t('TOP SPORT'),			// NETELLER Merchant title
+	'merch_account'  	 => '', 				// exaple: john123
+	//  ---------------------------------
+	//  ------ Personal ID data----------
+    'custom_1' => account_getCorrectName($account->data['firstname'].($account->data['middlename'] ? ' '.$account->data['middlename'] : '')) . ' ' . account_getCorrectName($account->data['surname']),
+	'custom_2' => userinfo_get_topsportId($account),
+    'custom_3' => ac_neteller_md5create( $amount_in_euros, 'EUR', $oid, AC_NETELLER_MODE ),  
+
+	//  ---------------------------------
+	//  ------ Payment Details ----------
+    'amount'   => $amount_in_euros,
+    'currency' => 'EUR',
+	); */
+
+	foreach($request as $key => $value){
+		$payment_form[$key] = array('#type' => 'hidden', '#value' =>  htmlspecialchars($value));
+	}
+
+	$payment_form[] = array(
+   'payment_method_icon' => array(
+		'#markup' => _account_payment_method_data($form_state['values']['payment_method'], 'title'),
+		'#prefix' => '<div>',
+		'#suffix' => '</div>',
+		),
+		
+    'payment_method' => array(
+      '#markup' =>  '<strong>'.t('Įmokos būdas:').'</strong> '._account_payment_method_data($form_state['values']['payment_method'], 'name'),
+      '#prefix' => '<div class="form-item">',
+      '#suffix' => '</div>',
+	),
+    'payment_update' => array(
+      '#markup' => '<strong>' . t('Įmokos įskaitymo trukmė').':</strong> '._account_payment_method_data($form_state['values']['payment_method'], 'update'),
+	),
+    'amount' => array(
+      '#markup' =>  '<strong>'.t('Suma:').'</strong> '.account_currency_string($form_state['values']['amount'], $form_state['values']['currency']),
+      '#prefix' => '<div class="form-item">',
+      '#suffix' => '</div>',
+	),
+    'net_account' => array(
+      '#type' => 'textfield',
+      '#title' => t('NETELLER account ID'),
+      '#description' => t('The member’s 12-digit Account ID that was assigned when they created their NETELLER account.'), 
+      '#size' => 12,
+      '#required' => true,
+	),
+    'secure_id' => array(
+      '#type' => 'textfield',
+      '#title' => t('NETELLER Secure ID'),
+      '#description' => t('The member’s 6-digit Secure ID that was assigned when they created their NETELLER account.'), 
+      '#size' => 6,
+      '#required' => true,
+	)
+	);
+
+	$payment_form['back'] = array(
+    '#markup' => l(t('Atgal'), 'account/deposits', array('attributes' => array('class' => array('form-submit', 'reset')))),
+    '#weight' => '20',
+	);
+
+	$payment_form['submit_action'] = array(
+    '#type' 	=> 'submit',
+    '#value' 	=> t('Patvirtinti'),
+    '#weight'	=> '21',
+    '#states' 	=> array(
+      	'enabled' => array( ':input[name="info_danger"]' => array('checked' => TRUE) ),
+	),
+	);
+	return $payment_form;
+}
+
+/**
+ * @return multitype:string Ambigous <A, string> multitype:string Ambigous <The, unknown, string, A, Returns, multitype:Ambigous <> , multitype:Optional >
+ */
+function uc_neteller_payment_cancelled_form() {
+	$form['uc_moneybookers_payment_cancelled_form'] = array(
+    '#value' => '<strong>' . t('Your payment was canceld.') . '</strong><br/>' .
+	t('Feel free to continue shopping on our site.'),
+    '#prefix' => '<div class="moneybookers_infotext">',
+    '#suffix' => '</div>',
+	);
+	$form['submit'] = array(
+    '#type'  => 'submit',
+    '#value' => t('continue'),
+	);
+	$form['#action'] = url('cart');
+	return $form;
+}
+
+/**
+ *
+ * Feedback variables:
+ * <!--- START OF EXAMPLE -
+ <?xml version="1.0" encoding="ISO-8859-1" ?>
+ <netdirect version="4.1">
+ <approval>yes</approval>
+ <amount>50</amount>
+ <da_amount>30</amount>
+ <trans_id>34</trans_id>
+ <error>none</error>
+ <fee>1.95</fee>
+ <time>{ts '2006-10-15 14:36:32'}</time>
+ <firstname>John</firstname>
+ <lastname>Smith</lastname>
+ <email>it@neteller.com</email>
+ <custom_1>Vardenis Pavardenis</custom_1>
+ <custom_2>00000</custom_2>
+ <custom_3>asdf98asdf874f85rf8788</custom_3>
+ <dafee>2.10</dafee>
+ <total_fee>4.05</total_fee>
+ <client_currency>CAD</client_currency>
+ <client_amount>67.63</client_amount>
+ <merchant_currency>USD</merchant_currency>
+ <merchant_amount>50</merchant_amount>
+ <fxrate>0.7393</fxrate>
+ </netdirect>
+ <!--- END OF EXAMPLE –
+ */
+function ac_neteller_payment_callback(){
+	if ( $_SERVER['REQUEST_METHOD'] === 'POST' ){
+		$payment_xml = file_get_contents('php://input');
+		$payment_xml = sx_array(simplexml_load_string($payment_xml));
+		//  Does the call have a transaction id? If not, forget it!
+		if (isset($payment_xml['trans_id'])){
+			watchdog('Neteller', 'Notification data. <pre>@data</pre>', array('@data' => print_r($payment_xml, true)));
+			$order_id = intval($payment_xml['trans_id']);
+			$uid = account_getOrderUser($order_id);
+			//  Do we have the corresponding order?
+			if ($uid) {
+				$account = user_load($uid);
+				//  Is the md5 hash valid?
+				if (ac_neteller_md5check($payment_xml['merchant_amount'], $payment_xml['merchant_currency'], $order_id, AC_NETELLER_MODE, $payment_xml['custom_3'])){
+					try{
+						// 3. save and send data
+						$params = array(
+    						'user_id'       => userinfo_get_topsportId($account),
+    						'amount'        => account_currency_api_convert($payment_xml['merchant_currency'], 'LTL', $payment_xml['merchant_amount']),
+    						'extra_amount'  => 0,
+    						'order_id'      => $order_id,
+    						'merchant_id'   => 666, // it does not mater, we can send any int
+    						'language'      => 'LT',
+    						'currency'      => 'LTL',//$_POST['paycurrency'],
+    						'pay_text'      => $order_id,
+    						'payment'       => 'neteller',
+    						'status'        => 'done',
+    						'error'         => '',
+    						'client_name'   => account_getCorrectName($account->data['firstname'].($account->data['middlename'] ? ' '.$account->data['middlename'] : '')),
+    						'client_surename' => account_getCorrectName($account->data['surname']),
+						);
+						account_payment_done($account, $params);
+						echo 'OK';
+					}catch (Exception $e){
+						echo get_class($e).': '.$e->getMessage();
+					}
+				} else {
+					watchdog('Neteller', 'Wrong MD5 signature. <pre>@data</pre>',  array('@data' => print_r($payment_xml, true)), WATCHDOG_ERROR);
+				}
+			} else {
+				watchdog('Neteller', 'Notification attempt for non-existent order. <pre>@data</pre>',  array('@data' => print_r($payment_xml, true)), WATCHDOG_ERROR);
+			}
+		} else {
+			watchdog('Neteller', 'Notification attempt without order ID. <pre>@data</pre>',  array('@data' => print_r($payment_xml, true)), WATCHDOG_ERROR);
+		}
+	}
+}
+
+/**
+ * @param float   $AMOUNT
+ * @param string  $CURRENCY
+ * @param integer $TRANSACTION_ID
+ * @param integer $MODE
+ * @param string  $SECURITY_CODE
+ * @return boolean
+ */
+function ac_neteller_md5check( $AMOUNT, $CURRENCY, $TRANSACTION_ID, $MODE, $SECURITY_CODE ) {
+	$shop_signature = strtoupper(md5( AC_NETELLER_ID . $AMOUNT . $CURRENCY . $TRANSACTION_ID . $MODE . AC_NETELLER_SECRET_KEY ));
+	if ($shop_signature === strtoupper($SECURITY_CODE) ) {
+		return true;
+	}
+	return false;
+}
+
+/**
+ * @param unknown_type $AMOUNT
+ * @param unknown_type $CURRENCY
+ * @param unknown_type $TRANSACTION_ID
+ * @param unknown_type $MODE
+ * @return string
+ */
+function ac_neteller_md5create( $AMOUNT, $CURRENCY, $TRANSACTION_ID, $MODE){
+	return md5( AC_NETELLER_ID . $AMOUNT . $CURRENCY . $TRANSACTION_ID . $MODE . AC_NETELLER_SECRET_KEY );
+}

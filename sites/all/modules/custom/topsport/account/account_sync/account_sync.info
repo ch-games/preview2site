@@ -1,0 +1,7 @@
+; $Id: account_sync.info $
+name = Account sync
+description = "Sinkronizuoja vartotojus senoje ir naujoje svetaineje"
+dependencies[] = topsport
+core = 7.x
+version = 7.x-0.x-dev
+package = TopSport

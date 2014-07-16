@@ -1,0 +1,49 @@
+<?php
+
+// $Id: automailer.install $
+
+function automailer_schema(){
+	$scheme['automailer'] = array(
+  		'description' => 'Stores users auto send mail stats',
+  		'fields' => array(      		
+      		'uid' => array(
+        		'type' => 'int',
+        		'unsigned' => TRUE,
+        		'not null' => TRUE,
+        		'default' => 0,
+        		'description' => "The user's {users}.uid.",
+      		),      
+			'type' => array(
+				'type' => 'varchar',
+	        	'length' => 20,
+	        	'not null' => TRUE,
+	        	'default' => '',
+				'description' => '',
+			),
+		    'step' => array(
+				'type' => 'int',
+				'not null' => FALSE,				
+				'default' => 0,
+				'description' => '',
+			),
+      		'timestamp' => array(
+        		'type' => 'int',
+        		'unsigned' => FALSE,
+        		'not null' => TRUE,
+        		'default' => 0,
+        		'description' => "",
+      		)
+      	),
+  		'primary key' => array('uid'),
+		'indexes' => array(
+			'type' => array('type'),
+		),
+    	'foreign keys' => array(
+	      	'automailer_users' => array(
+	        	'table' => 'users',
+	        	'columns' => array('uid' => 'uid'),
+	      	),
+		),
+  	);
+return $scheme;
+}

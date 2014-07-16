@@ -1,0 +1,53 @@
+<?php
+
+
+function tp404_menu(){
+
+	$eror404 = array(
+    'xml-service/pasiulymai.php',
+    'xml/sitemap.php',
+    'xml-service/rezultatai.php',
+    'custom/__rezultatai.php',
+    'custom/__pasiula.php',
+    'heatmap/js/clickheat.js',
+    'skaiciuokle.php',
+    'styles/loterijos.css',
+    'styles/style.css',
+    'styles/layout.css',
+    'swfobject.js',
+    'tooltip.js',
+    'ruler.js',
+    'drop_down.js',
+    'ads.js',
+    'tooltip.js',
+    'javascripts.js',
+    'jquery.js',
+    'heatmap/click.php',
+    'crossdomain.xml',
+    'custom/__groups.php',
+	);
+
+	foreach($eror404 as $link){
+		$items[$link] = array(
+      'title' => 'Pasiulos servisas',
+      'page callback' => 'tp404_goto',
+      'page arguments' => array($link),
+      'access callback' => true,
+      'type' => MENU_CALLBACK,
+		);
+	}
+
+	return $items;
+}
+
+function tp404_goto($link){
+
+	$path = 'https://senas.topsport.lt/'.$link;
+
+	$options = array(
+    'query' => $_GET
+	);
+
+	drupal_goto($path, $options, 301);
+
+}

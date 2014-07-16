@@ -1,0 +1,52 @@
+#block-livesportsbook-livesportsbook{background:url(images/right-block-footer.png) left bottom !important;padding-bottom:3px;}
+#block-livesportsbook-livesportsbook .block-title{background-image:url(images/right-block-header.png) !important;height:44px !important;}
+#block-livesportsbook-livesportsbook .block-title h4 span{text-align:center;width:203px;}
+#block-livesportsbook-livesportsbook .block-content{background:#ecedef !important;padding-left:0 !important;}
+#block-livesportsbook-livesportsbook .current-live-now{height:100px;background:url(images/neutral-slide.jpg) no-repeat;cursor:pointer;}
+#block-livesportsbook-livesportsbook .current-live-now.basketball{background-image:url(images/basketball.jpg)}
+#block-livesportsbook-livesportsbook .current-live-now.icehockey{background-image:url(images/icehockey.jpg);}
+#block-livesportsbook-livesportsbook .current-live-now.football{background-image:url(images/football.jpg);}
+#block-livesportsbook-livesportsbook .current-live-now.tennis{background-image:url(images/tennis.jpg);}
+#block-livesportsbook-livesportsbook .current-live-now.americanfootball{background-image:url(images/americanfootball.jpg);}
+#block-livesportsbook-livesportsbook .current-live-now.handball{background-image:url(images/handball.jpg);}
+#block-livesportsbook-livesportsbook .block-content .current-live-now span{display:block;color:#FFF;font-weight:bold;font-size:14px;text-align:center;width:92%;margin:0 auto;height:20px;}
+#block-livesportsbook-livesportsbook .block-content .current-live-now span.team1{padding-top:19px;}
+#block-livesportsbook-livesportsbook .block-content .current-live-now span.vs{color:#9aff88;font-size:12px;}
+#block-livesportsbook-livesportsbook .block-content div.title-holder{float:left;width:85%;color:#3f3f3f;overflow:hidden;}
+#block-livesportsbook-livesportsbook .block-content ul{margin:0;padding:0;}
+#block-livesportsbook-livesportsbook .block-content li{list-style:none;font-size:10px;color:#3f3f3f;font-weight:bold;border-bottom:1px solid #d4d4d4;line-height:10px;padding:4px 5px;height:11px;white-space:nowrap;overflow:hidden;}
+#block-livesportsbook-livesportsbook .block-content span.title{float:left;width:auto;color:#3f3f3f;overflow:hidden;}
+#block-livesportsbook-livesportsbook .block-content li.last{border:none !important;}
+#block-livesportsbook-livesportsbook li.live-match:hover,#block-livesportsbook-livesportsbook li.live-match:hover *{cursor:pointer;color:#c6e0ef !important;background:#166ab1 !important;background-image:none;position:relative;}
+#block-livesportsbook-livesportsbook .block-content li.sport-area{text-align:center;color:#3f3f3f;font-family:Verdana, Geneva, sans-serif;font-size:11px;font-weight:bold;background:#f0f0f2 url(images/sports_area_title_bg.png) repeat-x;border-bottom:1px solid #d4d4d4;border-top:1px solid #d4d4d4;padding:5px 0;text-transform:uppercase;height:auto;}
+#block-livesportsbook-livesportsbook .block-content li.sport-area .sport-icon{display:inline;vertical-align:text-bottom !important;}
+#block-livesportsbook-livesportsbook .block-content li span{color:#9b9b9b;float:left;width:35px;height:12px;}
+#block-livesportsbook-livesportsbook .block-content li span.live-now,.odds  span.live-now{color:#289e0b;font-weight:bold;font-size:10px;}
+#block-livesportsbook-livesportsbook .block-content li span.soon,.odds .soon{color:#F7941D;font-weight:bold;font-size:10px;}
+#block-livesportsbook-livesportsbook .block-content .all-live-link{height:20px;line-height:19px;}
+.odds tr.in-play .competitors{font-weight:bold;}
+#block-live-tabs {
+	margin-bottom: -3px;
+	z-index: 500;
+	position: relative;
+}
+#block-live-tabs button{
+	border: none;
+	border-radius: 0;
+	width: 50%;
+	padding: 5px; 
+	font-weight: bold;
+	color: #71A703;
+	text-decoration: underline;
+	cursor: pointer;
+}
+#block-live-tabs button[disabled=disabled], #block-live-tabs button:disabled{
+	font-weight: normal;
+	color:gray;
+	text-decoration: none;
+	border: none;
+}
+.block-livesportsbook .livewidget {
+	position: relative;
+	z-index: 400;
+}

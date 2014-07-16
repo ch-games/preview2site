@@ -1,0 +1,983 @@
+<?php
+
+use oddsManager as OddsApi;
+
+function odds_menu() {
+    $items['odds/%'] = array(
+      'title' => 'Lažybų pasiūla',
+      'page callback' => 'odds_renderPage',
+      'page arguments' => array(1),
+      'access arguments' => array('access content'),
+      'type' => MENU_SUGGESTED_ITEM,
+    );
+    $items['odds/all'] = array(
+      'title' => 'Lažybų pasiūla',
+      'page callback' => 'odds_renderPage',
+      'page arguments' => array(1),
+      'access arguments' => array('access content'),
+      'type' => MENU_SUGGESTED_ITEM,
+    );
+    $items['odds-overview'] = array(
+      'title' => 'Odds page',
+      'page callback' => 'odds_renderOverviewPage',
+      'access arguments' => array('access content'),
+      'type' => MENU_SUGGESTED_ITEM,
+    );
+
+    return $items;
+}
+
+function odds_init() {
+    drupal_add_js(drupal_get_path('module', 'odds') . '/offers-filter.js');
+}
+
+function odds_renderOverviewPage() {
+    global $language;
+    $html = '';
+    return $html;
+}
+
+function odds_filter_form($form, &$form_state, $gameTypes, $gameTypesGroups) {
+    $form['#token'] = FALSE;
+    $gts = array();
+    $options = array();
+    $checked = array();
+
+
+    foreach ($gameTypesGroups as $group) {
+        $key = implode(',', $group['children']);
+        $options[$key] = t($group['title']) . '<span class="odds-gt-total">' . $group['total'] . '</span>';
+    }
+
+    $gtcounts = array();
+
+    foreach ($gameTypes as $i => $t) {
+        $gts[$t['title']][] = $i;
+        $gtcounts[$t['title']] = (isset($gtcounts[$t['title']]) ? $gtcounts[$t['title']] : 0) + $t['total'];
+    }
+
+    foreach ($gts as $t => $a)
+        $options[implode(',', $a)] = preg_replace('|{(?:[^}]*)}|', '', $t) . '<span class="odds-gt-total">' . $gtcounts[$t] . '</span>';
+
+// check gametypes already on the page
+
+    if (null !== odds_rendered_gametypes())
+        foreach (array_keys($options) as $op)
+            foreach (explode(',', $op) as $gt)
+                if (in_array($gt, odds_rendered_gametypes())) {
+                    $checked[$op] = $op;
+                    break;
+                }
+
+
+    $form['offers']['gametypes'] = array(
+      '#type' => 'checkboxes',
+      '#options' => $options,
+      '#default_value' => $checked
+    );
+
+    $form['offers']['toggle_gtids'] = array(
+      '#type' => 'markup',
+      '#markup' => '<buton class="btn btn-default pull-right btn-toogle-gt-filter" onclick="return toggleGametypes(); return false;" title="' . t('Rodyti/slėpti statymų filtrą') . '" data-toggle="tooltip"><span class="glyphicon glyphicon-eye-close"></span></buton>',
+    );
+
+    $form['offers']['submit_action'] = array(
+      '#type' => 'submit',
+      '#value' => t('Filtruoti'),
+      '#attributes' => array('class' => array('btn btn-primary filter-submit-button')),
+    );
+    $form['#redirect'] = FALSE;
+
+    return $form;
+}
+
+function odds_form_alter(&$form, &$form_state, $form_id) {
+  if (in_array($form_id, array('odds_filter_form'))) {
+      if(isset($form['form_build_id'])){
+          unset($form['form_build_id']);
+      }
+      if(isset($form['#token'])){
+          unset($form['#token']);
+      }
+  }
+}
+
+function odds_filter_form_submit($form, &$form_state) {
+    $values = array();
+    foreach ($form_state['values']['gametypes'] as $key => $gt) {
+        if ($gt) {
+            $vals = explode(',', $gt);
+            $values = array_merge($values, $vals);
+        }
+    }
+    odds_filter_form_result($values);
+
+    $form_state['rebuild'] = TRUE;
+}
+
+function odds_filter_form_result($values = null) {
+    static $odds_filter_form_result;
+
+    if ($values) {
+        $odds_filter_form_result = $values;
+    }
+    return $odds_filter_form_result;
+}
+
+function odds_stats_icon($eid, $title = false) {
+    global $language;
+    $_stat_data = db_query('SELECT stats_uri, type FROM ts_stats WHERE eid = :eid', array(':eid' => $eid))->fetch();
+    if($_stat_data){
+        $type = 'newtab';
+        $uri = OddsViewHelper::getStatisticsDomain($_stat_data->type).$_stat_data->stats_uri;
+        if($_stat_data->type == 'h2h'){
+             $type = 'popup';
+             $uri = $uri.'&lg='.$language->language;  
+        }
+        $r = '<a class="event-stats" href="javascript:;" stat-type="'.$type.'" stat:uri="' . $uri . '"' . ($title ? ' stat:evtitle="' . $title . '"' : '') . ' title="' . t('Peržiūrėti statistiką') . '"><span class="glyphicon glyphicon-stats"></span></a>';
+        return $r;
+    }   
+    return '';
+}
+
+function odds_dateTimeFormat($time, $showIcon = true) {
+    $tomorrow = strtotime('tomorrow');
+    $onemoreday = strtotime('+1 day', $tomorrow);
+    $dif = $time - REQUEST_TIME;
+
+    $icon_variables = array(
+      'path' => '/sites/all/img/icons/siandien.gif',
+      'alt' => '',
+      'title' => t('šiandien'),
+      'width' => null,
+      'height' => null,
+      'attributes' => array('class' => 'today-icon'),
+    );
+    if ($dif < 3600 AND $dif > 0) {
+        return ($showIcon ? theme_image($icon_variables) . ' ' : '') . t('už %min min', array('%min' => round($dif / 60, 0)));
+    } elseif ($time < $tomorrow) {
+        return ($showIcon ? theme_image($icon_variables) . ' ' : '') . ' ' . t('šiandien') . ' ' . format_date($time, 'custom', 'H:i');
+    } elseif ($time < $onemoreday) {
+        return t('rytoj') . ' ' . format_date($time, 'custom', 'H:i');
+    }
+    if (date('Y') != date('Y', $time)) {
+        return format_date($time, 'custom', 'Y-m-d H:i');
+    }
+    return format_date($time, 'custom', 'm-d H:i');
+}
+
+function odds_is_filtered_view_type($type, $eid) {
+    return !$eid && $type != 'superbet' && $type != 'search' && $type != 'popular';
+}
+
+function odds_page_not_found() {
+    $html = '';
+    $title = t('Puslapis nerastas');
+    $description = '<p>Atsiprašome tačiau šio puslapio nepavyko rasti...</p>';
+    drupal_set_title($title);
+
+    $html_async = '<div id="offers_list">'
+            . '<div id="async-lastminute-blk" class="panel-crosspromo" data-async-load="/front/Odds/json/lastminute_block"><div id="block-lastminute-block"></div></div>'
+            . '<div id="async-popular-blk" class="panel-crosspromo" data-async-load="/front/Odds/json/popular_block"><div id="block-popular-block"></div></div>'
+            . '</div>';
+
+    $html .= '<div class="panel panel-sport panel-oddsnotfound-heading">'
+            . '<div class="panel-heading"><h2>' . $title . '</h2></div>'
+            . '<div class="panel-body">' . $description . '</div>'
+            . '</div>'
+            . '<div class="panel-oddsnotfound">'
+            . $html_async
+            . '</div>';
+
+    return $html;
+}
+
+function _odds_get_topevents($aid, $lang) {
+
+    $popEvents = array();
+
+    $evManager = new OddsApi\OddsManager();
+
+    $topevents = $evManager->getPopularOffers($lang, 0, 10);
+
+    foreach ($topevents['objects'] as $area) {
+        if ($area['id'] != $aid)
+            continue;
+
+        foreach ($area['events'] as $e) {
+            $popEvents[$e['object']['id']] = $e['object'];
+        }
+    }
+
+    return $popEvents;
+}
+
+/*
+ * generate loser/favorite topbet combinations
+ */
+
+function odds_generate_prepaired_bets($type) {
+    global $user;
+    if (!isset($user->data['currency']))
+        $user->data['currency'] = 'LTL';
+
+    $data = odds_prepair_topbet();
+
+    if (!is_array($data) || !count($data))
+        return false;
+
+    $times = array();
+
+
+    foreach ($data as $d)
+        $times[] = $d['date'];
+
+    array_multisort($times, $data);
+
+    $pids = array();
+    $bets = array();
+
+    $url = '#bet-{amount}-multi-';
+    $koef = 1.0;
+
+    $amount = 25;
+
+
+    foreach ($data as $d) {
+        if (!($d['peid'] && in_array($d['peid'], $pids)) && !in_array($d['eid'], $pids)) {
+            if ($koef * $d[$type]['odds'] < 800 && $d['date'] > time() + 600) {
+                $bets[] = $d['eid'] . ';' . $d[$type]['id'];
+                $koef *= $d[$type]['odds'];
+                if ($d['peid'])
+                    $pids[] = $d['peid'];
+                $pids[] = $d['eid'];
+            } else
+                break;
+        }
+
+        if (count($bets) > 5)
+            break;
+    }
+
+    if (count($bets) > 3) {
+        $koef = round($koef, 2);
+        $win = $koef * $amount;
+
+        if ($win > 3500) {
+
+            $amount = floor(3500 / $koef);
+            $win = $koef * $amount;
+        }
+
+        $url .= implode('-', $bets);
+
+        $url = strtr($url, array('{amount}' => $amount));
+
+        return array('url' => $url, 'coef' => $koef, 'win' => $win, 'currency' => $user->data['currency']);
+    }
+
+    return false;
+}
+
+/*
+ * Collects all events from filter for topbet generation
+ */
+
+function odds_prepair_topbet($odata = null) {
+    static $offers;
+    if ($odata === null) { // generate
+        return $offers;
+    } else { // append event to list 
+        $cnt = count($odata['bets']);
+        
+        if ($cnt == 2 || $cnt == 3 || $cnt == 5) {
+            if ($cnt == 2) {
+                $idx2 = 1;
+            } else {
+                $idx2 = 2;
+            }
+            if($odata['combtosamemodule'] === false){
+                if ($odata['bets'][0]['odds'] > $odata['bets'][$idx2]['odds']) {
+                    $offers[] = array('eid' => $odata['id'], 'date' => strtotime($odata['date']), 'peid' => $odata['pid'], 'favorite' => $odata['bets'][$idx2], 'outsider' => $odata['bets'][0]);
+                } else {
+                    $offers[] = array('eid' => $odata['id'], 'date' => strtotime($odata['date']), 'peid' => $odata['pid'], 'favorite' => $odata['bets'][0], 'outsider' => $odata['bets'][$idx2]);
+                }
+            }
+
+            //$offers[$odata['id']] = $odata;
+        }
+    }
+}
+
+/*
+ * Generates super bet combination ( superbet + 4 random popular events)
+ */
+
+function odds_generate_topbet($sof, $lang) {
+    global $user;
+    if (!isset($user->data['currency'])) {
+        $user->data['currency'] = 'LTL';
+    }
+    $popoffers = _odds_get_topevents($sof['aid'], $lang);
+
+    $url = '#bet-{amount}-multi';
+
+    $sc = 0;
+    $sof['bets'] = isset($sof['bets']) ? $sof['bets'] : array();
+    foreach ($sof['bets'] as $k => $b) {
+        if ($sof['bets'][$sc]['odds'] > $b['odds'])
+            $sc = $k;
+    }
+    $sof['bets'] = $sof['bets'][$sc];
+    $notuse_eid = $sof['pid'];
+
+    $offers = array($sof);
+    $koef = 1.0;
+    $now = time();
+
+    foreach ($popoffers as $o)
+        if ($o['id'] != $notuse_eid && $o['pid'] != $notuse_eid && strtotime($o['date']) > $now) {
+
+            $bbet = false;
+            foreach ($o['bets'] as $k => $v) {
+                if (!$bbet)
+                    $bbet = $v;
+                elseif ($bbet['odds'] > $v['odds'])
+                    $bbet = $v;
+            }
+
+            $o['bets'] = $bbet;
+
+            if ($bbet['odds'] > 1.15) {
+                $offers[] = $o;
+            }
+            if (count($offers) > 4)
+                break;
+        };
+
+    if (count($offers) <= 4)
+        return false; // not enough events
+
+    foreach ($offers as $o) {
+        $url .= '-' . $o['id'] . ';' . $o['bets']['id'];
+        $koef *= $o['bets']['odds'];
+    }
+
+
+    $koef = round($koef, 2);
+
+    return array('url' => $url, 'coef' => $koef, 'win' => $koef * 25, 'currency' => $user->data['currency']);
+}
+
+function odds_renderPage($type = null, $aid = null, $cid = null, $mid = null, $eid = null) {
+    global $language;
+    $output = '';
+    $heading_icon = 'default';
+
+    require_once 'oddsManager.php';
+    require_once 'OddsViewHelper.php';
+    $classicMode = false;
+    $lang = $language->language;
+
+    $args = odds_validate_page_arguments(func_get_args());
+
+    $aid = isset($args[1]) ? $args[1] : null;
+    $cid = isset($args[2]) ? $args[2] : null;
+    $mid = isset($args[3]) ? $args[3] : null;
+    $eid = isset($args[4]) ? $args[4] : null;
+    $_key = 'ODDSM_' . implode(',', array(__CLASS__, __FUNCTION__, $language->language, $type, $aid, $cid, $mid, $eid, odds_show_europeview()));
+    if ($type == 'search') {
+        if (isset($args[1]) && strlen($args[1]) < 3) {
+            drupal_set_message(t('Įveskite bent 3 simbolius'), 'warning');
+            return odds_page_not_found();
+        }
+        $argnum = func_num_args();
+        $aid = $argnum > 2 ? isset($args[2]) : null;
+        $cid = $argnum > 3 ? isset($args[3]) : null;
+        $mid = $argnum > 4 ? isset($args[4]) : null;
+        $eid = $argnum > 5 ? isset($args[5]) : null;
+    }
+
+    $offersManager = new OddsApi\OddsManager();
+
+    $offerData = array();
+
+    $filterGameTypes = array();
+
+    if ($aid != null && odds_is_filtered_view_type($type, $eid)) {
+        $gameTypesGroups = $offersManager->getUsedGametypesGroups($lang, $args);
+        $gameTypes = $offersManager->getUsedGametypes($lang, $args);
+
+        function gtreduce(&$n) {
+            return array('title' => $n['title'], 'total' => $n['total']);
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $form = drupal_get_form('odds_filter_form', array_map('gtreduce', odds_filter_gametypes($gameTypes)), $gameTypesGroups);
+            $filterGameTypes = odds_filter_form_result();
+        }        
+    }
+
+    /* disable caching issues with cache expire time */
+    if (!count($filterGameTypes)) {
+        $cache = cache_get($_key, 'cache');
+        if ($cache) {
+            $c2 = cache_get($_key . '_pagetitle', 'cache');
+            if ($c2) {
+                drupal_set_title($c2->data);
+            }
+            return $cache->data;
+        }
+    }
+
+    odds_load_odds($offersManager, $offerData, $lang, $classicMode, $args, count($filterGameTypes) ? $filterGameTypes : false);
+    $expire = $offersManager->getCacheExpire();
+
+    if ($aid != null && odds_is_filtered_view_type($type, $eid)) {
+        // Adding filter			
+        odds_filter_form_result(odds_rendered_gametypes());
+        if (!isset($form)){
+            $form = drupal_get_form('odds_filter_form', array_map('gtreduce', odds_filter_gametypes($gameTypes)), $gameTypesGroups);   
+        }
+        if (count($gameTypes) > 2 || count($gameTypesGroups) > 2) {
+            $outsider_combination = odds_generate_prepaired_bets('outsider');
+            $favorite_combination = odds_generate_prepaired_bets('favorite');
+            $output .= odds_draw_filters($form, $outsider_combination, $favorite_combination);
+        }
+        
+    }
+
+    // No items found rendering Odds not found
+    if (count($offerData) == 0) {
+        return odds_page_not_found();
+    }
+    
+    require_once 'oddsView.php';
+
+    $t_aid = null;
+    $t_cid = null;
+    $t_mid = null;
+
+
+    $t_aid = ($aid === null) ? key($offerData['area']) : $aid;
+    $t_cid = ($cid === null) ? key($offerData['area'][$t_aid]['country']) : $cid;
+    $t_mid = ($mid === null) ? key($offerData['area'][$t_aid]['country'][$t_cid]['module']) : $mid;
+
+    if (isset($offerData['area'][$t_aid]) && isset($offerData['area'][$t_aid]['country'][$t_cid]) && isset($offerData['area'][$t_aid]['country'][$t_cid]['module'][$t_mid])) {
+        $_tmp_ = $offerData['area'][$t_aid]['country'][$t_cid]['module'][$t_mid]['gameTypes'];
+        $_tmp_values = array_values($_tmp_);
+
+        $tmp = array_shift($_tmp_values);
+
+        $_tmp_offerlist_values = array_values($tmp['offerlist']);
+        $tmp = array_shift($_tmp_offerlist_values);
+
+        $_tmp_category = explode(' » ', $tmp['category']);
+        $sport_title = reset($_tmp_category);
+        if ($eid) {
+            $back_url = func_get_args();
+            array_unshift($back_url, 'odds');
+            array_pop($back_url);
+            $back_url = implode('/', $back_url);
+            $league = end($_tmp_category);
+            
+            $extension = odds_get_match_info($tmp['e_ext'], $tmp['aid'], $tmp['date']);
+            $extension_html = $extension ? ' <span class="label">('.$extension.')</span>' :'';
+            
+            $stats_html = '<span class="stats">'.odds_stats_icon( $eid, $tmp['title']).'</span>';
+            $gm_info = '<span class="date">' . $tmp['date'] . '</span><span class="odds-gm-league"><a href="/'.$back_url.'">' . $league . '</a></span><span class="link">' . l(t('Atgal į sąrašą'), $back_url) . '</span>'.$stats_html;
+            $output .= '<div class="panel-heading">' . $gm_info . '<h2><span class="tssporticon-big tssporticon-s' . $t_aid . '-big"></span>' . odds_render_match_title($tmp) . $extension_html.'</h2></div>';
+            drupal_set_title($page_title = $tmp['title'] . ' - ' . $tmp['category'], PASS_THROUGH);
+        } elseif ($mid)
+            drupal_set_title($page_title = $tmp['category']);
+        elseif ($cid)
+            drupal_set_title($page_title = $tmp['category']);
+        elseif ($aid)
+            drupal_set_title($page_title = $tmp['category']);
+        else {
+            $page_title = $sport_title = formatMainTitle($type);
+            drupal_set_title($page_title);
+            $heading_icon = $type;
+        }
+
+
+        /*
+         *  Rendering header
+         */
+        if ($type == 'superbet') {
+            $page_title = t('Superstatymas');
+            drupal_set_title($page_title);
+            $output = '<div class="panel panel-sport panel-superbetpage">'
+                    . '<div class="panel-heading"><span class="tssporticon tssporticon-superbet"></span><h2>' . $page_title . '</h2></div>'
+                    . '</div>';
+        } elseif ($eid) {
+            $output = '<div class="panel panel-sport panel-sport' . (isset($aid) ? $aid : '') . '"><div class="panel-body">' . $output . '</div></div>';
+        } elseif ($type == 'search') {
+            $page_title = t('Lažybų paieškos rezultatai');
+            $output = '<div class="panel panel-sport panel-sport' . (isset($aid) ? $aid : '') . '"><div class="panel-heading"><span class="tssporticon-big tssporticon-s' . (isset($aid) ? $aid : $heading_icon) . '-big"></span><h2>' . $page_title . '</h2></div><div class="panel-body">' . $output . '</div></div>';
+        } else {
+            $output = '<div class="panel panel-sport panel-sport' . (isset($aid) ? $aid : 's-all') . '"><div class="panel-heading"><span class="tssporticon-big tssporticon-s' . (isset($aid) ? $aid : $heading_icon) . '-big"></span><h2>' . $sport_title . '</h2></div><div class="panel-body">' . $output . '</div></div>';
+        }
+        /* disable caching issues with cache expire time */
+        cache_set($_key . '_pagetitle', $page_title, 'cache', $expire);
+
+
+        $gameTypes = isset($gameTypes) ? $gameTypes : null;
+        $view = new OddsView($offerData, $gameTypes);
+        $hide_longterm = ($mid !== null ? true : false);
+        if ($eid) {
+            $output = '<div class="panel panel-matchpage matchpage">' . $output . $view->renderMatch($type, odds_show_europeview()) . '</div>';
+            // Addind async blocks for cross promotion
+            $output.= '<div id="offers_list">'
+                    . '<div id="async-super-blk" class="panel-crosspromo" data-async-load="/front/Odds/json/super/' . $aid . '"></div>'
+                    . '<div id="async-lastminute-blk" class="panel-crosspromo" data-async-load="/front/Odds/json/lastminute/' . $aid . '"></div>'
+                    . '<div id="async-popular-blk" class="panel-crosspromo" data-async-load="/front/Odds/json/popular/' . $aid . '"></div>'
+                    . '</div>';
+        } elseif ($type == 'superbet') {
+            $output .= '<div class="panel panel-sport panel-superbet-body">' . $view->renderSuperBet($type, odds_show_europeview()) . '</div>';
+            // Addind async blocks for cross promotion
+            $output.= '<div id="offers_list">'
+                    . '<div id="block-lastminute-block" class="panel-crosspromo" data-async-load="/front/Odds/json/lastminute_block"></div>'
+                    . '<div id="block-popular-block" class="panel-crosspromo" data-async-load="/front/Odds/json/popular_block"></div>'
+                    . '</div>';
+        } elseif ($type == 'popular') {
+            $output .= $view->renderBlock($type, odds_show_europeview(), false, ($aid == null));
+        } else {
+            $output .= $view->renderBlock($type, odds_show_europeview(), $hide_longterm, ($aid == null));
+        }
+
+        if ($aid !== null && $eid === null) {
+            $output .= odds_getSportRulesBlock($aid);
+        }
+        if (!count($filterGameTypes)) {
+            cache_set($_key, $output, 'cache', $expire);
+        }        
+    } else {
+        $output = '';
+    }
+    return $output;
+}
+
+function odds_rendered_gametypes($gtid = null) {
+    static $gametypes;
+    if ($gtid === null) {
+        return $gametypes;
+    }
+    if ($gametypes === null || !in_array($gtid, $gametypes)) {
+        $gametypes[] = $gtid;
+    }
+}
+
+function odds_show_europeview() {
+    return true;
+    global $user;
+    $show_europeview = false;
+    if (user_is_anonymous() || (isset($_COOKIE['europeview']) && (bool) $_COOKIE['europeview']) || (isset($user->data['europeview']) && (bool) $user->data['europeview']) || (!isset($user->data['europeview']))) {
+        $show_europeview = true;
+    }
+    return $show_europeview;
+}
+
+function odds_draw_filters($form, $outsider_comb, $favorite_comb) {
+    global $user;
+
+    $html = '
+  <div id="offers_filter">    
+    <div class="filters-list">' . drupal_render($form) . '<div class="clear"></div></div>';
+
+    if ($outsider_comb)
+        $html .= '<button class="btn btn-topcomb" onclick="Odds.setDailyComb(\'dc' . $outsider_comb['url'] . '\'); _gaq.push([\'_trackEvent\', \'SuggestedMiltiBet\', \'Underdog\', \'' . $outsider_comb['win'] . '\']);">' . t('Autsideriai: %money %currency', array('%money' => number_format($outsider_comb['win'], 2, '.', ' '), '%currency' => $outsider_comb['currency'])) . '</button>';
+
+    if ($favorite_comb)
+        $html .= '<button class="btn btn-topcomb" onclick="Odds.setDailyComb(\'dc' . $favorite_comb['url'] . '\'); _gaq.push([\'_trackEvent\', \'SuggestedMiltiBet\', \'Favorite\', \'' . $favorite_comb['win'] . '\']);">' . t('Favoritai: %money %currency', array('%money' => number_format($favorite_comb['win'], 2, '.', ' '), '%currency' => $favorite_comb['currency'])) . '</button>';
+
+    $html .= '</div>';
+
+    return $html;
+}
+
+function odds_drop_event_gametype_prefix($title, $gext, $eext) {
+    $t = explode('/', $title);
+    $i = 0;
+    $exts = array($gext, $eext);
+    //echo "<br> [$gext], [$eext] - ";
+    while ($i < count($t)) {
+        if (in_array($t[$i], $exts)) {
+            //		echo " splice [$t[$i]] "; 
+            array_splice($t, $i, 1);
+        } else {
+            //		echo " skipped [$t[$i]] ";
+            $i++;
+        }
+    }
+
+    return implode('/', $t);
+}
+
+function odds_load_odds($offersManager, &$offerData, $language, $classicMode, $args, $filtergametypes) {
+    static $child_counts;
+
+    $type = $args[0];
+    $data = $offersManager->getById($language, $classicMode, $args);
+
+    if ($type == 'popular') {
+        odds_load_popular_odds($offerData, $data, $classicMode, $args);
+        return;
+    }
+
+    $prev_id = null;
+    if (count($data)) {
+        foreach ($data as $d) {
+            if ($d['type'] == 'category') {
+                $path = explode('/', $d['object']['id']);
+                $cnt = count($path);
+                $prepath = array($path[0]);
+                if ($path[0] == 'search') {
+                    $cnt--;
+                    $prepath[] = $path[1];
+                    array_splice($path, 1, 1);
+                }
+
+                switch ($cnt) {
+                    case 2:
+                        $offerData['area'][$path[1]] = array('id' => $path[1], 'title' => $d['object']['name'], 'count' => $d['object']['count']);
+                        $prepath[] = $path[1];
+                        odds_load_odds($offersManager, $offerData, $language, $classicMode, $prepath, $filtergametypes);
+                        break;
+                    case 3:
+                        $offerData['area'][$path[1]]['country'][$path[2]] = array('id' => $path[2], 'title' => $d['object']['name'], 'count' => $d['object']['count']);
+                        $prepath[] = $path[1];
+                        $prepath[] = $path[2];
+                        odds_load_odds($offersManager, $offerData, $language, $classicMode, $prepath, $filtergametypes);
+                        if (!isset($offerData['area'][$path[1]]['country'][$path[2]]['module']) || !count($offerData['area'][$path[1]]['country'][$path[2]]['module']))
+                            unset($offerData['area'][$path[1]]['country'][$path[2]]);
+                        if (!isset($offerData['area'][$path[1]]['country'][0]['module']) || !count($offerData['area'][$path[1]]['country'][0]['module']))
+                            unset($offerData['area'][$path[1]]['country'][0]);
+
+                        break;
+                    case 4:
+                        $offerData['area'][$path[1]]['country'][$path[2]]['module'][$path[3]] = array('id' => $path[3], 'title' => $d['object']['name'], 'count' => $d['object']['count']);
+                        $prepath[] = $path[1];
+                        $prepath[] = $path[2];
+                        $prepath[] = $path[3];
+                        odds_load_odds($offersManager, $offerData, $language, $classicMode, $prepath, $filtergametypes);
+                        if (!isset($offerData['area'][$path[1]]['country'][$path[2]]['module'][$path[3]]['gameTypes']) || !count($offerData['area'][$path[1]]['country'][$path[2]]['module'][$path[3]]['gameTypes']))
+                            unset($offerData['area'][$path[1]]['country'][$path[2]]['module'][$path[3]]);
+                        break;
+                }
+            }
+            elseif ($d['type'] == 'betting') {
+
+                $args_idx = ($args[0] == 'search') ? 1 : 0;
+
+                if (!$filtergametypes || in_array($d['object']['gtid'], $filtergametypes)) {
+
+                    odds_rendered_gametypes($d['object']['gtid']);
+                    odds_prepair_topbet($d['object']);
+
+                    $offerData['area'][$args[1 + $args_idx]]['country'][$args[2 + $args_idx]]['module'][$args[3 + $args_idx]]['gameTypes'][$d['object']['gtid']]['id'] = $d['object']['gtid'];
+                    $offerData['area'][$args[1 + $args_idx]]['country'][$args[2 + $args_idx]]['module'][$args[3 + $args_idx]]['gameTypes'][$d['object']['gtid']]['title'] = $d['object']['gametype'];
+                    $offerData['area'][$args[1 + $args_idx]]['country'][$args[2 + $args_idx]]['module'][$args[3 + $args_idx]]['gameTypes'][$d['object']['gtid']]['collapsed'] = $d['object']['collapsed'];
+
+                    // name - not set
+                    // hide name ?
+                    // combtosamemodule 
+                    // combtosamearea
+                    // rate_status
+                    // category
+                    if (!isset($offerData['area'][$args[1 + $args_idx]]['country'][$args[2 + $args_idx]]['module'][$args[3 + $args_idx]]['title'])) {
+                        $cttls = explode('»', $d['object']['category']);
+                        $offerData['area'][$args[1 + $args_idx]]['country'][$args[2 + $args_idx]]['module'][$args[3 + $args_idx]]['title'] = \trim($cttls[2]);
+                    }
+                    if (!isset($offerData['area'][$args[1 + $args_idx]]['country'][$args[2 + $args_idx]]['title'])) {
+                        $cttls = explode('»', $d['object']['category']);
+                        $offerData['area'][$args[1 + $args_idx]]['country'][$args[2 + $args_idx]]['title'] = \trim($cttls[1]);
+                    }
+                    if (!isset($offerData['area'][$args[1 + $args_idx]]['title'])) {
+                        $cttls = explode('»', $d['object']['category']);
+                        $offerData['area'][$args[1 + $args_idx]]['title'] = \trim($cttls[0]);
+                    }
+
+
+
+                    if (!$classicMode && count($d['object']['bets']) == 1 && (!$filtergametypes || !$d['object']['pid'] ) && isset($offerData['area'][$args[1 + $args_idx]]['country'][$args[2 + $args_idx]]['module'][$args[3 + $args_idx]]['gameTypes'][$d['object']['gtid']]['offerlist'][$prev_id]) && count($offerData['area'][$args[1 + $args_idx]]['country'][$args[2 + $args_idx]]['module'][$args[3 + $args_idx]]['gameTypes'][$d['object']['gtid']]['offerlist'][$prev_id]['odds']) == 1 && !isset($offerData['area'][$args[1 + $args_idx]]['country'][$args[2 + $args_idx]]['module'][$args[3 + $args_idx]]['gameTypes'][$d['object']['gtid']]['offerlist'][$prev_id]['bets_prefix'])
+                    ) {
+                        $bet = array_shift($d['object']['bets']);
+                        $bet['event_id'] = $d['object']['id'];
+                        $bet['name'] = $d['object']['name'];
+                        $offerData['area'][$args[1 + $args_idx]]['country'][$args[2 + $args_idx]]['module'][$args[3 + $args_idx]]['gameTypes'][$d['object']['gtid']]['offerlist'][$prev_id]['odds'][] = $bet;
+                        unset($offerData['area'][$args[1 + $args_idx]]['country'][$args[2 + $args_idx]]['module'][$args[3 + $args_idx]]['gameTypes'][$d['object']['gtid']]['offerlist'][$prev_id]['bets_prefix']);
+                    } else {
+
+
+                        $offerData['area'][$args[1 + $args_idx]]['country'][$args[2 + $args_idx]]['module'][$args[3 + $args_idx]]['gameTypes'][$d['object']['gtid']]['offerlist'][$d['object']['id']] = array(
+                          'id' => $d['object']['id'],
+                          'pid' => $d['object']['pid'],
+                          'aid' => $args[1 + $args_idx],
+                          'cid' => $args[2 + $args_idx],
+                          'mid' => $args[3 + $args_idx],
+                          'title' => $d['object']['title'],
+                          'date' => $d['object']['date'],
+                          'count' => isset($child_counts[$d['object']['pid'] ? $d['object']['pid'] : $d['object']['id']]) && $filtergametypes ? $child_counts[$d['object']['pid'] ? $d['object']['pid'] : $d['object']['id']] : $d['object']['advanced_bet'],
+                          'odds' => $d['object']['bets'],
+                          'category' => $d['object']['category'],
+                          'name' => $d['object']['name'],
+                          'e_ext' => $d['object']['e_ext'],
+                          'g_ext' => $d['object']['g_ext'],
+                          'team1' => $d['object']['item1name'],
+                          'team2' => $d['object']['item2name'],
+                          'team1country' => $d['object']['item1country_id'],
+                          'team2country' => $d['object']['item2country_id'],
+                          'hidename' => false,
+                          'combtosamearea' => $d['object']['combtosamearea'],
+                          'combtosamemodule' => $d['object']['combtosamemodule'],
+                        );
+
+                        if ($type == 'superbet') {
+                            $supbet = odds_generate_topbet($d['object'], $language);
+                            if ($supbet)
+                                $offerData['area'][$args[1 + $args_idx]]['country'][$args[2 + $args_idx]]['module'][$args[3 + $args_idx]]['gameTypes'][$d['object']['gtid']]['topbet'][] = $supbet;
+                        }
+
+                        if (isset($d['object']['bets_prefix']) && count($d['object']['bets']) > 1) {
+                            $offerData['area'][$args[1 + $args_idx]]['country'][$args[2 + $args_idx]]['module'][$args[3 + $args_idx]]['gameTypes'][$d['object']['gtid']]['offerlist'][$d['object']['id']]['bets_prefix'] = $d['object']['bets_prefix'];
+                        } elseif (isset($d['object']['bets_prefix']) && (count($d['object']['bets']) == 1) && $d['object']['pid'] > 0 && $filtergametypes) {
+                            $offerData['area'][$args[1 + $args_idx]]['country'][$args[2 + $args_idx]]['module'][$args[3 + $args_idx]]['gameTypes'][$d['object']['gtid']]['offerlist'][$d['object']['id']]['bets_prefix'] = odds_drop_event_gametype_prefix($d['object']['title'], $d['object']['e_ext'], $d['object']['g_ext']);
+                        } elseif ($filtergametypes && $d['object']['pid'] && count($d['object']['bets']) == 1 && strpos($d['object']['bets'][0]['pattern'], '<P1>') === FALSE) {
+                            $offerData['area'][$args[1 + $args_idx]]['country'][$args[2 + $args_idx]]['module'][$args[3 + $args_idx]]['gameTypes'][$d['object']['gtid']]['offerlist'][$d['object']['id']]['bets_prefix'] = odds_drop_event_gametype_prefix($d['object']['title'], $d['object']['e_ext'], $d['object']['g_ext']);
+                        }
+                    }
+                }
+
+
+
+                if ($filtergametypes && $d['object']['advanced_bet']) {
+                    $child_counts[$d['object']['id']] = $d['object']['advanced_bet'];
+                    odds_load_odds($offersManager, $offerData, $language, $classicMode, array($args[0], $args[1], $args[2], $args[3], $d['object']['id']), $filtergametypes);
+                }
+
+                $prev_id = $d['object']['id'];
+            }
+        }
+    }
+}
+
+function odds_load_popular_odds(&$offerData, $data, $classicMode, $args) {
+
+
+    $offerData['area'][0] = array('id' => 0, 'title' => t('Populiariausi įvykiai'), 'count' => 1);
+    $offerData['area'][0]['country'][-1] = array('id' => -1, 'title' => '', 'count' => 1);
+    foreach ($data['objects'] as $area) {
+        foreach ($area['events'] as $event) {
+            if (!isset($offerData['area'][0]['country'][-1]['module'][$area['id']])) {
+                $league = explode('»', $event['object']['category']);
+                $offerData['area'][0]['country'][-1]['module'][$area['id']] = array('id' => 0, 'title' => $league[0], 'count' => 1);
+            }
+            if (!isset($offerData['area'][0]['country'][-1]['module'][$area['id']]['gameTypes'][$event['object']['mid']])) {
+                $league = explode('»', $event['object']['category']);
+                $offerData['area'][0]['country'][-1]['module'][$area['id']]['gameTypes'][$event['object']['mid']] = array('id' => 0, 'title' => $league[2], 'count' => 1);
+            }
+
+            $offerData['area'][0]['country'][-1]['module'][$area['id']]['gameTypes'][$event['object']['mid']]['offerlist'][$event['object']['id']] = array(
+              'id' => $event['object']['id'],
+              'aid' => $event['object']['aid'],
+              'cid' => $event['object']['cid'],
+              'mid' => $event['object']['mid'],
+              'pid' => $event['object']['pid'],
+              'title' => $event['object']['title'],
+              'date' => $event['object']['date'],
+              'count' => $event['object']['advanced_bet'],
+              'odds' => $event['object']['bets'],
+              'category' => $event['object']['category'],
+              'name' => $event['object']['name'],
+              'hidename' => false
+            );
+        }
+    }
+    //echo '<pre>';	print_r($offerData);	echo '</pre>';
+}
+
+function odds_block_info() {
+    $blocks['odds_categories'] = array(
+      'info' => t('Lažybų pasiūlos meniu (optimized)'),
+      'cache' => DRUPAL_CACHE_CUSTOM,
+      'properties' => array(
+        'administrative' => FALSE,
+      ),
+      'status' => 1,
+      'region' => 'left',
+    );
+    return $blocks;
+}
+
+function odds_block_view($delta = '') {
+    global $language;
+    // avoid rendering
+    $pattern = '$home|^admin|^user$';
+    if (preg_match($pattern, current_path())) {
+        return null;
+    }
+    drupal_add_js(array('currentLanguage' => $language->language), 'setting');
+    drupal_add_js(array('oddsmenu' => array('visaPasiula' => t('Visi statymai'))), 'setting');
+
+    $_key = 'ODDSM_' . implode(',', array(__CLASS__, __FUNCTION__, $language->language));
+    if ($cache = cache_get($_key, 'block')) {
+        return $cache->data;
+    }
+
+    require_once 'oddsManager.php';
+    require_once 'OddsViewHelper.php';
+    $classicMode = false;
+    $lang = $language->language;
+    $aid = null;
+    $cid = null;
+    $mid = null;
+    $eid = null;
+    $type = 'all';
+    $block = array('content' => '');
+    $offersManager = new OddsApi\OddsManager();
+    $categories = $offersManager->getById($lang, $classicMode, array($type, $aid, $cid, $mid, $eid));
+
+    if (count($categories)) {
+        $count = 0;
+        $block['content'] .= '<ul class="nav nav-pills nav-stacked">';
+        foreach ($categories as $sport) {
+            $url = 'odds/' . $sport['object']['id'];
+            $tmp = explode('/', $sport['object']['id']);
+            $sport_id = end($tmp);
+            $block['content'] .= '<li class="collapsed depth-1"><a href="' . url($url, array('absolute' => false)) . '" data-async="' . $sport['object']['id'] . '" onclick="return ts.SportMenu.toggle(this); return false;"><span class="tssporticon tssporticon-s' . $sport_id . '"></span> <span class="title">' . $sport['object']['name'] . '</span> <span class="badge pull-right">' . $sport['object']['count'] . '</span></a></li>';
+            $count += $sport['object']['count'];
+        }
+        $block['content'] .= '</ul>';
+        $block['content'] = '<div class="heading"><h3>' . t('Lažybų pasiūla') . '<span class="badge pull-right">' . $count . '</span></h3></div>' . $block['content'];
+    }
+    cache_set($_key, $block, 'block', strtotime('+1 min'));
+    return $block;
+}
+
+function odds_get_by_event_name($event_name) {
+    global $language;
+    $lang = $language->language;
+    require_once 'oddsManager.php';
+    require_once 'OddsViewHelper.php';
+    $offersManager = new OddsApi\OddsManager();
+    $event = $offersManager->getEventByEventName($event_name, $lang);
+
+    return $event;
+}
+
+function odds_filter_gametypes($gts) {
+    if (count($gts)) {
+        foreach ($gts as $gt) {
+            if ($gt['collapsed'] == 't')
+                unset($gt);
+        }
+    }
+    return $gts;
+}
+
+function formatMainTitle($type) {
+    $title = '';
+    switch ($type) {
+        case 'last-minute':
+            $title = t('Paskutinės minutės lažybos');
+            break;
+        case 'today':
+            $title = t('Lažybos šiandien');
+            break;
+        case 'tomorrow':
+            $title = t('Lažybos rytoj');
+            break;
+        case 'weekend':
+            $title = t('Savaitgalio lažybos');
+            break;
+        default:
+            $title = t('Lažybų pasiūla');
+            break;
+    }
+    return $title;
+}
+
+function odds_getSportRulesBlock($aid) {
+    global $language;
+    $_key = implode('-', array(__FUNCTION__, $aid, $language->language));
+    if ($cache = cache_get($_key, 'cache')) {
+        return $cache->data;
+    }
+    $html = '';
+    $nid = db_select('offers_rules', 'r')->fields('r', array('nid'))->condition('language', $language->language)->condition('area_id', $aid)->execute()->fetchObject();
+    if (!empty($nid)) {
+        $rules = node_load($nid->nid);
+        if ($rules AND node_access('view', $rules)) {
+            $html .= theme('offers_rules', array('content' => $rules->body[$language->language]['0']['safe_value'], 'title' => $rules->title));
+        }
+    }
+    cache_set($_key, $html, 'cache', strtotime('+ 1 day'));
+    return $html;
+}
+
+function odds_validate_page_arguments($args) {
+    $total = count($args);
+    $arguments = array();
+    if ($total > 0) {
+        $arguments[0] = $args[0];
+        if ($args[0] == 'search') {
+            $arguments[1] = isset($args[1]) ? $args[1] : null;
+        } else {
+            for ($i = 1; $i < $total; $i++) {
+                if ($i >= 5)
+                    break;
+                if ($args[$i] != null) {
+                    $arguments[$i] = intval($args[$i]);
+                    if ($i != 2 && $arguments[$i] == 0) {
+                        $arguments[$i] = null;
+                    }
+                }
+            }
+        }
+    }
+    return $arguments;
+}
+
+function odds_render_match_title($obj){
+    $html ='';
+    /*if($obj['team1'] !== null && $obj['team2'] !== null 
+            && $obj['team1country'] !== null && $obj['team2country'] !== null){
+        $html = '<span class="team1name">'.OddsView::getCountryIcon($obj['team1country']). $obj['team1'].'</span>'. 
+                ' <span class="spliter-vs">-</span> '.
+                '<span class="team2name">'.OddsView::getCountryIcon($obj['team2country']). ' '.$obj['team2'].'</span>';
+    }else*/if($obj['team1'] !== null && $obj['team2'] !== null){
+        $html = '<span class="team1name">'.$obj['team1'].'</span>'.
+                ' <span class="spliter-vs">-</span> '.
+                '<span class="team2name">'.$obj['team2'].'</span>';
+    }else{
+        $html = $obj['title'];
+    }    
+    return $html;
+}
+
+
+function odds_render_match_info($extension = null, $aid, $date, $tp_poss = null){
+    $html = $tooltip_possition = '';
+    $extension = odds_get_match_info($extension, $aid, $date);
+    if($extension){
+        if($tp_poss){
+            $tooltip_possition = 'data-placement="'.$tp_poss.'"';
+        }
+        $html = '<span class="match-info glyphicon glyphicon-info-sign" title="'.$extension.'" data-toggle="tooltip" '.$tooltip_possition.'></span>';
+    }    
+    return $html;
+}
+function odds_get_match_info($extension = null, $aid, $date){
+    if($aid == 5 && \strlen($extension) === 2) {
+        $extension = t('@Month @Day dienos rungtynės', 
+                        array('@Month' => t(date('F', strtotime($date))), '@Day' => (int)$extension)
+                    );
+    } else {
+        $extension = OddsViewHelper::getMatchExtension($extension); 
+        if($extension){
+            $extension = t($extension);
+        }
+    }
+    return $extension;
+}

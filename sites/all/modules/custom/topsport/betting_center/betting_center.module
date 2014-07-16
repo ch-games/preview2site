@@ -1,0 +1,308 @@
+<?php
+// $Id$
+
+
+/**
+ * Implementation of hook_menu().
+ *
+ * @return An array of menu items.
+ */
+function betting_center_menu() {
+	$items = array();
+
+	$items['betting-center'] = array(
+    'title' => 'Lažybų punktai',
+    'description' => 'Lažybų punktų puslapis',
+    'page callback' => 'betting_center_page',
+    'access arguments' => array('access content'),
+	);
+	return $items;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function betting_center_theme() {
+	$theme_hooks = array(
+    'betting_center' => array(
+      'template' => 'betting-center-page',
+      'variables' => array('title' => NULL, 'content' => NULL, 'betshop_ads' => NULL, 'menu_block' => NULL, 'map_size'=> 1077),
+	),
+	);
+	return $theme_hooks;
+}
+
+function betting_center_page($city = null, $address = null) {
+	global $language;
+	list($lang_code) = explode('-', $language->language);
+	drupal_add_js('https://maps-api-ssl.google.com/maps/api/js?sensor=false&language='.$lang_code);
+	drupal_add_js(drupal_get_path('module', 'betting_center') . '/betting-center.js');
+
+	if(file_exists(DRUPAL_ROOT.'/sites/all/img/icons/tp_map_icon_'.$lang_code.'.png')){
+		$map_icon = '/sites/all/img/icons/tp_map_icon_'.$lang_code.'.png';
+	}else{
+		$map_icon = '/sites/all/img/icons/tp_map_icon.png';
+	}
+	drupal_add_js(array('map_icon' => $map_icon), 'setting');
+	$locations = array();
+	$centers = betting_center_centers();
+	foreach($centers as $center){
+		if($center->lat AND $center->lng){
+			$locations[] = array($center->lat, $center->lng, url('betting-center/'.$center->bccid.'/'.$center->bcid));
+		}
+	}
+	drupal_add_js(array('betting_center' => $locations), 'setting');
+	if($city == null and $address == null){
+       $theme_args['content'] = betting_center_betshop_ads();
+       $theme_args['map_size'] = 680;
+	}elseif($address == null){
+		$theme_args = betting_center_display_addreses($city);
+	}else{
+		$theme_args = betting_center_display_center($city, $address);
+	}
+    $theme_args['menu_block'] = betting_center_display_cities($city);
+    if(isset($theme_args['map'])){
+        drupal_add_js($theme_args['map'], 'setting');
+    }else {
+        drupal_add_js(array('betting_center_map' => array('zoom' => 7, 'loc' => array(55.169438, 23.881275))), 'setting');
+    }
+    return theme('betting_center', $theme_args);
+}
+
+function betting_center_display_cities($cid = false){	
+	$cities = betting_center_getCities();
+	$html = '';
+	$html .= '<ul id="betting-center-cities" class="nav nav-pills nav-stacked">';
+	foreach($cities as $city){		
+		$html .= '<li '.($cid == $city->bccid ? 'cass="active"' : '').'>'.l(t($city->title).'<span class="badge pull-right">'.$city->total.'</span>', 'betting-center/'.$city->bccid, array('html' => true)).'</li>';
+	}
+	$html .= '
+  </ul>';
+	return  $html;
+}
+
+function betting_center_display_addreses($city){
+	global $base_url;
+	$html = '';
+	$city = betting_center_cities($city, true);
+	$link_back = 'betting-center';
+	if($city){
+		if($city->lat AND $city->lng){
+			$geo_settings = array('betting_center_map' => array('zoom' => 12, 'loc' => array($city->lat, $city->lng)));
+		}
+		$centers = betting_center_centers(null, $city->bccid);
+		$html .= '<ul id="betting-center-addresses" class="nav nav-pills">';
+		foreach($centers as $center){
+			$title = $center->address;
+			$icons = '';
+			if($center->racedogs){
+				$icons .= ' <img src="'.$base_url.'/sites/all/img/icons/greyhound.gif" alt=""/> ';
+			}
+			if($center->place){
+				$icons .= ' <img align="center" src="'.file_create_url($center->place).'" alt="" /> ';
+			}
+			$html .= '
+      <li>'.l($title.$icons, 'betting-center/'.$center->bccid.'/'.$center->bcid, array('html' => TRUE, 'attributes' => array('class'=>array('btn btn-default')))).'</li>';
+		}
+		$html .= '
+    </ul>';
+		$link_back = l(t('Grįžti į miestų sąrašą').' <span class="glyphicon glyphicon-chevron-right"></span>', $link_back, array('attributes' => array('class' => array('btn btn-default pull-right')), 'html'=>true));
+		return array('title' => $city->title, 'content' => $html, 'link_back' => $link_back, 'map_size'=> 600, 'map'=>$geo_settings);
+	}else{
+		drupal_goto($link_back);
+	}
+}
+
+function betting_center_display_center($city, $address){
+	global $base_url;
+	$html = '';
+	$address = betting_center_centers($address, $city);
+	$link_back = 'betting-center/'.$city;
+	if(isset($address[0])){
+        $betshop_services = array();
+        $photo = $betshop_services_html = '';
+		$address = $address[0];
+		$city = betting_center_cities($address->bccid);
+		$city = $city[0];
+		if($address->lat AND $address->lng){
+            $geo_settings = array('betting_center_map' => array('zoom' => 17, 'loc' => array($address->lat, $address->lng)));
+		}else{
+            $geo_settings = array('betting_center_map' => array('zoom' => 12, 'loc' => array($city->lat, $city->lng)));
+		}
+
+		$place = '';
+		if($address->place){
+			$place = '<img src="'.file_create_url($address->place).'" class="betshop-place-img" />';
+		}
+
+		if($address->racedogs){
+            $betshop_services[] = '<img src="'.$base_url.'/sites/all/img/icons/greyhound.gif" alt=""/>';
+		}
+		$work_hours = betting_center_workhours($address->bcid);
+		$workhours = array();
+		foreach($work_hours as $day){
+			$workhours[] = array(betting_center_weekdays($day->week_day), t('@from:00 - @till:00', array('@from' => $day->from, '@till' => $day->till)));
+		}
+        if(count($betshop_services)){
+            $betshop_services_html .= '<ul class="nav nav-stacked">';
+            foreach ($betshop_services as $service){
+                $betshop_services_html .= '<li>'.$service.'</li>';
+            }
+            $betshop_services_html .= '</ul>';
+        }
+		$table_workhours = theme('table', array('caption' => '<h4>'.t('Darbo laikas').'</h4>', 'header' => array(), 'rows' => $workhours, 'empty' => t('Darbo laiko nėra')));
+		if($address->photo){
+			$photo = '<img src="'.file_create_url($address->photo).'" class="thumbnail img-responsive" />';
+		}
+        $html .= '<div class="row">'
+                    . '<div class="col-xs-9">'.$photo./*$betshop_services_html.*/'</div>'
+                    . '<div class="col-xs-15">'.$table_workhours.'</div>'
+                . '</div>';
+        /*if($address->opened AND $address->opened != '0000-00-00'){
+			$html .= t('Atidarytas').': '.$address->opened.'<br/>';
+		}*/
+		//$html .= t('Statusas').': '..'<br/>';
+        
+		if($address->closed AND $address->closed != '0000-00-00'){
+			$html .= t('Uždarytas').': '.$address->closed.'<br/>';
+		}
+		
+		$link_back = l('<span class="glyphicon glyphicon-chevron-left"></span> '.t('Grįžti į punktų sąrašą'), $link_back, array('attributes' => array('class' => array('btn btn-default pull-right')), 'html'=>true));
+		return array('title' => strtr('!place :address, :city', array(':address' => t($address->address), ':city' => t($city->title), '!place' => $place)).betting_center_statuses($address->state), 'content' => $html, 'link_back' => $link_back, 'map_size'=> 600, 'map'=>$geo_settings);
+	}else{
+		drupal_goto($link_back);
+	}
+}
+
+function betting_center_statuses($status = null){	
+    $statuses = array(
+    '0' => t("Planuojamas atidaryti"),
+    '2' => t("Laikinai nedirbantis"),
+    '3' => t("Uždarytas"),
+	);
+    $html = '';
+    if(isset($statuses[$status])){
+       ;
+        $html = '<span class="label label-danger">'. $statuses[$status].'</span>';
+    }
+    return $html;
+}
+
+function betting_center_weekdays($weekday = null){
+	$days = array(
+    '1' => t("Pirmadienis"),
+    '2' => t("Antradienis"),
+    '3' => t("Trečiadienis"),
+    '4' => t("Ketvirtadienis"),
+    '5' => t("Penktadienis"),
+    '6' => t("Šeštadienis"),
+    '7' => t("Sekmadienis"),
+	);
+	return ($weekday ? (isset($days[$weekday]) ? $days[$weekday] : '') : $days);
+}
+
+
+function betting_center_cities($city = null, $obj = false){
+    $key = __FUNCTION__ . implode('.',func_get_args());
+    
+    if($cache = cache_get($key)){
+        return $cache->data;
+    }
+	$cities = db_select('betting_center_city', 'bcc')
+	->fields('bcc', array())
+	->orderBy('title', 'ASC');
+
+	if($city){
+		$cities =  $cities->condition('bccid', $city);
+	}
+
+	$cities = $cities->execute();
+	if($obj){
+		return $cities->fetchObject();
+	}
+    $cache = $cities->fetchAll();
+    cache_set($key, $cache, 'cache_betshops', strtotime('+15 min'));
+	return $cache;
+}
+
+function betting_center_getCities(){
+    $key = __FUNCTION__ . implode('.',func_get_args());
+    
+    if($cache = cache_get($key)){
+        return $cache->data;
+    }
+	$cities = db_query('Select c.bccid, c.title, count(*) as total
+        FROM ts_betting_center_city c 
+        left join ts_betting_center cc ON c.bccid = cc.bccid
+        where cc.status = 1
+        group by c.bccid, c.title
+        order by total desc, c.title'
+    );
+	
+    $cache = $cities->fetchAll();
+    cache_set($key, $cache, 'block', strtotime('+30 min'));
+	return $cache;
+}
+
+function betting_center_centers($center = null, $city = null, $tpoid = null, $registration = false){
+    $key = __FUNCTION__ . implode('.',func_get_args());
+    
+    if($cache = cache_get($key)){
+        return $cache->data;
+    }
+	if($tpoid == 101){
+		$centers = new StdClass;
+		$centers->bccid = 2;
+		$centers->address = 'Testine g. 45';
+		return $centers;
+	}
+
+	$centers = db_select('betting_center', 'bc')
+	->fields('bc', array())
+	->orderBy('address', 'ASC')
+	->condition('status', 1);
+
+	if($center){
+		$centers->condition('bcid', $center);
+	}
+	if($tpoid){
+		$centers->condition('tpoid', $tpoid);
+	}
+	if($city){
+		$centers->condition('bccid', $city);
+	}
+	if($registration){
+		$centers->condition('registration', 1);
+	}
+	$centers = $centers->execute();
+	if($tpoid){
+		return $centers->fetchObject();
+	}
+    $cache = $centers->fetchAll();
+    cache_set($key, $cache, 'cache_betshops', strtotime('+15 min'));
+	return $cache;
+
+}
+
+function betting_center_workhours($center){
+    $key = __FUNCTION__ . implode('.',func_get_args());
+    
+    if($cache = cache_get($key)){
+        return $cache->data;
+    }
+	$cache = db_select('betting_center_workhours', 'bcw')
+	->fields('bcw', array())
+	->condition('bcid', $center)
+	->orderBy('week_day', 'asc')
+	->execute()
+	->fetchAll();
+    cache_set($key, $cache, 'cache_betshops', strtotime('+15 min'));
+	return $cache;
+}
+
+
+function betting_center_betshop_ads(){
+    $block = module_invoke('slideshow', 'block_view', array(3));
+    $html = strlen($block['content']) > 0 ? '<div id="block-slideshow-slideshow" class="panel panel-slideshow">'.$block['content'].'</div>' : '';
+    return $html;
+}

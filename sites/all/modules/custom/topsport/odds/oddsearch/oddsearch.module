@@ -1,0 +1,23 @@
+<?php
+
+function oddsearch_block_info() {
+	$blocks['oddsearch'] = array(
+    'info' => t('Lažybų pasiūlos paieška'),
+    'cache' => DRUPAL_CACHE_CUSTOM,
+    'properties' => array(
+        'administrative' => FALSE,
+    ),
+    'status' => 1,
+    'region' => 'right',
+    'class' => 'block-menu'
+  );
+	return $blocks;
+}
+
+
+function oddsearch_block_view($delta = '') {
+	//offers_searchform	
+	$form = drupal_get_form('offers_searchform');
+	$block['content'] = drupal_render($form);
+	return $block;
+}

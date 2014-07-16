@@ -1,0 +1,9 @@
+; $Id: account_log.info $
+name = Account events logging
+description = "Registruojami vartotojų veiksmai"
+dependencies[] = topsport
+core = 7.x
+version = 7.x-0.x-dev
+package = TopSport
+files[] = account_log.install
+files[] = account_log.module

@@ -1,0 +1,234 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Install, update and uninstall functions for the offers module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+
+function betting_center_schema() {
+
+	$schema['betting_center_city'] = array(
+        'description' => 'Stores betting centers data',
+        'fields' => array(
+            'bccid' => array(
+                'description' => 'The primary identifier for a betting center city.',
+                'type' => 'serial',
+                'unsigned' => TRUE,
+                'not null' => TRUE,
+	),
+            'title' => array(
+                'description' => "The betting center city's title",
+                'type' => 'varchar',
+                'length' => 255,
+                'not null' => TRUE,
+                'default' => '',
+	),
+            'lat' => array(
+                'type' => 'numeric',
+                'unsigned' => FALSE,
+                'not null' => FALSE,
+                'default' => 0,
+                'description' => "Betting center city's coords latitude",
+                'precision' => 15,
+                'scale' => 10,
+	),
+            'lng' => array(
+                'type' => 'numeric',
+                'unsigned' => FALSE,
+                'not null' => FALSE,
+                'default' => 0,
+                'description' => "Betting center city's coords longitude",
+                'precision' => 15,
+                'scale' => 10,
+	),
+	),
+        'primary key' => array('bccid'),
+	);
+
+	$schema['betting_center'] = array(
+        'description' => 'Stores betting centers data',
+        'fields' => array(
+            'bcid' => array(
+                'description' => 'The primary identifier for a betting center.',
+                'type' => 'serial',
+                'unsigned' => TRUE,
+                'not null' => TRUE,
+	),
+            'bccid' => array(
+                'type' => 'int',
+                'unsigned' => TRUE,
+                'not null' => TRUE,
+                'default' => 0,
+                'description' => "The betting center's {betting_center_city}.bccid.",
+	),
+            'tpoid' => array(
+                'type' => 'int',
+                'unsigned' => TRUE,
+                'not null' => TRUE,
+                'default' => 0,
+                'description' => "The betting center's TopSport Office Id.",
+	),
+            'address' => array(
+                'description' => "The betting center's address",
+                'type' => 'varchar',
+                'length' => 255,
+                'not null' => TRUE,
+                'default' => '',
+	),
+            'photo' => array(
+                'description' => "The betting center's photo",
+                'type' => 'varchar',
+                'length' => 255,
+                'not null' => FALSE,
+                'default' => '',
+	),
+            'place' => array(
+                'description' => "The betting center's place photo",
+                'type' => 'varchar',
+                'length' => 255,
+                'not null' => FALSE,
+                'default' => '',
+	),
+            'lat' => array(
+                'type' => 'numeric',
+                'unsigned' => FALSE,
+                'not null' => FALSE,
+                'default' => 0,
+                'description' => "Betting center's coords latitude",
+                'precision' => 15,
+                'scale' => 10,
+	),
+            'lng' => array(
+                'type' => 'numeric',
+                'unsigned' => FALSE,
+                'not null' => FALSE,
+                'default' => 0,
+                'description' => "Betting center's coords longitude",
+                'precision' => 15,
+                'scale' => 10,
+	),
+            'racedogs' => array(
+                'type' => 'int',
+                'unsigned' => TRUE,
+                'not null' => FALSE,
+                'default' => 0,
+                'description' => "Racing Dogs  in Betting center",
+	),
+            'opened' => array(
+                'type' => 'varchar',
+                'length' => 32,
+                'not null' => FALSE,
+                'default' => '0000-00-00',
+                'description' => "Then Betting center was opened",
+	),
+            'closed' => array(
+                'type' => 'varchar',
+                'length' => 32,
+                'not null' => FALSE,
+                'default' => null,
+                'description' => "Then Betting center was closed",
+	),
+            'state' => array(
+                'type' => 'int',
+                'unsigned' => TRUE,
+                'not null' => TRUE,
+                'default' => 0,
+                'description' => "Is Betting center opened",
+	),
+            'status' => array(
+                'type' => 'int',
+                'unsigned' => TRUE,
+                'not null' => TRUE,
+                'default' => 0,
+                'description' => "Is Betting center enabled",
+	),
+	),
+        'primary key' => array('bcid'),
+        'foreign keys' => array(
+            'betting_center_city' => array(
+                'table' => 'betting_centers_city',
+                'columns' => array('bccid' => 'bccid'),
+	),
+	),
+	);
+
+
+	$schema['betting_center_workhours'] = array(
+        'description' => 'Stores betting centers workhours',
+        'fields' => array(
+            'id' => array(
+                'description' => 'The primary identifier for a betting center workhour.',
+                'type' => 'serial',
+                'unsigned' => TRUE,
+                'not null' => TRUE,
+	),
+            'bcid' => array(
+                'type' => 'int',
+                'unsigned' => TRUE,
+                'not null' => TRUE,
+                'default' => 0,
+                'description' => "Betting center's id ",
+	),
+            'week_day' => array(
+                'type' => 'int',
+                'unsigned' => TRUE,
+                'not null' => TRUE,
+                'default' => 0,
+                'description' => "Betting center workhour week_day",
+	),
+            'from' => array(
+                'type' => 'int',
+                'unsigned' => TRUE,
+                'not null' => FALSE,
+                'default' => 0,
+                'description' => "Betting center workhour from time",
+	),
+            'till' => array(
+                'type' => 'int',
+                'unsigned' => TRUE,
+                'not null' => FALSE,
+                'default' => 0,
+                'description' => "Betting center workhour till time",
+	),
+	),
+        'primary key' => array('id'),
+        'foreign keys' => array(
+            'betting_center' => array(
+                'table' => 'betting_centers',
+                'columns' => array('bcid' => 'bcid'),
+	),
+	),
+	);
+
+	return $schema;
+}
+
+/*
+ function betting_center_install(){
+ db_query("SELECT create_struct('ts_betting_center_city')");
+ db_query("UPDATE struct_columns SET default_sql = 'nextval(''ts_betting_center_city_bccid_seq''::regclass)' WHERE table_name = 'ts_betting_center_city' AND column_name = 'bccid'");
+
+ db_query("SELECT create_struct('ts_betting_center')");
+ db_query("UPDATE struct_columns SET default_sql = 'nextval(''ts_betting_center_bcid_seq''::regclass)' WHERE table_name = 'ts_betting_center' AND column_name = 'bcid'");
+ db_query("UPDATE struct_columns SET default_const = '0000-00-00' WHERE table_name = 'ts_betting_center' AND column_name = 'opened'");
+
+ db_query("SELECT create_struct('ts_betting_center_workhours')");
+ db_query("UPDATE struct_columns SET default_sql = 'nextval(''ts_betting_center_workhours_id_seq''::regclass)' WHERE table_name = 'ts_betting_center_workhours' AND column_name = 'id'");
+ db_query("UPDATE struct_columns SET default_header = 'bcid' WHERE table_name = 'ts_betting_center_workhours' AND column_name = 'bcid'");
+ }
+ *.
+ /*
+ function betting_center_enable(){
+ betting_center_install();
+ }
+ */
+/*
+ function betting_center_uninstall(){
+ db_query("DELETE FROM struct_columns WHERE table_name IN ('ts_betting_center_city', 'ts_betting_center')");
+ }
+ */

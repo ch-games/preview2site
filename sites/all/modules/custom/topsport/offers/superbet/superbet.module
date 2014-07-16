@@ -1,0 +1,104 @@
+<?php
+
+
+
+/**
+ * Implements hook_block_info().
+ */
+function superbet_block_info() {
+	$blocks['superbet'] = array(
+    'info' => t('SuperBets block'),
+    'cache' => DRUPAL_CACHE_CUSTOM,
+	);
+	return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ *
+ * Generates a block containing the superbet offers.
+ */
+function superbet_block_view($delta = '') {
+	global $user;
+	$user_loged = ($user->uid?1:0);
+	$cid_parts[] = 'offers';
+	$cid_parts[] = $delta;
+	$cid_parts[] = 'europeview-'.(int)offers_show_europeview();
+	$cid_parts = array_merge($cid_parts, drupal_render_cid_parts());
+	$cid_parts[] = 'loged'.$user_loged;
+	$cid = implode(':', $cid_parts);
+	if($cache = cache_get($cid, 'cache_block')){
+		return $cache->data;
+	}
+	$block['subject'] = t('Superstatymas');
+	$block['content'] = '';
+	$events = offers_getAvailableEvents('superbet');
+	if(sizeof($events) > 0){
+		foreach($events as $event){
+			if(!isset($blockEvents['areas'][$event->aid])){
+				$blockEvents['areas'][$event->aid] = array(
+          '#aid' => $event->aid,
+          '#name' => substr($event->category, 0, strpos($event->category, '»')),
+          '#cnt' => 0,
+          'events' => array(),
+				);
+			}
+			$blockEvents['areas'][$event->aid]['#cnt']++;
+			$blockEvents['areas'][$event->aid]['events'][] = $event;
+		}
+		$header = array(
+      'title' => array('header' => true, 'data' => '', 'colspan' => $user_loged?3:4),
+      '1' => array('header' => true, 'data' => '1', 'class' => array('odd_title')),
+      '2' => array('header' => true, 'data' => '0', 'class' => array('odd_title')),
+      '3' => array('header' => true, 'data' => '2', 'class' => array('odd_title')),
+      '4' => array('header' => true, 'data' => '10', 'class' => array('odd_title')),
+      '5' => array('header' => true, 'data' => '02', 'class' => array('odd_title')),
+      'more' => array('header' => true, 'data' => '', 'class' => array('more')),
+		);
+		$attributes = array(
+      'class' => array('odds', 'control-offers-list'),
+		);
+		$rows = array();
+		$aid_selected = reset($blockEvents['areas']);$aid_selected = $aid_selected['#aid'];
+		$block['content'] .= '<ul id="lastminute-offers-list-conttrol" class="offers-list-control content-block-menu">';
+		foreach($blockEvents['areas'] as $area){
+			$block['content'] .= '
+        <li id="pol_'.$area['#aid'].'_lastminute" class="item'.($area['#aid'] == $aid_selected ? ' active first' : '').'">'.($area['#aid'] ? '<span class="icon"><img width="18px" src="/sites/all/img/icons/area/'.$area['#aid'].'.png"  alt="" /></span>' : '').$area['#name'].'</li>
+      ';
+		}
+		$block['content'] .= '</ul>';
+		foreach($blockEvents['areas'] as $key => $area){
+			$areaRows = array();
+			$areaColumnsEmpty = array();
+			if(!offers_show_europeview()){
+				$areaRows[] = array(
+          'data' => $header,
+          'header' => true,
+          'class' => array('aid_'.$key.'_lastminute'),
+          'style' => ($key != $aid_selected ? array('display: none;') : array()),
+				);
+			}
+			foreach($blockEvents['areas'][$key]['events'] as $event){
+				$eventRows = offers_format_event_row($event, 'lastminute', $areaColumnsEmpty);
+				foreach($eventRows as $row){
+					$row['style'][] = ($event->aid != $aid_selected ? 'display: none;' : '');
+					$areaRows[] = $row;
+				}
+			}
+			
+			if($user_loged) $areaColumnsEmpty['name'] = true;
+			
+			foreach($areaColumnsEmpty as $columnId => $isEmpty){
+				if($isEmpty){
+					foreach($areaRows as $key => $areaRow){
+						unset($areaRows[$key]['data'][$columnId]);
+					}
+				}
+			}
+			$rows = array_merge($rows, $areaRows);
+		}
+		$block['content'] .= theme('table', array('sticky'=>false, /*'header' => $header,*/ 'rows' => $rows, 'attributes' => $attributes));
+	}
+	cache_set($cid, $block, 'cache_block', offers_getOffersCacheLifeTime());
+	return $block;
+}

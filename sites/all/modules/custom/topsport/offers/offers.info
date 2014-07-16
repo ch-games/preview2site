@@ -1,0 +1,9 @@
+; $Id$
+name = Offers module
+description = "Display offers in pages"
+dependencies[] = topsport
+core = 7.x
+version = 7.x-0.x-dev
+package = TopSport
+files[] = offers.install
+files[] = offers.module

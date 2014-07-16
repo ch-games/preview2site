@@ -1,0 +1,8 @@
+; $Id: howtostart.info, $
+name = Kaip pradėti lažintis
+description = "Rodo blokelį su nuorodomis į kaip pradėti lažintis puslapius"
+dependencies[] = topsport
+core = 7.x
+version = 7.x-0.x-dev
+package = TopSport
+files[] = howtostart.module

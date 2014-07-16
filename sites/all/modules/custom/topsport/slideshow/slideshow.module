@@ -1,0 +1,477 @@
+<?php
+
+/**
+ * Implements hook_block_info().
+ */
+function slideshow_block_info() {
+    $blocks['slideshow'] = array(
+      'info' => t('Slideshow'),
+      'region' => 'front',
+      'status' => 1,
+      'visibility' => 0,
+      'weight' => -10,
+      'cache' => DRUPAL_CACHE_CUSTOM,
+    );
+    return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ *
+ * Generates a block containing the slideshow.
+ */
+function slideshow_block_view($delta = array(2)) {
+    $group_id = 2;
+    if (isset($delta[0])) {
+        $group_id = $delta[0];
+    }
+    global $language, $user;
+    $cid = implode(':', array(__FUNCTION__, $language->language, $group_id));
+    if (/* !user_access('edit own slideshow content') AND */$cache = cache_get($cid, 'cache_block')) {
+        return $cache->data;
+    }
+    $block['content'] = '';
+    $slides = slideshow_list($delta);
+    if (!count($slides)) {
+        return;
+    }
+
+
+    $first = key($slides);
+    $slidesCount = 0;
+    $expire = strtotime('+5 min');
+
+    $slides_html = '';
+    if (count($slides_html)) {
+        foreach ($slides as $slide) {
+            $function = 'slideshow_type_' . $slide->type;
+            if (function_exists($function)) {
+                $type = strtr($slide->type, array('_' => '-'));
+                $content = $function($slide, $expire);
+                if (strlen($content)) {
+                    $slides_html .= '<div class="item ' . $type . ($slidesCount == 0 ? ' active' : '') . '">' . $content . '</div>';
+                    $slidesCount++;
+                }
+            }
+        }
+    }
+    $slides_html = '<div class="carousel-inner">' . $slides_html . '</div>';
+    if ($slidesCount > 0) {
+        $i = 1;
+        $slides_control = '';
+        if ($slidesCount > 1) {
+            $slides_control = '<ul class="carousel-indicators">';
+            while ($i <= $slidesCount) {
+                $slides_control .= '<li data-target="#sports-events-highlights" ' . ($i == 1 ? 'class="active"' : '') . ' data-slide-to="' . ($i - 1) . '"> </li>';
+                $i++;
+            }
+            $slides_control .= '</ul>
+            <a class="left carousel-control" href="#sports-events-highlights" data-slide="prev">
+                <span class="glyphicon glyphicon-chevron-left" ></span>
+            </a>
+            <a class="right carousel-control" href="#sports-events-highlights" data-slide="next">
+              <span class="glyphicon glyphicon-chevron-right"></span>
+            </a>';
+        }
+        $block['content'] = '<div id="sports-events-highlights" class="carousel slide" data-ride="carousel">' . $slides_control . $slides_html . '</div>';
+    } else {
+        $block['content'] = '';
+    }
+    //if(!user_access('edit own slideshow content')){
+    cache_set($cid, $block, 'cache_block', $expire);
+    //}
+    return $block;
+}
+
+/**
+ * Implements hook_node_info().
+ */
+function slideshow_node_info() {
+    variable_set('language_content_type_slideshow', 2);
+    return array(
+      'slideshow' => array(
+        'name' => t('Slideshow item'),
+        'base' => 'slideshow',
+        'description' => t('A <em>slideshow</em> page display list of <em>slideshows</em>.'),
+        'has_title' => TRUE,
+        'title_label' => t('Slideshow'),
+        'has_body' => TRUE,
+        'locked' => TRUE,
+      )
+    );
+}
+
+/**
+ * Implements hook_node_view().
+ */
+function slideshow_view($node, $view_mode, $langcode) {
+    return $node;
+}
+
+/**
+ * Implements hook_form().
+ */
+function slideshow_form($node, &$form_state) {
+    global $user;
+    $admin = user_access('bypass slideshow access') || user_access('edit any slideshow content') || (user_access('edit own slideshow content') && $user->uid == $node->uid);
+
+    $form['title'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Sisteminis pavadinimas'),
+      '#default_value' => !empty($node->title) ? $node->title : '',
+      '#required' => TRUE,
+      '#weight' => -5,
+    );
+    $form['slide_title'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Title'),
+      '#default_value' => isset($node->slide_title) ? $node->slide_title : '',
+      '#required' => FALSE,
+      '#weight' => -4,
+      '#prefix' => '<div id="slideshow-title">',
+      '#suffix' => '</div>',
+    );
+
+    $form['url'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Url'),
+      '#default_value' => isset($node->url) ? $node->url : '',
+      '#required' => FALSE,
+      '#weight' => 9,
+    );
+    $form['eid'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Event Name'),
+      '#default_value' => isset($node->eid) ? $node->eid : '',
+      '#size' => 5,
+      '#maxlength' => 10,
+      '#required' => FALSE,
+      '#weight' => 0,
+      '#ajax' => array(
+        'callback' => 'slideshow_form_callback',
+        'wrapper' => 'slideshow-title',
+        'method' => 'replace',
+        'effect' => 'fade',
+      ),
+    );
+    $form['image_display'] = array(
+      '#type' => 'select',
+      '#title' => t('Paveikslėlio rodymas'),
+      '#default_value' => isset($node->image_display) ? $node->image_display : 1,
+      '#options' => array(1 => t('Sumažintas'), 0 => t('Orginalaus dydžio')),
+      '#required' => FALSE,
+      '#weight' => 0,
+    );
+    $form['weight'] = array(
+      '#type' => 'weight',
+      '#title' => t('Weight'),
+      '#default_value' => isset($node->weight) ? $node->weight : '',
+      '#delta' => 10,
+    );
+
+    drupal_add_css('.ajax-progress{float: none!important;}', 'inline');
+
+    return $form;
+}
+
+function slideshow_form_callback($form, &$form_state) {
+    if (!empty($form_state['values']['eid'])) {
+        $event = offers_getEventByEventName($form_state['values']['eid'], (!empty($form_state['values']['language']) ? $form_state['values']['language'] : null));
+
+        if (!empty($event)) {
+            $form['slide_title']['#value'] = $event->title;
+        } else {
+            $form['slide_title']['#value'] = '';
+        }
+    }
+    return $form['slide_title'];
+}
+
+/**
+ * Implements hook_field_extra_fields().
+ */
+function slideshow_field_extra_fields() {
+    $extra['node']['slideshow'] = array(
+      'form' => array(
+        'body' => array(
+          'label' => t('Body'),
+          'description' => t('Body'),
+          'weight' => 0,
+        ),
+        'eid' => array(
+          'label' => t('Event ID'),
+          'description' => t('Event ID'),
+          'weight' => 0,
+        ),
+      ),
+      'display' => array(
+        'title' => array(
+          'label' => t('Title'),
+          'description' => t('The name of the slideshow'),
+          'weight' => -5,
+        ),
+      ),
+    );
+    return $extra;
+}
+
+/**
+ * Implements hook_insert().
+ */
+function slideshow_insert($node) {
+    if (!empty($node->field_image[$node->language]['0']['fid'])) {
+        $file = file_load($node->field_image[$node->language]['0']['fid']);
+        $image = image_load($file->uri);
+        image_scale_and_crop($image, 200, 156);
+        $destination = str_replace('.'/* .$image->info['extension'] */, '_resized.'/* .$image->info['extension'] */, $image->source);
+        image_save($image, $destination);
+    }
+    $node->active = 1;
+    db_insert('slideshow')
+            ->fields(array(
+              'nid' => $node->nid,
+              'eid' => ($node->eid !== '' ? $node->eid : null),
+              'slide_title' => ($node->slide_title !== '' ? $node->slide_title : null),
+              'image_display' => ($node->image_display !== '' ? $node->image_display : null),
+              'url' => ($node->url !== '' ? $node->url : null),
+              'weight' => ($node->weight !== '' ? $node->weight : null),
+            ))
+            ->execute();
+    cache_clear_all('slideshow', 'cache_block', TRUE);
+}
+
+/**
+ * Implements hook_load().
+ */
+function slideshow_load(&$nodes) {
+    global $user;
+    foreach ($nodes as $node) {
+        $offer = db_select('slideshow', 's')
+                ->fields('s', array())
+                ->condition('nid', $node->nid)
+                ->execute()
+                ->fetchObject();
+        foreach ($offer as $key => $value) {
+            $nodes[$node->nid]->{$key} = $value;
+        }
+    }
+}
+
+/**
+ * Implements hook_update().
+ */
+function slideshow_update(&$node) {
+    if (!empty($node->field_image[$node->language]['0']['fid'])) {
+        $file = file_load($node->field_image[$node->language]['0']['fid']);
+        $image = image_load($file->uri);
+        image_scale_and_crop($image, 200, 156);
+        $destination = str_replace('.'/* .$image->info['extension'] */, '_resized.'/* .$image->info['extension'] */, $image->source);
+        image_save($image, $destination);
+    }
+    db_update('slideshow')
+            ->fields(array(
+              'nid' => $node->nid,
+              'eid' => ($node->eid !== '' ? $node->eid : null),
+              'slide_title' => ($node->slide_title !== '' ? $node->slide_title : null),
+              'image_display' => ($node->image_display !== '' ? $node->image_display : null),
+              'url' => ($node->url !== '' ? $node->url : null),
+              'weight' => ($node->weight !== '' ? $node->weight : null),
+            ))
+            ->condition('nid', $node->nid)
+            ->execute();
+    cache_clear_all('slideshow', 'cache_block', TRUE);
+}
+
+/**
+ * Implements hook_delete().
+ */
+function slideshow_delete(&$node) {
+    db_delete('slideshow')
+            ->condition('nid', $node->nid)
+            ->execute();
+    cache_clear_all('slideshow', 'cache_block', TRUE);
+}
+
+function slideshow_file_delete($file) {
+    $image = image_load($file->uri);
+    if ($image) {
+        $path = str_replace('.' . $image->info['extension'], '_resized.' . $image->info['extension'], $image->source);
+        file_unmanaged_delete($path);
+    }
+}
+
+function slideshow_field_attach_prepare_translation_alter(&$entity, $context) {
+    if ($context['entity_type'] == 'node' && $entity->type == 'slideshow') {
+        $entity->eid = $context['source_entity']->eid;
+        $entity->slide_title = $context['source_entity']->slide_title;
+        $entity->image_display = $context['source_entity']->image_display;
+        $entity->url = $context['source_entity']->url;
+        $entity->weight = $context['source_entity']->weight;
+    }
+}
+
+function slideshow_list($group = array(2)) {
+    global $language;
+    $slides = array();
+    if (is_array($group)) {
+        $slide_groups = new EntityFieldQuery();
+        try {
+            $nids = $slide_groups->entityCondition('entity_type', 'node')
+                    ->fieldCondition('field_slide_groups', 'value', $group, 'IN')
+                    ->propertyCondition('status', 1)
+                    ->propertyCondition('language', array($language->language, 'und'), 'IN')
+                    ->fieldOrderBy('field_weight', 'value', 'ASC')
+                    ->execute();
+        } catch (Exception $exc) {
+            $nids = null;
+        }
+
+        if (isset($nids['node'])) {
+            $news_items_nids = array_keys($nids['node']);
+            $slides = entity_load('node', $news_items_nids);
+        }
+    }
+    return $slides;
+}
+
+/**
+ * CUSTOM HTML slideshow (flash/html/etc)
+ * @global type $language
+ * @param type $item
+ * @return type
+ */
+function slideshow_type_slideshow_html($item) {
+    global $language;
+    return isset($item->body['und'][0]['value']) ? $item->body['und'][0]['value'] : $item->body[$language->language][0]['value'];
+}
+
+/**
+ * IMAGE BANNER simple to use for webmaster
+ * @global type $language
+ * @param type $item
+ * @return type
+ */
+function slideshow_type_slideshow_banner($item) {
+    global $language;
+
+    $url = isset($item->field_url['und'][0]['value']) ? $item->field_url['und'][0]['value'] : $item->field_url[$language->language][0]['value'];
+    $source_path = isset($item->field_image['und'][0]['uri']) ? $item->field_image['und'][0]['uri'] : $item->field_image[$language->language][0]['uri'];
+    $image_uri = file_create_url($source_path);
+
+    $title = isset($item->field_url_title['und'][0]['value']) ? $item->field_url_title['und'][0]['value'] : $item->field_url_title[$language->language][0]['value'];
+    if (strlen($title)) {
+        $title = '<div class="carousel-caption"><h1>' . $title . '</h1></div>';
+    }
+    return '<a href="' . $url . '"><div class="glass-shine"></div><img src="' . $image_uri . '" alt="' . $item->title . '">' . $title . '</a>';
+}
+
+/**
+ * Show event odds with HD image
+ * @param type $item
+ * @return string
+ */
+function slideshow_type_slideshow_event($item, &$expire) {
+    global $language;
+    $html = '';
+    $event_name = (int) (isset($item->field_event_name['und'][0]['value']) ? $item->field_event_name['und'][0]['value'] : $item->field_event_name[$language->language][0]['value']);
+    if (!($event_name > 0)) {
+        return '';
+    }
+    $source_path = isset($item->field_image['und'][0]['uri']) ? $item->field_image['und'][0]['uri'] : $item->field_image[$language->language][0]['uri'];
+    $image_uri = file_create_url($source_path);
+    $url = '/odds/all/';
+
+    $offer = odds_get_by_event_name($event_name);
+    $offer = $offer ? reset($offer) : false;
+    $event = '';
+
+    require_once drupal_get_path('module', 'odds') . '/oddsView.php';
+    require_once drupal_get_path('module', 'odds') . '/OddsViewHelper.php';
+
+    if (isset($offer['object']['bets'])) {
+        $i = 1;
+        $event .= '<div class="odds-list">';
+        foreach ($offer['object']['bets'] as $o) {
+            $event .= OddsView::renderBtnBet($o['title'], $o['odds'], $offer['object']['id'], $o['id'], 'slide_event');
+            if ($i > 2) {
+                break;
+            } $i++;
+        }
+
+
+        $e = &$offer['object'];
+        $unix_e_time = strtotime($e['date']);
+        if ($unix_e_time < $expire) {
+            $expire = $unix_e_time;
+        }
+        $event .= '</div>';
+        $title = strlen($item->title) ? OddsViewHelper::getMatchTitle($e) . ' ' . odds_render_match_info($e['e_ext'], $e['aid'], $e['date'], 'right') : $item->title;
+        $url .= $offer['object']['url'];
+        $html = '<a href="' . $url . '"><img src="' . $image_uri . '" alt="' . $item->title . '"></a>';
+        $html .= '<div class="carousel-caption">'
+                . '<h1>' . $title . '</h1>'
+                . '<h2>' . $e['gametype'] . '<span class="label label-date">' . OddsViewHelper::formatOddsDate($e['date']) . '</span></h2>'
+                . $event .
+                '</div>';
+    } else {
+        $item->status = 0;
+        node_save($item);
+    }
+
+    return $html;
+}
+
+function slideshow_type_slideshow_banner_auto($item, &$expire) {
+    global $language;
+    $html = ''; $title = '';
+
+    require_once drupal_get_path('module', 'odds') . '/oddsManager.php';
+    require_once drupal_get_path('module', 'odds') . '/oddsView.php';
+    require_once drupal_get_path('module', 'odds') . '/OddsViewHelper.php';
+    $omng = new \oddsManager\OddsManager();
+    $url = isset($item->field_url['und'][0]['value']) ? $item->field_url['und'][0]['value'] : $item->field_url[$language->language][0]['value'];
+    $cat = explode('/', $url);
+    array_shift($cat);
+    $offer = $omng->getById($language->language, '', $cat);
+    $offer = reset($offer);
+    if (isset($offer['object'])) { 
+        $category = explode(' » ', $offer['object']['category']);
+        if (count($cat) == 5) {
+            array_pop($cat);
+            array_unshift($cat, 'odds');
+            $url = implode('/', $cat);
+            $title = $category[2] . ' | ' . OddsViewHelper::getMatchTitle($offer['object']);
+        } elseif (count($cat) == 4) {
+            array_unshift($cat, 'odds');
+            $url = implode('/', $cat);
+            $title = $category[2];
+            if ($offer['object']['cid'] > 0) {
+                $title = $category[1] . ' | ' . $title;
+            }
+        }
+        $source_path = isset($item->field_image['und'][0]['uri']) ? $item->field_image['und'][0]['uri'] : $item->field_image[$language->language][0]['uri'];
+        $image_uri = file_create_url($source_path);
+        $unix_e_time = strtotime($offer['object']['date']);
+        if ($unix_e_time < $expire) {
+            $expire = $unix_e_time;
+        }
+        if (strlen($title)) {
+            $title = '<div class="carousel-caption"><h1>' . $title . '</h1></div>';
+        }
+        $html = '<a href="' . $url . '"><div class="glass-shine"></div><img src="' . $image_uri . '" alt="' . $item->title . '">' . $title . '</a>';
+    } else {
+        $item->status = 0;
+        node_save($item);
+    }
+    return $html;
+}
+
+function slideshow_node_presave($node) {
+    switch ($node->type) {
+        case 'slideshow_banner': case 'slideshow_event':
+            cache_clear_all('slideshow_block_view', 'cache_block', true);
+            break;
+        default:
+            break;
+    }
+}

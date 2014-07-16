@@ -1,0 +1,7 @@
+; $Id: 
+name = Payment - WebMoney.ru
+description = Integrates WebMoney.ru payment services.
+;dependencies[] = account
+package = TopSport
+core = 7.x
+files[] = ac_webmoney.module

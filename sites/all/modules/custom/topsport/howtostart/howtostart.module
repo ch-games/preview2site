@@ -1,0 +1,99 @@
+<?php
+// $Id:
+
+
+/**
+ * Implements hook_block_info().
+ */
+function howtostart_block_info() {
+	$blocks['howtostart'] = array(
+    'info' => t('Kaip pradėti lažintis'),
+    'properties' => array(
+      'administrative' => TRUE,
+	),
+    'region' => 'right',
+    'status' => 1,
+    'visibility' => 0,
+    'weight' => -5,
+    'cache' => DRUPAL_CACHE_PER_ROLE,
+	);
+	return $blocks;
+}
+
+
+/**
+ * Implements hook_block_configure().
+ *
+ * This hook declares configuration options for blocks provided by this module.
+ */
+function howtostart_block_configure($delta = '') {
+	$form = array();
+	if ($delta == 'howtostart') {
+		$menu_options = menu_get_menus();
+
+		$form['howtostart_block_links_source'] = array(
+      '#type' => 'select',
+      '#title' => t('Bloko nuorodų šaltinis'),
+      '#default_value' => variable_get('howtostart_block_links_source', ''),
+      '#empty_option' => t('Nėra nuorodų'),
+      '#options' => $menu_options,
+      '#tree' => FALSE,
+      '#description' => t('Pasirinkite meniu, kurio nuorodos bus rodomos blokelyje'),
+		);
+
+	}
+	return $form;
+}
+
+/**
+ * Implements hook_block_save().
+ *
+ * This hook declares how the configured options for a block
+ * provided by this module are saved.
+ */
+function howtostart_block_save($delta = '', $edit = array()) {
+	if ($delta == 'howtostart') {
+		variable_set('howtostart_block_links_source', $edit['howtostart_block_links_source']);
+	}
+	return;
+}
+
+
+/**
+ * Implements hook_block_view().
+ *
+ * Generates a block containing the bet slip.
+ */
+function howtostart_block_view($delta = '') {
+	global $language;
+	list($lang_code) = explode('-', $language->language);
+	if (user_access('access content')) {
+		$block['subject'] = t('Kaip pradėti lažintis');
+		$block['subject'] = t('Lažybų informacija');
+		$block['content'] = '';
+		$links_menu = variable_get('howtostart_block_links_source', false);
+		$content = '<ul id="howtostartlink">';
+		//$content .= '<li><a href="http://stats.betradar.com/s4/?clientid=110&amp;language='.$lang_code.'" onclick="window.open(this.href, \'\', \'resizable=yes,status=yes,location=no,toolbar=no,menubar=no,fullscreen=no,scrollbars=yes,dependent=no,width=990,height=650\'); return false;">'.t('Statistika').'</a></li>';
+		//$content .= '<li><a href="http://livescore.betradar.com/?alias=topsport&amp;language='.$lang_code.'" onclick="window.open(this.href, \'\', \'resizable=yes,status=yes,location=no,toolbar=no,menubar=no,fullscreen=no,scrollbars=yes,dependent=no,width=990,height=650\'); return false;">'.t('Livescore').'</a></li>';
+		//$content .= '<li class="hr"></li>';
+		//$content .= '<li>'.l(t('Demo turas'), 'demo-turas', array('attributes' => array('class' => array('colorbox-inline')), 'query' => array('width' => '700',/* 'height' => '500'*/))).'</li>';
+		$k = 0;
+		if($links_menu){
+			$block_links = menu_navigation_links($links_menu);
+			foreach($block_links as $link) {
+				if($link['langcode'] AND $link['langcode'] != 'und' AND $link['langcode'] != $language->language){ continue; }
+				if($k == 2){ $content .= '<li class="hr"></li>'; $k = 0; }
+				$content .= '<li>'.l($link['title'], $link['href'], array('language' => $language)).'</li>';
+				$k++;
+			}
+		}
+		$content .= '</ul>';
+		$block['content'] .= $content;
+		if(!user_is_logged_in()){
+			$block['content'] .= '<div class="clear"></div>';
+			$block['content'] .= l(t('Registruokitės'), 'user/register', array('attributes' => array('class' => array('long-button'), 'onclick' => array('_gaq.push([\'_trackEvent\', \'Banners\', \'Click\', \'Right side: HowToStart - register button\']);'))));
+		}
+		return $block;
+	}
+}
+

@@ -1,0 +1,293 @@
+<?php
+// $Id$
+
+/**
+ * Implements hook_menu().
+ */
+function contacts_menu() {
+
+	$items['contacts'] = array(
+    'title' => 'Susisiekite',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('contacts_form'),
+    'access arguments' => array('access content'),
+	);
+
+	$items['admin/config/content/contacts'] = array(
+    'title' => 'Kontaktų forma',
+    'description' => 'Kontaktų formos papildomi nustatymai',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('contacts_admin'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+	);
+
+	return $items;
+}
+
+
+function contacts_form($form, &$form_state){
+	drupal_set_title( t('Parašykite mums lažybų klausimais ') );
+    global $user;
+
+	/*Label: “Prašome pasirinkti kategoriją, kuri labiausiai atitinka jūsų paklausimą”
+	 Options:
+	 - Priėjimas prie sąskaitos
+	 - Balansas (įmokos / išmokos)
+	 - Lažybos / mano statymai
+	 - Šunų lenktynės
+	 - Techniniai klausimai
+	 - Atsiliepimai
+	 - Kita*/
+	$contacts_subjects = variable_get('contacts_subjects', array());
+	$subjectoptions = array();
+	foreach($contacts_subjects as $key => $subject){
+		$subjectoptions[$key] = t($subject['title']);
+	}
+	$form['subject'] = array(
+    '#type' => 'select',
+    '#title' => t('Kategorija'),
+    '#description' => t('Prašome pasirinkti kategoriją, kuri labiausiai atitinka jūsų paklausimą'),
+    '#default_value' => '',
+    '#empty_value' => '',
+    '#required' => TRUE,
+    '#options' => $subjectoptions,
+	);
+	// Label: “Vardas” - privaloma
+	if($user->uid && isset($user->data['firstname'])){
+		$form['firstname'] = array(
+      '#type' => 'value',
+      '#value' => $user->data['firstname'],
+		);
+	}else{
+		$form['firstname'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Vardas'),
+      '#default_value' => '',
+      '#required' => TRUE,
+      '#size' => 27,
+		);
+	}
+	// Label: “Pavardė” - privaloma
+	if($user->uid && isset($user->data['surname'])){
+		$form['surname'] = array(
+      '#type' => 'value',
+      '#value' => $user->data['surname'],
+		);
+	}else{
+		$form['surname'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Pavardė'),
+      '#default_value' => '',
+      '#required' => TRUE,
+      '#size' => 27,
+		);
+	}
+	// Label: “El. paštas” - privaloma
+	if($user->uid && isset($user->mail)){
+		$form['email'] = array(
+      '#type' => 'value',
+      '#value' => $user->mail,
+		);
+	}else{
+		$form['email'] = array(
+      '#type' =>  'textfield',
+      '#title' => t('Email'),
+      '#default_value' => '',
+      '#required' => TRUE,
+      '#validate' => array('valid_email_address'),
+      '#size' => 27,
+		);
+	}
+	// Label: “Kliento kortelės numeris” - neprivaloma
+	if($user->uid && isset($user->data['UserCardNumber'])){
+		$form['cardnumber'] = array(
+      '#type' => 'value',
+      '#value' => $user->data['UserCardNumber'],
+		);
+	}else{
+		$form['cardnumber'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Kliento kortelės numeris'),
+      '#default_value' => '',
+      '#required' => FALSE,
+      '#size' => 27,
+		);
+	}
+	// Label: “Paklausimas”  - privaloma
+	$form['message'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Paklausimas'),
+    '#default_value' => '',
+    '#required' => TRUE,
+    '#rows' => 5,
+    '#cols' => 30,
+	);
+
+	$form['contacts_submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Send'),
+	);
+
+	return $form;
+}
+function contacts_form_validate(&$form, &$form_state){
+	$mail = $form_state['values']['email'];
+	if ($mail && !valid_email_address($mail)) {
+		form_set_error('email', t('Įveskite teisingą el-pašto adresą'));
+	}
+}
+
+function contacts_form_submit(&$form, &$form_state){
+    global $user;
+	$contacts_subjects = variable_get('contacts_subjects', array());
+	//$to = $contacts_subjects[$form_state['values']['subject']]['email'];
+    $to = 'pagalba@topsport.lt';
+	$from = array(
+    'name' => $form_state['values']['firstname'].' '.$form_state['values']['surname'],
+    'mail' => $form_state['values']['email'],
+	);
+    $params['account'] = $user;
+	$params = $form_state['values'];
+	$params['subject_title'] = $contacts_subjects[$form_state['values']['subject']]['title'];
+
+	$language = language_default();
+
+	$send = TRUE;
+
+	$result = drupal_mail('contacts', 'contacts_message', $to, $language, $params, $from, $send);
+	if ($result['result'] == TRUE) {
+		drupal_set_message(t('Your message has been sent.'));
+	}else{
+		drupal_set_message(t('There was a problem sending your message and it was not sent.'), 'error');
+	}
+	//$result['to'] = 'pagalba@topsport.lt'; drupal_mail_system('account', 'contacts_message')->mail($result);
+	//$result['to'] = 'test@webpartners.lt'; drupal_mail_system('account', 'contacts_message')->mail($result);
+}
+
+
+function contacts_mail($key, &$message, $params) {
+	$options = array(
+    'langcode' => $message['language']->language,
+	);
+
+	switch ($key) {
+		case 'contacts_message':
+			$message['subject'] = t('@subject iš @site-name', array('@subject' => $params['subject_title'],'@site-name' => variable_get('site_name')), $options);
+			$message['body'][] = t('Kategorija: @value', array('@value' => check_plain($params['subject_title'])), $options);
+			$message['body'][] = t('Vardas: @value', array('@value' => check_plain($params['firstname'])), $options);
+			$message['body'][] = t('Pavardė: @value', array('@value' => check_plain($params['surname'])), $options);
+			$message['body'][] = t('El. paštas: @value', array('@value' => check_plain($params['email'])), $options);
+			$message['body'][] = t('Kliento kortelės numeris: @value', array('@value' => check_plain($params['cardnumber'])), $options);
+			$message['body'][] = t('Paklausimas:  @value', array('@value' => check_plain($params['message'])), $options);
+			break;
+	}
+}
+
+function contacts_admin($form, &$form_state){
+
+
+	// We will have many fields with the same name, so we need to be able to
+	// access the form hierarchically.
+	$form['#tree'] = TRUE;
+
+	if (empty($form_state['num_subjects'])) {
+		$contacts_subjects = variable_get('contacts_subjects', array());
+		$form_state['num_subjects'] = count($contacts_subjects);
+		if($form_state['num_subjects'] == 0){ $form_state['num_subjects'] = 1; }
+	}
+
+	// Build the number of name fieldsets indicated by $form_state['num_names']
+	for ($i = 1; $i <= $form_state['num_subjects']; $i++) {
+		$form['subject'][$i] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Kategorija #@num', array('@num' => $i)),
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE,
+		);
+
+		$form['subject'][$i]['title'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Pavadinimas'),
+      '#required' => TRUE,
+      '#default_value' => isset($contacts_subjects[$i]['title']) ? $contacts_subjects[$i]['title'] : '',
+		);
+
+		$form['subject'][$i]['email'] = array(
+      '#type' => 'textfield',
+      '#title' => t('El. pašto adresas'),
+      '#required' => TRUE,
+      '#default_value' => isset($contacts_subjects[$i]['email']) ? $contacts_subjects[$i]['email'] : '',
+		);
+	}
+	$form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Saugoti'),
+	);
+
+	// Adds "Add another name" button
+	$form['add_name'] = array(
+    '#type' => 'submit',
+    '#value' => t('Pridėti kategoriją'),
+    '#submit' => array('contacts_admin_add_name'),
+	);
+
+	// If we have more than one name, this button allows removal of the
+	// last name.
+	if ($form_state['num_subjects'] > 1) {
+		$form['remove_name'] = array(
+      '#type' => 'submit',
+      '#value' => t('Pašalinti paskutinę kategoriją'),
+      '#submit' => array('contacts_admin_remove_name'),
+		// Since we are removing a name, don't validate until later.
+      '#limit_validation_errors' => array(),
+		);
+	}
+
+	return $form;
+
+}
+function contacts_admin_add_name($form, &$form_state) {
+	// Everything in $form_state is persistent, so we'll just use
+	// $form_state['add_name']
+	$form_state['num_subjects']++;
+
+	// Setting $form_state['rebuild'] = TRUE causes the form to be rebuilt again.
+	$form_state['rebuild'] = TRUE;
+}
+
+function contacts_admin_remove_name($form, &$form_state) {
+	if ($form_state['num_subjects'] > 1) {
+		$form_state['num_subjects']--;
+	}
+
+	// Setting $form_state['rebuild'] = TRUE causes the form to be rebuilt again.
+	$form_state['rebuild'] = TRUE;
+}
+
+/**
+ * Validate function for contacts_admin().
+ *
+ * Adds logic to validate the form to check the validity of the new fields,
+ * if they exist.
+ */
+function contacts_admin_validate($form, &$form_state) {
+
+	for ($i = 1; $i <= $form_state['num_subjects']; $i++) {
+	}
+}
+
+/**
+ * Submit function for contacts_admin().
+ */
+function contacts_admin_submit($form, &$form_state) {
+	$subjects = array();
+	for ($i = 1; $i <= $form_state['num_subjects']; $i++) {
+		$subjects[$i] = array(
+      'title' => $form_state['values']['subject'][$i]['title'],
+      'email' => $form_state['values']['subject'][$i]['email'],
+		);
+	}
+	variable_set('contacts_subjects', $subjects);
+	drupal_set_message(t('Nustatymai išsaugoti'));
+}

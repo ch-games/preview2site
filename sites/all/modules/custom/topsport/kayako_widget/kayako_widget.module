@@ -1,0 +1,82 @@
+<?php
+
+/**
+ * Implements hook_block_info().
+ */
+function kayako_widget_block_info() {
+	$blocks['kayakolivechatblock'] = array(
+    'info' 		 => t('Kayako live chat block'),
+  	'properties' => array( 'administrative' => FALSE ),
+  	'region' 	 => 'left',
+  	'status' 	 => 1,
+  	'visibility' => 0,
+  	'weight' 	 => 5,
+  	'cache' 	 => DRUPAL_NO_CACHE
+	);
+
+	return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function kayako_widget_block_view($delta = '') {
+	global $user; global $language;
+	$block['subject'] = '';
+
+	$block['content'] = kayako_widget_widget_template($language->language);
+	if ($user->uid) {
+		$block['content'] = str_replace('::email::', urlencode($user->mail), $block['content']);
+		$block['content'] = str_replace('::fullName::', urlencode((isset($user->data['firstname'])? $user->data['firstname']: '') . '&nbsp;'. (isset($user->data['middlename']) ? $user->data['middlename'] : '') . '&nbsp;' . (isset($user->data['surname']) ? $user->data['surname'] : '')), $block['content']);
+	} else {
+		$block['content'] = str_replace('::email::', '', $block['content']);
+		$block['content'] = str_replace('::fullName::', '', $block['content']);
+	}
+
+	return $block;
+}
+
+function kayako_widget_widget_template($language){
+
+	if ($language === 'ru'){
+		return <<< HTML
+	<p style="font-size:8px; font-family:Verdana, Geneva, sans-serif; text-align:left; font-weight:bold; margin:0;"><a target="_blank" href="http://pagalba.topsport.lt/visitor/index.php?/Russian/LiveChat/Chat/Request/_sessionID=/_promptType=chat/_proactive=0/_filterDepartmentID=2/_randomNumber=rnxij43bi9tcs49to6r9d4gotbmw04n3/_fullName=::fullName::/_email=::email::/" class="livechatlink"><img src="https://pagalba.topsport.lt/visitor/index.php?/Russian/LiveChat/HTML/NoJSImage/cHJvbXB0dHlwZT1jaGF0JnVuaXF1ZWlkPXZ2bnFjanM5M2MmdmVyc2lvbj00LjQwLjk4NiZwcm9kdWN0PUZ1c2lvbiZmaWx0ZXJkZXBhcnRtZW50aWQ9MiZza2lwdXNlcmRldGFpbHM9MSZjdXN0b21vbmxpbmU9aHR0cCUzQSUyRiUyRnBhZ2FsYmEudG9wc3BvcnQubHQlMkZfX3N3aWZ0JTJGZmlsZXMlMkZmaWxlX2w1YXpkbDRuYW90MGxsYi5wbmcmY3VzdG9tb2ZmbGluZT1odHRwJTNBJTJGJTJGcGFnYWxiYS50b3BzcG9ydC5sdCUyRl9fc3dpZnQlMkZmaWxlcyUyRmZpbGVfYXp3aWhwYTQwYnc5eHBpLnBuZyZjdXN0b21hd2F5PWh0dHAlM0ElMkYlMkZwYWdhbGJhLnRvcHNwb3J0Lmx0JTJGX19zd2lmdCUyRmZpbGVzJTJGZmlsZV9nZ3JnNHMwcW15ZmlkczcucG5nJmN1c3RvbWJhY2tzaG9ydGx5PWh0dHAlM0ElMkYlMkZwYWdhbGJhLnRvcHNwb3J0Lmx0JTJGX19zd2lmdCUyRmZpbGVzJTJGZmlsZV81bGlsZ3ZlNXl1dTI2dmsucG5nCjk3OWFkYmM2ZDI4MjE5OWFhZDI4OGNkZmY5YWZlNDAyZjY0ZGMxMWU=" style="width: 100%;" /></a></p>
+HTML;
+	}elseif ($language === 'en' || $language === 'en-gb') {
+		return <<< HTML
+		<p style="font-size:8px; font-family:Verdana, Geneva, sans-serif; text-align:left; font-weight:bold; margin:0;"><a target="_blank" href="http://pagalba.topsport.lt/visitor/index.php?/English/LiveChat/Chat/Request/_sessionID=/_promptType=chat/_proactive=0/_filterDepartmentID=2/_randomNumber=izjjjzy585un706w8fc4d0d8whrqs0jk/_fullName=::fullName::/_email=::email::/" class="livechatlink"><img src="https://pagalba.topsport.lt/visitor/index.php?/English/LiveChat/HTML/NoJSImage/cHJvbXB0dHlwZT1jaGF0JnVuaXF1ZWlkPXBkcXk0aDQzZTImdmVyc2lvbj00LjQwLjk4NiZwcm9kdWN0PUZ1c2lvbiZjdXN0b21vbmxpbmU9aHR0cCUzQSUyRiUyRnBhZ2FsYmEudG9wc3BvcnQubHQlMkZfX3N3aWZ0JTJGZmlsZXMlMkZmaWxlX2xvNzhkaWppZmVoajFpcS5wbmcmY3VzdG9tb2ZmbGluZT1odHRwJTNBJTJGJTJGcGFnYWxiYS50b3BzcG9ydC5sdCUyRl9fc3dpZnQlMkZmaWxlcyUyRmZpbGVfYnpjbnhsaXBqcGRpd2xyLnBuZyZjdXN0b21hd2F5PWh0dHAlM0ElMkYlMkZwYWdhbGJhLnRvcHNwb3J0Lmx0JTJGX19zd2lmdCUyRmZpbGVzJTJGZmlsZV9qdWtsMG9renBxcjVzb3IucG5nJmN1c3RvbWJhY2tzaG9ydGx5PWh0dHAlM0ElMkYlMkZwYWdhbGJhLnRvcHNwb3J0Lmx0JTJGX19zd2lmdCUyRmZpbGVzJTJGZmlsZV9rYWJpOHJtejdueW95cnUucG5nCjIxZTE4ZjQ4YjQ0YWJkNTY2MzM5MjYzYTU1YzFhZjdiZWZhYmUyZjE=" style="width: 100%;" /></a></p>
+HTML;
+
+	}elseif ($language === 'lv') {
+		return <<< HTML
+		<p style="font-size:8px; font-family:Verdana, Geneva, sans-serif; text-align:left; font-weight:bold; margin:0;"><a target="_blank" href="http://pagalba.topsport.lt/visitor/index.php?/English/LiveChat/Chat/Request/_sessionID=/_promptType=chat/_proactive=0/_filterDepartmentID=2/_randomNumber=izjjjzy585un706w8fc4d0d8whrqs0jk/_fullName=::fullName::/_email=::email::/" class="livechatlink"><img src="https://pagalba.topsport.lt/visitor/index.php?/English/LiveChat/HTML/NoJSImage/cHJvbXB0dHlwZT1jaGF0JnVuaXF1ZWlkPXBkcXk0aDQzZTImdmVyc2lvbj00LjQwLjk4NiZwcm9kdWN0PUZ1c2lvbiZjdXN0b21vbmxpbmU9aHR0cCUzQSUyRiUyRnBhZ2FsYmEudG9wc3BvcnQubHQlMkZfX3N3aWZ0JTJGZmlsZXMlMkZmaWxlX2xvNzhkaWppZmVoajFpcS5wbmcmY3VzdG9tb2ZmbGluZT1odHRwJTNBJTJGJTJGcGFnYWxiYS50b3BzcG9ydC5sdCUyRl9fc3dpZnQlMkZmaWxlcyUyRmZpbGVfYnpjbnhsaXBqcGRpd2xyLnBuZyZjdXN0b21hd2F5PWh0dHAlM0ElMkYlMkZwYWdhbGJhLnRvcHNwb3J0Lmx0JTJGX19zd2lmdCUyRmZpbGVzJTJGZmlsZV9qdWtsMG9renBxcjVzb3IucG5nJmN1c3RvbWJhY2tzaG9ydGx5PWh0dHAlM0ElMkYlMkZwYWdhbGJhLnRvcHNwb3J0Lmx0JTJGX19zd2lmdCUyRmZpbGVzJTJGZmlsZV9rYWJpOHJtejdueW95cnUucG5nCjIxZTE4ZjQ4YjQ0YWJkNTY2MzM5MjYzYTU1YzFhZjdiZWZhYmUyZjE=" style="width: 100%;" /></a></p>
+HTML;
+
+	} else {
+		return <<< HTML
+		<p style="font-size:8px; font-family:Verdana, Geneva, sans-serif; text-align:left; font-weight:bold; margin:0;"><a target="_blank" href="http://pagalba.topsport.lt/visitor/index.php?/Default/LiveChat/Chat/Request/_sessionID=/_promptType=chat/_proactive=0/_filterDepartmentID=2/_randomNumber=rnxij43bi9tcs49to6r9d4gotbmw04n3/_fullName=::fullName::/_email=::email::/" class="livechatlink"><img src="https://pagalba.topsport.lt/visitor/index.php?/Default/LiveChat/HTML/NoJSImage/cHJvbXB0dHlwZT1jaGF0JnVuaXF1ZWlkPWRkNGs5MXB3aDEmdmVyc2lvbj00LjQwLjk4NiZwcm9kdWN0PUZ1c2lvbiZmaWx0ZXJkZXBhcnRtZW50aWQ9MiZ2YXJpYWJsZVswXVswXT0mdmFyaWFibGVbMF1bMV09JmN1c3RvbW9ubGluZT1odHRwJTNBJTJGJTJGcGFnYWxiYS50b3BzcG9ydC5sdCUyRl9fc3dpZnQlMkZmaWxlcyUyRmZpbGVfOGE3YnYzNWF3dHQyMzNiLnBuZyZjdXN0b21vZmZsaW5lPWh0dHAlM0ElMkYlMkZwYWdhbGJhLnRvcHNwb3J0Lmx0JTJGX19zd2lmdCUyRmZpbGVzJTJGZmlsZV81MGljZTV6MHk2dGlwNjUucG5nJmN1c3RvbWF3YXk9aHR0cCUzQSUyRiUyRnBhZ2FsYmEudG9wc3BvcnQubHQlMkZfX3N3aWZ0JTJGZmlsZXMlMkZmaWxlX24weXFyOHBzM3loaGY4dy5wbmcmY3VzdG9tYmFja3Nob3J0bHk9aHR0cCUzQSUyRiUyRnBhZ2FsYmEudG9wc3BvcnQubHQlMkZfX3N3aWZ0JTJGZmlsZXMlMkZmaWxlX3gzZ3pnYnV2OGNhbDZjMS5wbmcKYWQwZThhNzY4ZDkwNjlmMTQxMjk3ZmNjMjVjOTNjNGJmOTFkZThjZg==" style="width: 100%;" /></a></p>
+HTML;
+	}
+}
+
+function kayako_widget_page_alter(&$page) {
+
+	/*global $user;*/
+	/*
+	 if(isset($_SERVER['HTTP_HTTPS'])){
+		$kayako_code = <<< HTML
+		<!-- BEGIN FUSION TAG CODE - DO NOT EDIT! --><div id="proactivechatcontainer31t5ptmcmq"></div><div id="swifttagcontainer31t5ptmcmq" style="display: none;"><div id="swifttagdatacontainer31t5ptmcmq"></div></div> <script type="text/javascript">var swiftscriptelem31t5ptmcmq=document.createElement("script");swiftscriptelem31t5ptmcmq.type="text/javascript";var swiftrandom = Math.floor(Math.random()*1001); var swiftuniqueid = "31t5ptmcmq"; var swifttagurl31t5ptmcmq="https://pagalba.topsport.lt/visitor/index.php?/LiveChat/HTML/Monitoring/cHJvbXB0dHlwZT1jaGF0JnVuaXF1ZWlkPTMxdDVwdG1jbXEmdmVyc2lvbj00LjMwLjc1MCZwcm9kdWN0PUZ1c2lvbiZjdXN0b21vbmxpbmU9JmN1c3RvbW9mZmxpbmU9JmN1c3RvbWF3YXk9JmN1c3RvbWJhY2tzaG9ydGx5PQpmNGQxNmYyYTYwMTFlZDk5YWQ1M2U2MzgwOGEyYzI1MjMyYTg0Njcz";setTimeout("swiftscriptelem31t5ptmcmq.src=swifttagurl31t5ptmcmq;document.getElementById('swifttagcontainer31t5ptmcmq').appendChild(swiftscriptelem31t5ptmcmq);",1);</script><!-- END FUSION TAG CODE - DO NOT EDIT! -->
+		HTML;
+		} else {
+		$kayako_code = <<< HTML
+		<!-- BEGIN FUSION TAG CODE - DO NOT EDIT! --><div id="proactivechatcontainerbjtmp7dq9t"></div><div id="swifttagcontainerbjtmp7dq9t" style="display: none;"><div id="swifttagdatacontainerbjtmp7dq9t"></div></div> <script type="text/javascript">var swiftscriptelembjtmp7dq9t=document.createElement("script");swiftscriptelembjtmp7dq9t.type="text/javascript";var swiftrandom = Math.floor(Math.random()*1001); var swiftuniqueid = "bjtmp7dq9t"; var swifttagurlbjtmp7dq9t="http://pagalba.topsport.lt/visitor/index.php?/LiveChat/HTML/Monitoring/cHJvbXB0dHlwZT1jaGF0JnVuaXF1ZWlkPWJqdG1wN2RxOXQmdmVyc2lvbj00LjMwLjc1MCZwcm9kdWN0PUZ1c2lvbiZjdXN0b21vbmxpbmU9JmN1c3RvbW9mZmxpbmU9JmN1c3RvbWF3YXk9JmN1c3RvbWJhY2tzaG9ydGx5PQo5MmY1OGFjMDg5Mzg0ZTNmNTRmM2YxNTE3ZGFhNTU5N2IwNTFiOWU0";setTimeout("swiftscriptelembjtmp7dq9t.src=swifttagurlbjtmp7dq9t;document.getElementById('swifttagcontainerbjtmp7dq9t').appendChild(swiftscriptelembjtmp7dq9t);",1);</script><!-- END FUSION TAG CODE - DO NOT EDIT! -->
+		HTML;
+		}
+
+		if (!$user->uid && !isset($_SERVER['HTTP_HTTPS']) ){
+		$page['page_bottom']['kayako_widget']= array(
+		'#type'   => 'markup',
+		'#markup' => $kayako_code,
+		);
+		}*/     
+}

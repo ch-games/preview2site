@@ -1,0 +1,9 @@
+; $Id: bets.info
+name = BetGamesTV
+description = "Partner module who is involve ability play on lottery"
+dependencies[] = topsport
+core = 7.x
+version = 7.x-0.x-dev
+package = TopSport
+files[] = betgamestv.module
+files[] = betgamestv.apiservice.inc

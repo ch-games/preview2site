@@ -1,0 +1,1731 @@
+<?php
+// $Id$
+define('REG_SKIP_DOCUMENTS', true);
+
+function betslip_menu() {
+
+  $items['betslip/edit'] = array(
+    'title' => 'Edit Bet Slip',
+    'page callback' => 'betslip_edit',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+    
+
+  $items['betslip/edit/rearrange'] = array(
+    'title' => 'Rearrange Bet Slip',
+    'page callback' => 'betslip_rearrange',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['betslip/type'] = array(
+    'title' => 'Edit Bet Slip type',
+    'page callback' => 'betslip_type',
+    'page arguments' => array(2, 3),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['betslip/stake'] = array(
+    'title' => 'Edit Bet Slip stake',
+    'page callback' => 'betslip_stake',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+/*
+  $items['betslip/place-bet'] = array(
+    'title' => 'Place bets from slip',
+    'page callback' => 'betslip_place_bets',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+*/
+
+  $items['betslip/system-edit'] = array(
+    'title' => 'Edit Bet Slip System Bets',
+    'page callback' => 'betslip_system_edit',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+function betslip_permission() {
+  return array(
+    'can place bets' => array(
+      'title' => t('Statyti (atlikti statymą)'),
+      'description' => t('Leisti vartotojui atlikti statymą.'),
+    ),
+  );
+}
+
+function betslip_init(){
+	//require_once drupal_get_path('module', 'offers'). '/offers.module';
+}
+
+function betslip_theme() {
+  $theme_hooks = array(
+    'betslip_types' => array(
+        'template' => 'betslip-types',
+        'variables' => array('title' => NULL, 'items' => NULL, 'block' => NULL),
+    ),
+    'betslip_row' => array(
+        'template' => 'betslip-row',
+        'variables' => array('id' => NULL, 'title' => NULL, 'type' => NULL, 'choise' => NULL, 'rate' => NULL, 'combcount'=> NULL),
+    ),
+  );
+  return $theme_hooks;
+}
+
+function betslip_block_info() {
+  $blocks['betslip'] = array(
+    'info' => t('Bet slip info'),
+    'region' => 'right',
+    'status' => 1,
+    'visibility' => 0,
+    'weight' => -4,
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  return $blocks;
+}
+
+// function betslip_init(){
+//   if(!drupal_match_path($_GET['q'], 'admin'."\n".'admin/*'."\n".'system/ajax'."\n".'node/add*')){
+//   }
+// }
+
+function betslip_block_view($delta = ''){
+  global $language, $base_url;
+  // avoid rendering
+  $pattern = '$home|^admin|^user$';
+  if(preg_match($pattern, current_path())){
+        return null;
+    }
+  drupal_add_js(drupal_get_path('module', 'betslip') . '/betslip.js');
+
+  $betslip_data = betslip_getUsersBetSlip();
+  $bets_active = array();
+  foreach($betslip_data as $bet){
+    $bets_active[] = $bet->event_id.'_'.$bet->choise;
+    $bets_active[] = $bet->event_id.'_'.$bet->choise.'_pop';
+    $bets_active[] = $bet->event_id.'_'.$bet->choise.'_popular';
+    $bets_active[] = $bet->event_id.'_'.$bet->choise.'_lastminute';
+    $bets_active[] = $bet->event_id.'_'.$bet->choise.'_day';
+  }
+  $action_toggle = url('betslip/edit/nojs/toggle');
+  $action_rearrange = url('betslip/edit/rearrange');
+  $action_addbets = url('betslip/edit/nojs/addbets/');
+  $js_variables = array('betslip' => array('action_addbets'=> $action_addbets, 'action_toggle' => $action_toggle,
+	'action_rearrange' => $action_rearrange, 
+	'bets_active' => $bets_active, 
+	'share_link_title' => t('Dalinkis "Mano statymai" įvykiais'),
+	'share_link_description' => t('Naudodami aukščiau pateikta nuoroda, galėsite pasidalinti savo sudarytu "mano statymai" skaičiuoklės turiniu su draugais. Ši nuoroda galios iki %date.'),
+	'base_url' => "kjhkjhkjh", 'lang' => $language->prefix));   
+  drupal_add_js($js_variables, "setting");
+  drupal_add_js('misc/progress.js');
+
+  $block['subject'] = t('Mano statymai');
+  $block['content'] = betslip_drawBetSlip();
+  return $block;
+}
+
+function betslip_empty_data(){
+
+  return '<ol id="betslip_empty">
+    <li><span class="badge">1</span> '.t('Pasirinkite sporto šaką;').'</li>
+    <li><span class="badge">2</span> '.t('Pasirinkite įvykį ir jo baigtį;').'</li>
+    <li><span class="badge">3</span> '.t('Pasirinkite statymo tipą ir sumą;').'</li>
+  </ol>';
+
+}
+
+function betslip_get_block_content_actions(){
+  $html = '';
+  $html .= '<div id="betslip_actions" class="clear">
+    <ul '.((count(betslip_session('systems')) AND betslip_session('type') == 'system') ? 'style="display: none;"' : '').'>
+      <li><div class="row-selection selected">'.l('selected', "betslip/edit/nojs/selection/slip/1", array('attributes' => array('class' => array('use-ajax'), 'title' => t('Žymėti viską'), 'data-toggle' => 'tooltip'))).'</div></li>
+      <li><div class="row-selection unselected">'.l('unselected', "betslip/edit/nojs/selection/slip/0", array('attributes' => array('class' => array('use-ajax'), 'title' => t('Atšaukti žymėjimą'), 'data-toggle' => 'tooltip'))).'</div></li>
+      <li><div class="row-selection remove">'.l('remove', "betslip/edit/nojs/remove/slip", array('attributes' => array('class' => array('use-ajax'), 'title' => t('Pašalinti visus'), 'data-toggle' => 'tooltip'))).'</div></li>
+    </ul>
+  </div>';
+  return $html;
+}
+
+function betslip_get_block_content_bottom($confirm = false){
+  $html = '';
+  $html .= '<div id="betslip_bottom" class="clear">';
+  if($confirm){
+    $confirm_form = drupal_get_form('betslip_bets_confirm_form');
+    $html .= render($confirm_form);
+  }else{
+    if(betslip_session('type') == 'system'){
+      $form = drupal_get_form('betslip_systemBets_form');
+      $html .= render($form);
+    }
+    $form = drupal_get_form('betslip_bets_form');
+    $html .= render($form);
+  }
+  $html .= '</div>';
+  return $html;
+}
+
+function betslip_get_system_possible_bets($constants = 0, $type = 1){
+  $options = array();
+  $betscount = count(betslip_getUsersBetSlip(1)) - $constants;
+  while($type < $betscount){
+    $count = betslip_get_system_possible_bets_count($betscount, $type);
+    if($count <= 330 AND !($type == 1 AND $constants == 0)){
+      $possible_bets = betslip_generate_system_bets($constants, $type);
+      $winnings = betslip_getSystemsWinnings_calculate($possible_bets, 1);
+      if($winnings <= 10000){
+        $options[$type] = betslip_get_system_bet_title($constants, $type, $betscount, $count);
+      }
+    }
+    $type++;
+  }
+  return $options;
+}
+
+function betslip_get_system_bet_title($constants, $groupcount, $betscount, $totalbets = null, $stake = null){
+  if(!$totalbets){
+    $totalbets = betslip_get_system_possible_bets_count($betscount, $groupcount);
+  }
+  return ($constants ? $constants.' '.t('konst.').' + ' : t('Sisteminis')).' '.$groupcount.'/'.$betscount.' ('.$totalbets.' '.t('komb.').($stake ? ' x '.account_currency_string($stake) : '').')';
+}
+
+function betslip_get_system_possible_bets_count($betsCount, $type){
+  return (fact($betsCount)/(fact($type) * fact($betsCount - $type)));
+}
+
+function betslip_generate_system_bets($constants, $type){
+  $betslipData = betslip_getUsersBetSlip(1);
+  $betslipConst = array();
+  $k = 1;
+  while($k <= $constants){
+    $betslipConst[] = array_shift($betslipData);
+    $k++;
+  }
+  $bets = bets__generate_system_bets($betslipData, $type, $betslipConst);
+  return $bets;
+}
+
+function betslip_drawBetSlip($reset = true){
+  $html = '';
+  $betslip_data = betslip_getUsersBetSlip();
+  $html .= theme('betslip_types', array('items' => betslip_getTypes(), 'static' => false));  
+    
+  $html .= '<div id="betslip_rows" class="type-'.betslip_session('type').'">';
+  if(empty($betslip_data)){
+    $html .= betslip_empty_data();
+  } 
+  foreach($betslip_data as $row){
+    $bet = betslip_getEventFromBet($row);
+    $html .= betslip_draw_row($row, $bet);
+  }
+  $html .= '</div>';
+  $html .= betslip_get_block_content_actions();
+  $html .= betslip_get_block_content_bottom();
+  return $html;
+}
+
+function betslip_stake_total($betslip_type, $betslip_stake){
+  $betslip_stake_total = 0;
+  if($betslip_type == 'system'){
+    $systems = betslip_session('systems');
+    $betslipCount = count(betslip_getUsersBetSlip(1));
+    foreach($systems as $constant => $bets){
+      foreach($bets as $type => $stake){
+        $betslip_stake_total += $stake * betslip_get_system_possible_bets_count($betslipCount - $constant, $type);
+      }
+    }
+  }else{
+    $betslip_stake_total = betslip_bets_total($betslip_type, $betslip_stake) * $betslip_stake;
+  }
+  return $betslip_stake_total;
+}
+
+function betslip_bets_total($betslip_type, $betslip_stake){
+  $betslip_bets_total = 0;
+  switch ($betslip_type){
+    case 'multi':
+      $betslip_bets_total = 1;
+      break;
+    case 'system':
+      $systems = betslip_session('systems');
+      $betslipCount = count(betslip_getUsersBetSlip(1));
+      foreach($systems as $constant => $bets){
+        foreach($bets as $type => $stake){
+          $betslip_bets_total += betslip_get_system_possible_bets_count($betslipCount - $constant, $type);
+        }
+      }
+      break;
+    case 'single':
+    default:
+      $betslip_data = betslip_getUsersBetSlip(1);
+      $betslip_bets_total = count($betslip_data);
+      break;
+  }
+  return $betslip_bets_total;
+}
+
+function betslip_systemsBets_list($static = false){
+  $betslipCount = count(betslip_getUsersBetSlip(1));
+  $systems = betslip_session('systems');
+  $html = '<div id="systems_to_bet">';
+  if(!empty($systems)){
+    $html .= '<div class="line"><strong>'.t('Pasirinktos sistemos:').'</strong></div>';
+  }
+  $header = array(t('Komb.'), array('data' => t('Koef.'), 'class' => array('text-center')), array('data' => t('Laimėjimas'), 'class' => array('text-right')));
+  foreach($systems as $constant => $beted){
+    foreach($beted as $type => $stake){
+      $generatedBets = betslip_generate_system_bets($constant, $type);
+
+      $rows = array();
+      foreach($generatedBets as $bet){
+        $bet_rate = 1;
+        $letters = '';
+        foreach($bet as $row){
+          $letters .= $row->letter;
+          if($constant AND drupal_strlen($letters) == $constant){
+            $letters .= ':';
+          }
+          $rates = betslip_getEventRatesFromBet($row);
+          if(!$rates){ continue; }
+          $bet_rate *= $rates->{'c'.$row->choise};
+        }
+        $bet_rate = round($bet_rate, 2);
+        $winnings = round($stake * $bet_rate, 2);
+        $rows[] = array(
+          array(
+            'class' => array('combination-letters'),
+            'data' => betslip_wordwrap($letters),
+          ),
+          array(
+            'class' => array('text-center', 'combination-coef'),
+            'data' => betslip_number_format($bet_rate),
+          ),
+          array(
+            'class' => array('text-right', 'combination-winnings'),
+            'data' => betslip_number_format($winnings),
+          ),
+        );
+      }
+      $bets_table = theme('table', array('header' => $header, 'sticky' => FALSE, 'rows' => $rows, 'attributes' => array('class' => array('system-bets-combinations'))));
+      $html .= '<div id="system_'.$constant.'_'.$type.'" class="combination">'.
+      '<div class="line">'.
+      ($static ? '' : '<div class="row-selection remove">'.l(' ', "betslip/system-edit/nojs/remove/{$constant}/{$type}", array('attributes' => array('class' => array('use-ajax'), 'title' => t('Pašalinti')))).'</div>').
+      '<div class="row-selection information" onclick="Drupal.combinationsToggle(this);" title="'.t('Kombinacijos').'"> </div>'.
+      '<div class="combination-title" onclick="Drupal.combinationsToggle(this);">'.betslip_get_system_bet_title($constant, $type, ($betslipCount - $constant), null, $stake).'</div>'.
+      '</div>'.$bets_table.
+      '</div>';
+    }
+  }
+  if(!empty($systems) AND !$static){
+    $html .= '<div class="line">'.l(t('Pašalinti visas sistemas'), "betslip/system-edit/nojs/remove-all", array('attributes' => array('class' => array('use-ajax', 'remove-all-systems'), 'title' => t('Pašalinti visas sistemas')))).'</div>';
+  }
+  $html .= '</div>';
+  return $html;
+}
+
+function betslip_wordwrap($str, $width = 10, $break = "<br/>"){
+// return $str;
+  $len = drupal_strlen($str);
+  if($len <= $width){ return $str; }
+
+  $lines = array();
+  $line = '';
+  for($i = 0; $i < $len; $i++){
+    $line .= drupal_substr($str, $i, 1);
+    if(drupal_strlen($line) == $width){
+      $lines[] = $line;
+      $line = '';
+    }
+  }
+  if($line != ''){
+    $lines[] = $line;
+  }
+  return implode($break, $lines);
+}
+
+
+function betslip_systemBets_form($form, &$form_state){
+  $form['#prefix'] = '<div id="betslip_system_bet" class="clear">';
+  $form['#suffix'] = '</div>';
+
+  $betslip_data = betslip_getUsersBetSlip(1);
+  $systems = betslip_session('systems');
+  $betslipCount = count($betslip_data);
+  $constcount = count($betslip_data) - 2;
+  $k = 0;
+  $constants = array();
+  while($k <= $constcount){
+    $constants[] = $k++;
+  }
+
+  $form['betslist'] = array(
+    '#markup' => betslip_systemsBets_list(),
+  );
+  $form['form_start'] = array(
+    '#markup' => '<div id="system_bets_add_form">',
+  );
+  $form['constant'] = array(
+    '#type' => 'select',
+    '#title' => t('Konstantų sk.'),
+    '#default_value' => 0,
+    '#options' => $constants,
+    '#attributes' => array(
+      'onchange' => array('Drupal.constantChange(this);'),
+    ),
+    '#ajax' => array('wrapper' => 'betslip_system_bet', 'callback' => 'betslip_systemBets_form_callback', 'progress' => array('type' => null)),
+  );
+  $form['bets'] = array(
+    '#tree' => true,
+  );
+
+  $constantsCount = isset($form_state['values']['constant']) ? $form_state['values']['constant'] : 0;
+
+  $min = 1;
+  foreach($betslip_data as $item){
+    $event = betslip_getEventFromBet($item);
+    if(isset($event->combcount) AND intval($event->combcount)){
+      if($min < $event->combcount){
+        $min = intval($event->combcount);
+      }
+    }
+  }
+  $options = betslip_get_system_possible_bets($constantsCount, $min);
+
+  $default_value = '0.00';
+  if(!empty($options)){
+    foreach($options as $key => $option){
+      $option_value = isset($systems[$constantsCount][$key]) ? $systems[$constantsCount][$key] : $default_value;
+      $form['bets'][$constantsCount][$key] = array(
+        '#type' => 'textfield',
+        '#title' => $option,
+        '#default_value' => $option_value,
+        '#size' => '3',
+        '#maxlength' => 10,
+        '#attributes' => array(
+          'onfocus' => array('Drupal.cleanStakeFocus(this);'),
+          'onblur' => array('Drupal.cleanStakeBlur(this);'),
+        ),
+        '#ajax' => array(
+          'callback' => 'betslip_systemBets_form_submit_callback',
+          'keypress' => TRUE,
+        ),
+      );
+    }
+    $form['action submit'] = array(
+      '#type' => 'submit',
+      '#ajax' => array(
+        'callback' => 'betslip_systemBets_form_submit_callback',
+        'keypress' => TRUE,
+      ),
+      '#value' => t('Pridėti sistemas'),
+      '#attributes' => array(
+        'class' => array('reset'),
+      ),
+    );
+  }else{
+    $form['no_systems_message'] = array(
+      '#markup' => '<strong>'.t('Galimų sistemų nėra').'</strong>',
+    );
+  }
+  $form['form_end'] = array(
+    '#markup' => '</div>',
+  );
+  $form['#ajax'] = true;
+  return $form;
+}
+
+function betslip_system_edit($ajax, $action, $constant = 0, $type = 0){
+  $commands = array();
+  $commands[] = ajax_command_invoke('#betslip_messages', 'html', array(''));
+  betslip_session('last_action', REQUEST_TIME);
+  $systems = betslip_session('systems');
+  if($action == 'remove'){
+    betslip_log('system remove', 'Pašalinama sistema: %constant - %type', array('%constant' => $constant, '%type' => $type));
+    if(isset($systems[$constant][$type])){
+      unset($systems[$constant][$type]);
+      if(empty($systems[$constant])){ unset($systems[$constant]); }
+    }
+  }elseif($action == 'remove-all'){
+    betslip_log('system remove', 'Pašalinamos visos sistemos');
+    $systems = array();
+  }
+  betslip_session('systems', $systems);
+  if($ajax == 'ajax'){
+    $commands[] = ajax_command_replace('#systems_to_bet', betslip_systemsBets_list());
+    $win_total = betslip_number_format(betslip_calculate_possible_winnings());
+    $commands[] = ajax_command_invoke('#betslip_bottom .win_total', 'html', array($win_total));
+    $betslip_stake_total = betslip_stake_total('system', 1);
+    $commands[] = ajax_command_invoke('#betslip_bottom #betslip_stake_total', 'html', array(betslip_number_format($betslip_stake_total)));
+    
+    $commands[] = ajax_command_invoke('#sharebetslink', 'attr', array('data-ts-link', betslip_getUsersBetSlipURL()));
+    $commands[] = ajax_command_invoke('#sharebetslink', 'attr', array('data-ts-exptime', betslip_getUsersBetSlipURLExpire()));
+    
+    if(!empty($systems)){
+      $commands[] = ajax_command_invoke('.slip_row_data .row-left div', 'hide');
+      $commands[] = ajax_command_invoke('.slip_row_data .row-left div.row-letter', 'hide');
+      $commands[] = ajax_command_invoke('#betslip_actions ul', 'hide');
+      $commands[] = ajax_command_invoke('.slip_row_data .row-right .row-selection', 'hide');
+    }else{
+      $commands[] = ajax_command_invoke('.slip_row_data .row-left div', 'show');
+      $commands[] = ajax_command_invoke('.slip_row_data .row-left div.row-letter', 'hide');
+      $commands[] = ajax_command_invoke('#betslip_actions ul', 'show');
+      $commands[] = ajax_command_invoke('.slip_row_data .row-right .row-selection', 'show');
+    }
+
+    print ajax_render($commands);
+    exit;
+  }else{
+    drupal_goto($_SERVER['HTTP_REFERER']);
+  }
+}
+
+function betslip_systemBets_form_callback(&$form, &$form_state){
+  return $form;
+}
+
+function betslip_systemBets_form_submit(&$form, &$form_state){
+  $systems = betslip_session('systems');
+  $startCount = count($systems);
+  $systems[$form_state['values']['constant']] = array();
+  if(isset($form_state['stake_too_low'])){ unset($form_state['stake_too_low']); }
+  foreach($form_state['values']['bets'] as $constant => $bets){
+    foreach($bets as $type => $bet){
+     $bet = floatval(str_replace(',', '.', $bet));
+      if($bet >= account_currency_convert(null, 1, 'LTL', 3)){
+        $systems[$constant][$type] = betslip_number_format($bet);
+      }elseif($bet > 0){
+        $form_state['stake_too_low'] = TRUE;
+      }
+    }
+  }
+  if(empty($systems[$form_state['values']['constant']])){ unset($systems[$form_state['values']['constant']]); }
+  $endCount = count($systems);
+  betslip_session('systems', $systems);
+  if($startCount == 0 AND $endCount == 0){
+    if(!isset($form_state['stake_too_low'])){
+      $form_state['no_systems_message'] = $startCount.'-'.$endCount;
+    }
+  }else{
+    if(isset($form_state['no_systems_message'])){ unset($form_state['no_systems_message']); }
+  }
+}
+
+function betslip_systemBets_form_submit_callback(&$form, &$form_state){
+  $commands[] = ajax_command_invoke('#betslip_messages', 'html', array(''));
+  $win_total = betslip_number_format(betslip_calculate_possible_winnings());
+  $commands[] = ajax_command_invoke('#betslip_bottom .win_total', 'html', array($win_total));
+  $betslip_stake_total = betslip_stake_total('system', 1);
+  $commands[] = ajax_command_invoke('#betslip_bottom #betslip_stake_total', 'html', array(betslip_number_format($betslip_stake_total)));
+  $commands[] = ajax_command_invoke('#sharebetslink', 'attr', array('data-ts-link', betslip_getUsersBetSlipURL()));
+  $commands[] = ajax_command_invoke('#sharebetslink', 'attr', array('data-ts-exptime', betslip_getUsersBetSlipURLExpire()));
+  $commands[] = ajax_command_replace('#systems_to_bet', betslip_systemsBets_list());
+  $systems = betslip_session('systems');
+  if(!empty($systems)){
+    $commands[] = ajax_command_invoke('.slip_row_data .row-left div', 'hide');
+    $commands[] = ajax_command_invoke('.slip_row_data .row-left div.row-letter', 'show');
+    $commands[] = ajax_command_invoke('#betslip_actions ul', 'hide');
+    $commands[] = ajax_command_invoke('.slip_row_data .row-right .row-selection', 'hide');
+  }else{
+    $commands[] = ajax_command_invoke('.slip_row_data .row-left div', 'show');
+    $commands[] = ajax_command_invoke('.slip_row_data .row-left div.row-letter', 'hide');
+    $commands[] = ajax_command_invoke('#betslip_actions ul', 'show');
+    $commands[] = ajax_command_invoke('.slip_row_data .row-right .row-selection', 'show');
+  }
+  if(isset($form_state['no_systems_message'])){
+    $commands[] = ajax_command_betlipmessage(t('Nurodykite statomą sumą bent vienai sistemai'), 'warning');
+  }
+  if(isset($form_state['stake_too_low'])){
+    $commands[] = ajax_command_betlipmessage(t('Vienoje ar keliose sistemose nurodyta statymo suma yra per maža.'), 'warning');
+  }
+  betslip_session('last_action', REQUEST_TIME);
+  return array('#type' => 'ajax', '#commands' => $commands);
+}
+
+function betslip_bets_form($form, &$form_state){
+  $betslip_type = betslip_session('type');
+  $betslip_stake = betslip_session('stake');
+  $rate_total = betslip_get_rate_total();
+  $betslip_bets_total = betslip_bets_total($betslip_type, $betslip_stake);
+  $js_variables = array('betslip' => array('rate_total' => $rate_total, 'bets_total' => $betslip_bets_total));
+  drupal_add_js($js_variables, "setting");
+  $form['betslip_type'] = array(
+      '#type' => 'hidden',
+      '#value' => $betslip_type,
+  );
+
+  $form['bottom_info'] = array(
+    '#prefix' => '<div id="betslip_bottom_info" class="clear" style="text-align: right; ">',
+    '#suffix' => '</div>',
+  );
+
+  if($betslip_type == 'multi'){
+    $form['bottom_info']['rate_total'] = array(
+        '#type' => 'item',
+        '#title' => t('Koeficientas'),
+      '#markup' => '<span class="rate_total">'.betslip_number_format($rate_total).'</span>',
+    );
+  }
+  if($betslip_type != 'system'){
+    $form['bottom_info']['betslip_stake'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Statymo suma'),
+      '#default_value' => betslip_number_format(betslip_session('stake')),
+      '#size' => '3',
+      '#maxlength' => 10,
+      '#attributes' => array(
+        'onfocus' => array('Drupal.cleanStakeFocus(this);'),
+        'onblur' => array('Drupal.cleanStakeBlur(this);'),
+      ),
+      '#ajax' => array('callback' => 'betslip_bets_form_betslip_stake', 'event' => 'change', 'keypress' => TRUE, 'progress' => array('type' => null, 'message' => '')),
+    );
+  }
+  $win_total = betslip_number_format(betslip_calculate_possible_winnings());
+  $form['bottom_info']['win_total'] = array(
+    '#type' => 'item',
+    '#title' => t('Prog. laimėjimas'),
+    '#markup' => '<span id="win_total" class="win_total">'.$win_total.'</span> ',
+  );
+
+  $betslip_stake_total = betslip_stake_total($betslip_type, $betslip_stake);
+
+  $form['bottom_info']['betslip_stake_item'] = array(
+    '#type' => 'item',
+    '#title' => t('Statoma suma'),
+    '#markup' => '<span id="betslip_stake_total" class="stake_total">'.betslip_number_format($betslip_stake_total).'</span> ',
+  );
+
+  $betslip_data = betslip_getUsersBetSlip();
+  $form['bottom_info']['count_total'] = array(
+    '#type' => 'item',
+    '#title' => t('Viso įvykių:'),
+    '#markup' => '<span id="count_total" class="count_total">'.count($betslip_data).'</span>',
+    '#prefix' => '<div class="betslip-count-total">',
+    '#suffix' => '</div>',
+  );
+
+  $form['bottom_info']['betslip_messages'] = array (
+    '#markup' => '<div id="betslip_messages"></div>',
+  );
+  
+  $form['bottom_info']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Tęsti'),
+    '#ajax' => array('callback' => 'betslip_bets_form_submit', 'keypress' => TRUE, ),
+    '#attributes' => array('class' => array('btn-primary','btn-placebet-next'))
+  );
+  
+  if($betslip_type != 'system')
+  $form['bottom_info']['button-back'] = array(
+    '#markup' => '<div class="block-sharebet"><a class="btn-sharebet" id="sharebetslink" href="#" data-ts-link="'.betslip_getUsersBetSlipURL().'" data-ts-exptime="'.betslip_getUsersBetSlipURLExpire().'">'.t('Dalintis').'</a></div>',  
+      );
+  
+  return $form;
+}
+function betslip_getUsersBetSlipURLExpire()
+{
+    $bets = array(betslip_session('stake'));
+    $expire = false;
+    foreach (betslip_getUsersBetSlip() as $bet)
+    {
+	$d = unserialize($bet->data);
+	if(!$expire || $d->date < $expire)
+	    $expire = $d->date;
+    }
+    return $expire ? $expire - time() : 0;
+}
+function betslip_getUsersBetSlipURL()
+{
+    $bets = array(betslip_session('stake'));
+    array_push($bets, betslip_session('type'));
+    foreach (betslip_getUsersBetSlip() as $bet)
+    {
+	array_push($bets, $bet->event_id . ';' . $bet->choise);
+    }
+    return '#bet-' . implode('-', $bets);
+}
+
+function betslip_bets_form_betslip_stake($form, $form_state){
+  betslip_session('type', $form_state['values']['betslip_type']);
+  betslip_session('stake', floatval(str_replace(',', '.', $form_state['values']['betslip_stake'])));
+  $win_total = betslip_number_format(betslip_calculate_possible_winnings());
+  $commands = array();
+  $commands[] = ajax_command_invoke('#betslip_bottom .win_total', 'html', array($win_total));
+  $commands[] = ajax_command_invoke('#betslip_messages', 'html', array(''));
+  $commands[] = ajax_command_invoke('#sharebetslink', 'attr', array('data-ts-link', betslip_getUsersBetSlipURL()));
+  $commands[] = ajax_command_invoke('#sharebetslink', 'attr', array('data-ts-exptime', betslip_getUsersBetSlipURLExpire()));
+  
+  checkLimitsAjax($commands);  
+  
+  betslip_session('last_action', REQUEST_TIME);
+  return array('#type' => 'ajax', '#commands' => $commands);
+}
+
+function betslip_bets_form_submit($form, $form_state){
+  betslip_session('type', $form_state['values']['betslip_type']);
+  if(isset($form_state['values']['betslip_stake'])){
+    betslip_session('stake', floatval(str_replace(',', '.', $form_state['values']['betslip_stake'])));
+  }
+  betslip_session('last_action', REQUEST_TIME - 1);
+  global $user;
+  userinfo_updateUser($user);  
+  $commands = array();
+  $betslip_data = betslip_getUsersBetSlip(1);
+  $betslipStake = betslip_session('stake');
+  $rate_total = betslip_get_rate_total();
+  $win_total = betslip_calculate_possible_winnings();
+  $betslip_type = betslip_session('type');
+  $systems = betslip_session('systems');
+  $betslip_stake_total = betslip_stake_total($betslip_type, $betslipStake);
+  //betslip_log('action', 'Paspaustas mygtukas Tęsti. Duomenys: <br/> Tipas: %type <br/> Statymas: %stake <br/> Viso statymas: %betslip_stake_total <br/> Statymai: <pre>%betslipdata</pre> <br/> Sistemos: <pre>%systems</pre> ', array('%type' => $betslip_type, '%stake' => $betslipStake, '%betslip_stake_total' => $betslip_stake_total, '%betslipdata' => print_r($betslip_data, true), ' %systems' => print_r($systems, true)));
+  $commands[] = ajax_command_invoke('#betslip_messages', 'html', array(''));
+  $commands[] = ajax_command_remove('.betslip-error');
+  if($betslip_type == 'system' AND empty($systems)){
+    $commands[] = ajax_command_betlipmessage('Nėra pasirinktų sistemų', 'error');
+  }elseif(empty($betslip_data)){
+    $commands[] = ajax_command_betlipmessage(t('Norint lažintis privalote: pasirinkti pageidaujamą sporto šaką, pasirinkti įvykį ir jo baigtį, pasirinkti statymo tipą ir sumą kurią norite pastatyti. Plačiau skaitykite <a href="@url">lažybų instrukcijas</a>', array('@url' => url('node/531'))), 'error');
+  }elseif($user->uid == 0){
+    $commands[] = ajax_command_betlipmessage(t('Norint atlikti šį statymą jums reikia <a href="@login-url">prisijungti</a>, jei jūs pirmą kartą svetainėje privalote <a href="@register-url">užsiregistruoti</a>', array('@login-url' => url('user/login', array('query' => array('destination' => $_SERVER['HTTP_REFERER']))), '@register-url' => url('user/register'))), 'error');
+  }elseif(!user_access('can place bets')){
+    $commands[] = ajax_command_betlipmessage(t('Kad galėtumėte atlikti statymą Jums reikia pasirašyti sutartį.'), 'error');
+  }elseif(isset($user->roles[variable_get('account_roles_topsport_contract', '')]) && REG_SKIP_DOCUMENTS === FALSE && geoip_country_code() == 'LT'){
+    $commands[] = ajax_command_betlipmessage(t('Norint atlikti statymus Jūs privalote <a href="@url">įkelti tapatybę patvirtinantį dokumentą</a> (šį veiksmą reikia atlikti tik vieną kartą, jei mes jį patvirtinome).', array('@url' => url('account/withdrawals'))), 'warning');
+  }elseif($betslip_stake_total > $user->data['maxBetAmount']){
+    $commands[] = ajax_command_betlipmessage(t('Maksimali statoma suma yra @maxbet LTL', array('@maxbet' => $user->data['maxBetAmount'])), 'error');
+  }elseif($betslip_stake_total > userinfo_get_balance()){
+    $commands[] = ajax_command_betlipmessage(t('Jūsų norimai operacijai nepakanka balanso likučio, <a href="@url">papildykite sąskaitą</a>', array('@url' => url('account/deposits'))), 'error');
+  }elseif($betslip_type != 'system' && $betslipStake < account_currency_convert(null, 1, 'LTL', 3)){
+    $commands[] = ajax_command_betlipmessage(t('Statoma suma per maža'), 'error');
+  }elseif($betslip_type != 'single' && !($bet_limit = bets_limits(count($betslip_data)))){
+    $commands[] = ajax_command_betlipmessage(t('Negalimas lažybų kortelėje esančių įvykių kiekis'), 'error');
+  }elseif($betslip_type != 'single' && $bet_limit->coef < $rate_total){
+    $commands[] = ajax_command_betlipmessage(t('Bendras lažybų kortelės koeficientas yra per didelis'), 'error');
+  }elseif($betslip_type != 'single' && $bet_limit->win < $win_total){
+    $commands[] = ajax_command_betlipmessage(t('Galimas laimėjimas yra per didelis'), 'error');
+  }elseif($superbets = betslip_getSuperbetsFromBetslip($betslip_data) AND count($superbets) > 1){
+    $commands[] = ajax_command_betlipmessage(t('Lažybų skaičiuoklėje gali būti tik vienas superstatymo įvykis'), 'error');
+    foreach($superbets as $row){
+      $commands[] = ajax_command_invoke('#r_'.$row->event_id.'_'.$row->choise, 'addClass', array('betslip-error'));
+    }
+  }else{
+    $betAllow = true;
+    if($betslip_type == 'single'){
+      foreach($betslip_data as $row){
+        $bet = betslip_getEventFromBet($row);
+        if($bet->combcount){
+          $betAllow = false;
+          $commands[] = ajax_command_invoke('#r_'.$row->event_id.'_'.$row->choise, 'addClass', array('betslip-error'));
+        }
+      }
+      if(!$betAllow){
+        $commands[] = ajax_command_betlipmessage(t('Įvykiai turi būti kombinuojami'), 'error');
+      }
+    }
+    if(betslip_session('type') != 'single'){
+      foreach($betslip_data as $row){
+        $bet = betslip_getEventFromBet($row);
+        if(bets_can_be_combained($row, $bet) !== TRUE){
+          $betAllow = false;
+          $commands[] = ajax_command_invoke('#r_'.$row->event_id.'_'.$row->choise, 'addClass', array('betslip-error'));
+        }
+      }
+      if(!$betAllow){
+        $commands[] = ajax_command_betlipmessage(t('Įvykiai negali būti kombinuojami.'), 'error');
+      }
+      if($betAllow){
+        $totalCount = count($betslip_data);
+        $minCount = 0;
+        foreach($betslip_data as $row){
+          $bet = betslip_getEventFromBet($row);
+          if($bet->combcount AND ($bet->combcount > $totalCount)){
+            if($minCount < $bet->combcount){ $minCount = $bet->combcount; }
+            $betAllow = false;
+            $commands[] = ajax_command_invoke('#r_'.$row->event_id.'_'.$row->choise, 'addClass', array('betslip-error'));
+          }
+        }
+        if(!$betAllow){
+          $commands[] = ajax_command_betlipmessage(t('Per mažai įvykių kortelėje.').'<br/>'.t('Mažiausias įvykių skaičius kortelėje: %minCount', array('%minCount' => $minCount)), 'error');
+        }
+      }
+    }
+    if($betAllow){
+      $data = '';
+      $data .= theme('betslip_types', array('items' => betslip_getTypes(), 'static' => false));
+      foreach($betslip_data as $row){
+        $bet = betslip_getEventFromBet($row);
+        $data .= betslip_draw_row($row, $bet, true);
+      }
+      $data .= betslip_get_block_content_bottom(TRUE);
+      //betslip_log('betslip data', 'Mano statymai blokelio informacija: <br/> !data <br/>', array('!data' => $data));
+      $commands[] = ajax_command_html('#block-betslip-betslip .panel-body', $data);
+    }
+  }
+  $commands[] = ajax_command_invoke('#account-balance', 'html', array(account_balance_string()));
+  print ajax_render($commands); exit;
+}
+
+function betslip_bets_confirm_form($form, &$form_state){
+  $betslip_type = betslip_session('type');
+  $betslip_stake = betslip_session('stake');
+
+  $form['#ajax'] = TRUE;
+  $form['betslip_type'] = array(
+    '#type' => 'hidden',
+    '#value' => $betslip_type,
+  );
+  $form['betslip_stake'] = array(
+    '#type' => 'hidden',
+    '#value' => $betslip_stake,
+  );
+
+  $form['bottom_info'] = array(
+    '#tree' => false,
+    '#prefix' => '<div id="betslip_bottom_info" class="clear" style="text-align: right; ">',
+    '#suffix' => '</div>',
+  );
+
+  $betslip_getTypes = betslip_getTypes();
+  $bet_type_markup = $betslip_getTypes[$betslip_type]['title'];
+
+  $form['bottom_info']['bet_type_item'] = array(
+    '#type' => 'item',
+    '#title' => t('Statymo tipas'),
+    '#markup' => '<span class="rate_total">'.$bet_type_markup.'</span>',
+  );
+  if($betslip_type == 'system'){
+    $form['bottom_info']['system_bets'] = array(
+      '#markup' => betslip_systemsBets_list(true),
+    );
+  }
+  if($betslip_type == 'multi'){
+    $rate_total = betslip_get_rate_total();
+    $form['bottom_info']['rate_total'] = array(
+      '#type' => 'item',
+      '#title' => t('Koeficientas'),
+      '#markup' => '<span class="rate_total">'.betslip_number_format($rate_total).'</span>',
+    );
+  }
+
+  $betslip_stake_total = betslip_stake_total($betslip_type, $betslip_stake);
+
+  $form['bottom_info']['betslip_stake_item'] = array(
+    '#type' => 'item',
+    '#title' => t('Statoma suma'),
+    '#markup' => account_currency_string('<span id="betslip_stake_total" class="rate_total">'.betslip_number_format($betslip_stake_total).'</span> '),
+  );
+
+  $win_total = betslip_number_format(betslip_calculate_possible_winnings());
+  $form['bottom_info']['win_total_item'] = array(
+    '#type' => 'item',
+    '#title' => t('Prog. laimėjimas'),
+    '#markup' => account_currency_string('<span id="win_total" class="win_total">'.$win_total.'</span> '),
+  );
+  /*2013-12-06 disabled
+   * if($betslip_stake_total > 100){
+    $form['bottom_info']['current_pass'] = array(
+      '#type' => 'password',
+      '#title' => t('Current password'),
+      '#size' => 36,
+      '#ajax' => array('event' => 'submit', 'callback' => 'betslip_bets_form_confirm_submit_null', 'keypress' => TRUE),
+    );
+  }*/
+  $form['bottom_info']['clearUsersSlip'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Išvalyti statymus'),
+    '#default_value' => 1,
+    '#ajax' => array('event' => 'submit', 'callback' => 'betslip_bets_form_confirm_submit_null', 'keypress' => TRUE),
+  );
+  $form['bottom_info']['betslip_messages'] = array (
+    '#markup' => '<div id="betslip_messages"></div>',
+  );
+  $form['bottom_info']['button-back'] = array(
+    '#markup' => '<a class="left button-back" onclick="javascript:location.reload();" href="#">'.t('Atgal').'</a>',
+  );
+
+  $form['generated_time'] = array('#type' => 'value', '#value' => REQUEST_TIME - 1);
+
+  $form['bottom_info']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Patvirtinti'),
+    '#ajax' => array('callback' => 'betslip_bets_form_confirm_submit'),
+    '#attributes' => array('class' => array('btn-primary','btn-placebet-confirm'))
+  );
+  return $form;
+}
+
+function betslip_dateTimeFormat($time){
+	$tomorrow = strtotime('tomorrow');
+	$onemoreday = strtotime('+1 day', $tomorrow);
+	$dif = $time - REQUEST_TIME;
+	
+	if($dif < 3600 AND $dif > 0){
+		return t('už %min min', array('%min' => round($dif/60, 0)));
+	}elseif($time < $tomorrow){
+		return t('šiandien').' '.format_date($time, 'custom', 'H:i');
+	}elseif($time < $onemoreday){
+		return t('rytoj').' '.format_date($time, 'custom', 'H:i');
+	}
+	if(date('Y') != date('Y', $time)){
+		return format_date($time, 'custom', 'Y-m-d H:i');
+	}
+	return format_date($time, 'custom', 'm-d H:i');
+}
+
+function betslip_bets_form_confirm_submit_null($form, &$form_state){ }
+function betslip_bets_form_confirm_submit($form, &$form_state){	
+  betslip_log('action', 'Paspaustas mygtukas Patvirtinti. Duomenys: <br/> Tipas: %type <br/> Statymas: %stake', array('%type' => $form_state['values']['betslip_type'], '%stake' => $form_state['values']['betslip_stake']));
+  global $user;  
+  betslip_session('type', $form_state['values']['betslip_type']);
+  betslip_session('stake', floatval(str_replace(',', '.', $form_state['values']['betslip_stake'])));
+  $commands = array();
+  $commands[] = ajax_command_invoke('#betslip_messages', 'html', array(''));
+  $betallow = true;
+  /* 2013-12-06 disabled
+   * if(isset($form_state['values']['current_pass'])){
+    require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
+    $current_pass_failed = empty($form_state['values']['current_pass']) || !user_check_password($form_state['values']['current_pass'], $user);
+    if($current_pass_failed){
+      $commands[] = ajax_command_betlipmessage(t('Jūsų slaptažodis neteisingas'), 'error');
+      $betallow = false;
+    }
+  }*/
+  if($form_state['values']['generated_time'] < betslip_session('last_action')){
+    $betallow = false;
+    $commands[] = ajax_command_html('#block-betslip-betslip .panel-body', betslip_drawBetSlip());
+    $commands[] = ajax_command_betlipmessage(t('Mano statymų duomenys buvo pakeisti. Atlikite statymą iš naujo.'), 'error');
+  }
+  if($betallow){
+    betslip_session('last_action', REQUEST_TIME);
+    $betslip_data = betslip_getUsersBetSlip(1);    
+    $betsPlaced = bets_placeBets($betslip_data, betslip_session('stake'), betslip_session('type'), betslip_session('systems'));
+    if(!empty($betsPlaced)){
+      foreach($betsPlaced as $result){
+	  if(is_array($result))
+	  {
+	      foreach ($result['events'] as $ev)
+	      if($ev['ErrorId'] == 1){
+		  $commands[] = array('command'=>'changedKoef', 'eid' => $ev['EventId'], 'nCoef'=> $ev['NewCoef'], 'oCoef' => $ev['oldKoef']);
+	      }
+	    $commands[] = ajax_command_betlipmessage($result['message'], 'error');
+	  }else
+	    $commands[] = ajax_command_betlipmessage($result, 'error');
+      }
+    } else{     
+      userinfo_updaterData();
+      $_SESSION['gemius'] = 'bet_placed';
+      $commands[] = ajax_command_betlipmessage(t('Statymas atliktas sėkmingai') . '<br />' . ' <a href="'.url('account/bets').'">' . t('Statymų istoriją rasite čia.') . '</a>', 'success' );
+      if($form_state['values']['clearUsersSlip']){
+        betslip_clearUsersSlip();
+        betslip_session('type', null, TRUE);
+        betslip_session('systems', null, TRUE);
+        $commands[] = ajax_command_invoke('.btn-bet', 'removeClass', array('active'));
+      }
+    }
+    drupal_static_reset('betslip_getUsersBetSlip');
+    array_unshift($commands, ajax_command_html('#block-betslip-betslip .panel-body', betslip_drawBetSlip()));    
+  }  
+  $commands[] = ajax_command_invoke('.my-balance a', 'html', array(account_balance_string()));
+  $Wallets = account_user_data($user->uid);
+  if(isset($Wallets->discount_current_amount)){  
+  	$commands[] = ajax_command_invoke('#account_balance_discount_string', 'html', array(account_currency_string($Wallets->discount_current_amount)));
+  	$commands[] = ajax_command_invoke('#account_balance_discount_UsedCount', 'html', array($Wallets->discount_used_count));
+  } else {
+  	$commands[] = ajax_command_invoke('.my-discount', 'remove');
+  }
+  if(isset($Wallets->Goldens->Amount))$commands[] = ajax_command_invoke('.my-goldens a', 'html', array($Wallets->Goldens->Amount . ' '. $Wallets->Goldens->Currency));
+   
+  print ajax_render($commands);
+  exit;
+}
+
+function betslip_session($key, $value = NULL, $reset = FALSE) {
+  global $user;
+  static $storage;
+  if($reset){
+    if(isset($_SESSION['betslip'][$key])){ unset($_SESSION['betslip'][$key]); }
+    $storage[$key] = null;
+  }
+  if(isset($value)) {
+    if($key == 'stake'){
+      $value = round($value, 2);
+    }
+    $storage[$key] = $value;
+    $_SESSION['betslip'][$key] = $value;
+    if($key != 'last_action' AND $key != 'systems'){
+      betslip_log('session', 'Raktas: %key. Reikšmė: %value', array('%key' => $key, '%value' => $value));
+    }
+  }elseif(empty($storage[$key]) && isset($_SESSION['betslip'][$key])){
+    $storage[$key] = $_SESSION['betslip'][$key];
+  }elseif(empty($storage[$key]) && !isset($_SESSION['betslip'][$key])){
+    switch ($key){
+      case 'type':
+        $value = 'single';
+        break;
+      case 'stake':
+        $value = (isset($user->data['betamount']) ? ($user->data['betamount']) : 0);
+        break;
+      case 'systems':
+        $value = array();
+        break;
+      case 'last_action':
+        $value = REQUEST_TIME;
+        break;
+      default:
+        $value = NULL;
+        break;
+    }
+    $storage[$key] = $value;
+//     $_SESSION['betslip'][$key] = $value;
+  }
+  return $storage[$key];
+}
+
+function betslip_getTypes(){
+  $betslip_data = betslip_getUsersBetSlip();
+  $betslip_type = betslip_session('type');
+  $betslip_types = array(
+    'single' => array(
+      'title' => t('Paprastas'),
+      'link' => 'betslip/type/nojs/single',
+      'active' => ($betslip_type == 'single'),
+      'enabled' => true,
+    ),
+    'multi' => array(
+      'title' => t('Kombinuotas'),
+      'link' => 'betslip/type/nojs/multi',
+      'active' => ($betslip_type == 'multi'),
+      'enabled' => (count($betslip_data) > 1),
+    ),
+    'system' => array(
+      'title' => t('Sisteminis'),
+      'link' => 'betslip/type/nojs/system',
+      'active' => ($betslip_type == 'system'),
+      'enabled' => (count($betslip_data) > 2),
+    ),
+  );
+  return $betslip_types;
+}
+
+function betslip_user_login(&$edit, $account){
+  if(isset($_SESSION['betslip']['data'])){
+    if(!empty($_SESSION['betslip']['data'])){
+      betslip_clearUsersSlip();
+      foreach($_SESSION['betslip']['data'] as $slipData){
+        betslip_addEventToUsersBetSlip($slipData->event_id, $slipData->choise, $slipData->selected, $slipData->weight);
+      }
+    }
+    unset($_SESSION['betslip']['data']);
+  }
+}
+
+function betslip_getUsersBetSlip($selected = null){
+  global $user;
+  $data = &drupal_static(__FUNCTION__);
+
+  if(!isset($data)){
+    if(isset($user) && $user->uid){
+      $data = "1"; //db_select('users_betslip', 'slip')->fields('slip')->condition('uid', $user->uid)->orderBy('weight', 'ASC')->execute()->fetchAll();
+    }else{
+      if(!isset($_SESSION['betslip']['data'])){
+        $_SESSION['betslip']['data'] = array();
+      }
+      $data = $_SESSION['betslip']['data'];
+    }
+    $letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+    $i = 0;
+    foreach($data as $key => $event){
+      $data[$key]->letter = drupal_substr($letters, $i++, 1);
+      if(empty($event->data)){
+        betslip_updateBetEventData($data[$key]);
+      }
+    }
+  }
+  $result = $data;
+
+  if($selected !== null){
+    foreach($result as $key => $dat){
+      if($dat->selected != $selected){
+        unset($result[$key]);
+      }
+    }
+  }
+
+  return $result;
+}
+
+function betslip_clearUsersSlip(){
+  global $user;
+  if(isset($user) && $user->uid){
+    db_delete('users_betslip')->condition('uid', $user->uid)->execute();
+  }else{
+    $_SESSION['betslip']['data'] = array();
+  }
+  betslip_session('stake', null, TRUE);
+  /*
+  if(isset($_SESSION['betslip'])){
+    unset($_SESSION['betslip']);
+  }*/
+}
+
+function betslip_draw_row($row, $bet, $static = false){
+  global $language;
+
+  if(empty($bet) OR $bet->date < REQUEST_TIME){
+    betslip_removeEventToUsersBetSlip($row->event_id, $row->choise);
+    return;
+  }
+
+  $gameType = offers_getGameType($bet->gtid);
+  $gameTypeTitle = $gameType->title;
+  $patterns = offers_getPatterns();
+  $pattern = isset($patterns[$gameType->patternid]) ? $patterns[$gameType->patternid] : null;
+  $selection = $gameType->{'cn'.$row->choise};
+  $offerPattern = offers_event_pattern_data($bet);
+  if(offers_show_europeview() AND $pattern){
+	  $cor_pattern = explode('|', $pattern->{'cn'.$row->choise});
+	  $cor_pattern = array_pop($cor_pattern);	
+	  $selection = strtr($cor_pattern, $offerPattern);
+	  $gameTypeTitle = preg_replace('|{(?:[^}]*)}|', '', $gameTypeTitle);
+  }
+  else
+	  $gameTypeTitle = strtr($gameTypeTitle, array('{'=>'(', '}' => ')'));
+  
+  $variables = array(
+    'row' => $row,
+    'bet' => $bet,
+    'row_id' => 'r_' . $row->event_id . '_'.$row->choise,
+    'title' => $bet->title,
+    'eventName' => $bet->name,
+	'combcount' => $bet->combcount, 
+    'letter' => isset($row->letter) ? $row->letter : '',
+    'eventCat' => $bet->category,
+    'type' => $gameTypeTitle,
+    'eid' => $row->event_id,
+    'choise' => $row->choise,
+    'selection' => $selection,
+    'rate' => $bet->{'c'.$row->choise},
+    'selected' => $row->selected,
+    'sliptype' => betslip_session('type'),
+    'static' => $static,
+    'hideactions' => (betslip_session('type') == 'system' AND count(betslip_session('systems'))),
+  );
+  return theme('betslip_row', $variables);
+}
+
+function betslip_get_rate_total(){
+  static $rate_total;
+  if(!isset($rate_total)){
+    $betslip_type = betslip_session('type');
+    switch($betslip_type){
+      case 'single':
+        $rate_total = 0;
+        break;
+      case 'multi':
+        $rate_total = 1;
+        break;
+      case 'system':
+        $rate_total = 0;
+        break;
+      default:
+        $rate_total = 0;
+        break;
+    }
+    if($betslip_type == 'system'){
+      betslip_getSystemsWinnings(true);
+    }else{
+      $betslip_data = betslip_getUsersBetSlip(1);
+      foreach ($betslip_data as $row){
+        $rates = betslip_getEventRatesFromBet($row);
+        if(!$rates){ continue; }
+        switch($betslip_type){
+          case 'single':
+            $rate_total += $rates->{'c'.$row->choise};
+            break;
+          case 'multi':
+            $rate_total *= $rates->{'c'.$row->choise};
+            break;
+        }
+      }
+    }
+  }
+  return round($rate_total, 2);
+}
+
+function betslip_getSystemsWinnings($rate = false){
+  $winnings = 0;
+  $systems = betslip_session('systems');
+  foreach($systems as $constants => $bets){
+    foreach($bets as $type => $stake){
+      if($rate){ $stake = 1; }
+      $possible_bets = betslip_generate_system_bets($constants, $type);
+      $winnings += betslip_getSystemsWinnings_calculate($possible_bets, $stake);
+    }
+  }
+  return $winnings;
+}
+
+function betslip_getSystemsWinnings_calculate($possible_bets, $stake){
+  $winnings = 0;
+  foreach($possible_bets as $bet){
+    $bet_rate = 1;
+    foreach($bet as $row){
+      $rates = betslip_getEventRatesFromBet($row);
+      if(!$rates){ continue; }
+      $bet_rate *= $rates->{'c'.$row->choise};
+    }
+    $bet_rate = round($bet_rate, 2);
+    $winnings += round($stake * $bet_rate, 2);
+  }
+  return $winnings;
+}
+
+
+function betslip_calculate_possible_winnings(){
+  $winnings = 0;
+  if(betslip_session('type') != 'system'){
+    $rate_total = betslip_get_rate_total();
+    $betslip_stake = betslip_session('stake');
+    $winnings = ($rate_total * $betslip_stake);
+  }else{
+    $winnings =  betslip_getSystemsWinnings();
+  }
+  return round($winnings, 2);
+}
+
+function betslip_type($ajax, $type){
+  if(in_array($type, array('single', 'multi', 'system'))){
+    $betslip_data = betslip_getUsersBetSlip();
+    if(($type == 'single') || ($type == 'multi' && count($betslip_data) > 1) || ($type == 'system' && count($betslip_data) > 2)){
+      betslip_log('type change', 'Naujas tipas: %type. %reason', array('%type' => $type, '%reason' => 'Vartojo atliktas keitimo veiksmas.'));
+      betslip_session('type', $type);
+    }
+  }
+  if($ajax == 'ajax'){
+    $commands = array();
+    $commands[] = ajax_command_html('#block-betslip-betslip .panel-body', betslip_drawBetSlip());
+    print ajax_render($commands);
+    exit;
+  }else{
+    drupal_goto($_SERVER['HTTP_REFERER']);
+  }
+}
+
+function betslip_eventInUsersBetSlip($event_id, $choise){
+  global $user;
+
+  if(isset($user) && $user->uid){
+    return db_select('users_betslip', 'slip')
+      ->fields('slip')
+      ->condition('uid', $user->uid)
+      ->condition('event_id', $event_id)
+      ->condition('choise', $choise)
+      ->execute()
+      ->fetchObject();
+  }else{
+    if(isset($_SESSION['betslip']['data'][$event_id.'_'.$choise])){
+      return $_SESSION['betslip']['data'][$event_id.'_'.$choise];
+    }
+    return false;
+  }
+}
+
+function betslip_getSuperbetsFromBetslip($betslip_data){
+
+  $superbets = array();
+  foreach($betslip_data as $bet){
+    $event = betslip_getEventFromBet($bet);
+    if($event->name < 20){
+      $superbets[] = $bet;
+    }
+  }
+
+  return $superbets;
+}
+
+function betslip_getEventFromBet($bet, $reset = false){
+
+  if(empty($bet->data) OR $reset){
+    $event = offers_getEventById($bet->event_id);
+  }else{
+    $event = unserialize($bet->data);
+  }
+
+  return $event;
+}
+
+function betslip_getEventRatesFromBet($bet){
+
+  return $event = betslip_getEventFromBet($bet);
+
+//   $rateCodes = array('c1', 'c2', 'c3', 'c4', 'c5', 'c6');
+//   $rates = stdClass();
+//   foreach($rateCodes as $key){
+//     $rates->$key = $event->$key;
+//   }
+//   return $rates;
+}
+
+function betslip_requireEventDataUpdate($event_id, $choise){
+  global $user;
+  if(isset($user) && $user->uid){
+    $qry = db_update('users_betslip')
+      ->fields(array('data' => null))
+      ->condition('uid', $user->uid)
+      ->condition('event_id', $event_id)
+      ->condition('choise', $choise)
+      ->execute();
+  }else{
+    $_SESSION['betslip']['data'][$bet->event_id.'_'.$bet->choise]->data = null;
+  }
+
+}
+
+function betslip_updateBetEventData(&$bet){
+  global $user;
+  $event = serialize(betslip_getEventFromBet($bet, true));
+  if(isset($user) && $user->uid){
+    $qry = db_update('users_betslip')
+      ->fields(array('data' => $event))
+      ->condition('uid', $user->uid)
+      ->condition('event_id', $bet->event_id)
+      ->condition('choise', $bet->choise)
+      ->execute();
+  }else{
+    $_SESSION['betslip']['data'][$bet->event_id.'_'.$bet->choise]->data = $event;
+  }
+
+  $bet->data = $event;
+}
+
+function betslip_addEventToUsersBetSlip($event_id, $choise, $selected = 1, $weight = FALSE){
+  global $user;
+
+  if($weight === FALSE)	
+  {
+	  $weight = 1;
+	  foreach (betslip_getUsersBetSlip(true) as $b)
+		  if($b->weight >= $weight) $weight = $b->weight + 1;	
+  }
+  
+  $event = serialize(offers_getEventById($event_id));
+  if(isset($user) && $user->uid){
+    db_insert('users_betslip')
+      ->fields(array(
+        'uid' => $user->uid,
+        'event_id' => $event_id,
+        'choise' => $choise,
+        'selected' => $selected,
+        'data' => $event,
+        'weight' => $weight,
+      ))
+      ->execute();
+  }else{
+    $_SESSION['betslip']['data'][$event_id.'_'.$choise] = new stdClass();
+    $_SESSION['betslip']['data'][$event_id.'_'.$choise]->event_id = $event_id;
+    $_SESSION['betslip']['data'][$event_id.'_'.$choise]->choise = $choise;
+    $_SESSION['betslip']['data'][$event_id.'_'.$choise]->selected = $selected;
+    $_SESSION['betslip']['data'][$event_id.'_'.$choise]->data = $event;
+    $_SESSION['betslip']['data'][$event_id.'_'.$choise]->weight = $weight;
+  }
+  betslip_session('systems', array());
+  betslip_session('last_action', REQUEST_TIME);  
+}
+
+function betslip_removeEventToUsersBetSlip($event_id, $choise){
+  global $user;
+
+  if(isset($user) && $user->uid){
+    db_delete('users_betslip')
+      ->condition('uid', $user->uid)
+      ->condition('event_id', $event_id)
+      ->condition('choise', $choise)
+      ->execute();
+  }else{
+    if(isset($_SESSION['betslip']['data'][$event_id.'_'.$choise])){
+      unset($_SESSION['betslip']['data'][$event_id.'_'.$choise]);
+    }
+  }
+  betslip_session('systems', array());
+  betslip_session('last_action', REQUEST_TIME);
+}
+
+function betslip_removeEventFromSlip($event_id){
+  global $user;
+
+  if($event_id == (string)(int)($event_id)){
+    db_delete('users_betslip')
+    ->condition('event_id', $event_id)
+    ->condition('uid', $user->uid)
+    ->execute();
+  }
+}
+
+function betslip_selectionEventToUsersBetSlip($event_id, $choise, $selection){
+  global $user;
+
+  if(isset($user) && $user->uid){
+    $qry = db_update('users_betslip')
+    ->fields(array('selected' => $selection))
+    ->condition('uid', $user->uid);
+    if($event_id != 'slip'){
+      $qry = $qry->condition('event_id', $event_id)
+      ->condition('choise', $choise);
+    }
+    $qry = $qry->execute();
+  }else{
+    if($event_id == 'slip'){
+      if(isset($_SESSION['betslip']['data'])){
+        foreach($_SESSION['betslip']['data'] as &$row){
+          $row->selected = $selection;
+        }
+      }
+    }else{
+      if(isset($_SESSION['betslip']['data'][$event_id.'_'.$choise])){
+        $_SESSION['betslip']['data'][$event_id.'_'.$choise]->selected = $selection;
+      }
+    }
+  }
+}
+
+function betslip_unselectSuperEvents(&$commands, $exevent, $choise)
+{    
+   
+    if($exevent->name > 20) return; // not superbet
+    $event_id = $exevent->eid;
+    $selection = 0;
+    $wusChanged = false;
+    foreach(betslip_getUsersBetSlip(true) as $bet)
+    {
+	$event = unserialize($bet->data);
+	if($event->name <= 20 && ($bet->event_id != $event_id || $bet->choise != $choise)) // superbet = oe.name <= 20 
+	{
+	    $wusChanged = true;
+	    // unselect 
+	    betslip_log('selection event', 'Keičiamas įvykio pasirinkimas: %event_id - %choise - %selection', array('%event_id' => $bet->event_id, '%choise' => $bet->choise, '%selection' => $selection));
+	    betslip_selectionEventToUsersBetSlip($bet->event_id, $bet->choise, intval($selection));
+	    $commands[] = ajax_command_replace('#r_'.$bet->event_id.'_'.$bet->choise.' .row-selection.selection', '<div class="row-selection selection '.($selection ? 'selected' : 'unselected').'">'.l(' ', "betslip/edit/nojs/selection/$bet->event_id/$bet->choise/".($selection ? 0 : 1), array('attributes' => array('class' => array('use-ajax'), 'title' => ''))).'</div>');
+	}
+    }
+ 
+    if($wusChanged) {	
+	$commands[] = ajax_command_betlipmessage(t('Lažybų skaičiuoklėje gali būti tik vienas superstatymo įvykis'), 'error');
+	
+    }
+}
+
+function betslip_edit(){
+  global $user, $language;
+
+  $type = arg(2);
+  $action = arg(3);
+  $event_id = arg(4);
+  $choise = arg(5);
+  $selection = (arg(6) ? 1 : 0);
+  $betslip_data = betslip_getUsersBetSlip();
+  $commands = array();
+  $commands[] = ajax_command_invoke('#betslip_messages', 'html', array(''));
+  $updateTypes = false;
+  $DeleteSystems = true;
+
+  
+  $betslip_type = betslip_session('type');
+  $systems = betslip_session('systems');
+  if($betslip_type == 'system' AND !empty($systems)){
+    $commands[] = ajax_command_betlipmessage(t('Kad atliktumėte pakeitimus pirmiausia turite pašalintis visas pasirinktas sistemas'), 'error');
+    if($type == 'ajax'){
+     print ajax_render($commands);
+     exit;
+    }else{
+      drupal_goto($_SERVER['HTTP_REFERER']);
+    }
+  }
+  if($event_id == (string)(int)($event_id) OR $event_id == 'slip' OR $action == 'addbets'){
+    if($action == 'remove'){
+      if($event_id == 'slip'){
+        betslip_log('remove slip', 'Ištrinami visi statymai');
+        betslip_clearUsersSlip();
+        foreach($betslip_data as $row){
+          $commands[] = ajax_command_remove('#r_'.$row->event_id.'_'.$row->choise);
+        }
+        $commands[] = ajax_command_invoke('.btn-bet', 'removeClass', array('active'));
+      }else{
+        $in_slip = betslip_eventInUsersBetSlip($event_id, $choise);
+        betslip_log('remove event', 'Ištrinamas įvykio statymas: %event_id - %choise', array('%event_id' => $event_id, '%choise' => $choise));
+        betslip_removeEventToUsersBetSlip($event_id, $choise);
+        $commands[] = ajax_command_remove('#r_'.$event_id.'_'.$choise);
+        $commands[] = ajax_command_invoke('#e_'.$event_id.'_'.$choise, 'removeClass', array('active'));
+        $commands[] = ajax_command_invoke('#e_'.$event_id.'_'.$choise.'_day', 'removeClass', array('active'));
+        $commands[] = ajax_command_invoke('#e_'.$event_id.'_'.$choise.'_pop', 'removeClass', array('active'));
+        $commands[] = ajax_command_invoke('#e_'.$event_id.'_'.$choise.'_lastminute', 'removeClass', array('active'));
+        $commands[] = ajax_command_invoke('[data-eid="e_'.$event_id.'_'.$choise.'"]', 'removeClass', array('active'));
+        $commands[] = ajax_command_invoke('#ball_'.$event_id,  'removeClass', array('bs'.$choise));
+      }
+    }elseif($action == 'selection'){
+      if($event_id == 'slip'){
+        $selection = (arg(5) ? 1 : 0);
+        $choise = null;
+        betslip_selectionEventToUsersBetSlip($event_id, $choise, intval($selection));
+        betslip_log('selection slip', 'Keičiami visi įvykių pasirinkimai: %selection - %choise', array('%selection' => $selection));
+        foreach($betslip_data as $row){
+          $commands[] = ajax_command_replace('#r_'.$row->event_id.'_'.$row->choise.' .row-selection.selection', '<div class="row-selection selection '.($selection ? 'selected' : 'unselected').'">'.l(' ', "betslip/edit/nojs/selection/{$row->event_id}/{$row->choise}/".($selection ? 0 : 1), array('attributes' => array('class' => array('use-ajax'), 'title' => ''))).'</div>');
+        }
+      }else{
+        betslip_log('selection event', 'Keičiamas įvykio pasirinkimas: %event_id - %choise - %selection', array('%event_id' => $event_id, '%choise' => $choise, '%selection' => $selection));
+        $in_slip = betslip_eventInUsersBetSlip($event_id, $choise);
+        if($in_slip){
+          betslip_selectionEventToUsersBetSlip($event_id, $choise, intval($selection));
+          $commands[] = ajax_command_replace('#r_'.$event_id.'_'.$choise.' .row-selection.selection', '<div class="row-selection selection '.($selection ? 'selected' : 'unselected').'">'.l(' ', "betslip/edit/nojs/selection/$event_id/$choise/".($selection ? 0 : 1), array('attributes' => array('class' => array('use-ajax'), 'title' => ''))).'</div>');
+        }else{
+          $commands[] = ajax_command_remove('#r_'.$event_id.'_'.$choise);
+        }
+      }
+    }elseif($action == 'addbets'){
+                
+        /* remove existing bets */
+        
+		$pairs = explode('-', $choise);
+        // set stake
+        $stake = array_shift($pairs);
+        betslip_session('stake', floatval(str_replace(',', '.', $stake)));
+        
+		$bet_type = array_shift($pairs);
+		
+		$pairs_to_add = array();
+		foreach ($pairs as $t)
+		{
+			 list($event_id, $choise) = explode(';', $t);
+			 $pairs_to_add[$event_id] = $choise;
+		}
+		
+		
+        foreach(betslip_getUsersBetSlip() as $e)
+        if(!array_key_exists($e->event_id, $pairs_to_add) || $pairs_to_add[$e->event_id] != $e->choise){
+            betslip_removeEventToUsersBetSlip($e->event_id, $e->choise);
+            $commands[] = ajax_command_remove('#r_'.$e->event_id.'_'.$e->choise);
+        }		
+		else
+		{
+			unset($pairs_to_add[$e->event_id]); // event already in slip, so let it be there
+		}
+        
+       
+	
+        betslip_session('type',  $bet_type);
+        $updateTypes = true;
+		
+        foreach ($pairs_to_add as $event_id => $choise)
+        {
+            $in_slip = betslip_eventInUsersBetSlip($event_id, $choise);
+            if(!$in_slip || empty($in_slip))
+            {
+                 $bet = offers_getEventById($event_id);
+                if($bet){
+                    betslip_log('toggle event', 'Pridedamas įvykis: %event_id - %choise', array('%event_id' => $event_id, '%choise' => $choise));
+                    betslip_addEventToUsersBetSlip($event_id, $choise, 1);
+                    $row = betslip_eventInUsersBetSlip($event_id, $choise);
+                    $row = betslip_draw_row($row, $bet);
+                    $commands[] = ajax_command_append('#betslip_rows', $row);
+                    $commands[] = ajax_command_invoke('#e_'.$event_id.'_'.$choise, 'addClass', array('active'));
+                    $commands[] = ajax_command_invoke('#e_'.$event_id.'_'.$choise.'_day', 'addClass', array('active'));
+                    $commands[] = ajax_command_invoke('#e_'.$event_id.'_'.$choise.'_pop', 'addClass', array('active'));
+                    $commands[] = ajax_command_invoke('#e_'.$event_id.'_'.$choise.'_popular', 'addClass', array('active'));
+                    $commands[] = ajax_command_invoke('#e_'.$event_id.'_'.$choise.'_lastminute', 'addClass', array('active'));
+                    $commands[] = ajax_command_invoke('[data-eid="e_'.$event_id.'_'.$choise.'"]', 'addClass', array('active'));
+                    if($bet->aid == 103){
+                    $commands[] = ajax_command_invoke('#ball_'.$event_id, 'addClass', array('bs'.$choise));
+                    }            
+                }
+            }
+        }
+    }elseif($action == 'toggle'){
+      $in_slip = betslip_eventInUsersBetSlip($event_id, $choise);
+      if(!empty($in_slip)){
+        betslip_log('toggle event', 'Panaikinamas įvykis: %event_id - %choise', array('%event_id' => $event_id, '%choise' => $choise));
+        betslip_removeEventToUsersBetSlip($event_id, $choise);
+        $commands[] = ajax_command_remove('#r_'.$event_id.'_'.$choise);
+        $commands[] = ajax_command_invoke('#e_'.$event_id.'_'.$choise, 'removeClass', array('active'));
+        $commands[] = ajax_command_invoke('#e_'.$event_id.'_'.$choise.'_day', 'removeClass', array('active'));
+        $commands[] = ajax_command_invoke('#e_'.$event_id.'_'.$choise.'_pop', 'removeClass', array('active'));
+        $commands[] = ajax_command_invoke('#e_'.$event_id.'_'.$choise.'_popular', 'removeClass', array('active'));
+        $commands[] = ajax_command_invoke('#e_'.$event_id.'_'.$choise.'_lastminute', 'removeClass', array('active'));
+        $commands[] = ajax_command_invoke('[data-eid="#e_'.$event_id.'_'.$choise.'"]', 'removeClass', array('active'));
+        $commands[] = ajax_command_invoke('#ball_'.$event_id,  'removeClass', array('bs'.$choise));        
+      }else{
+        if(count($betslip_data) >= 30){
+          $commands[] = ajax_command_betlipmessage(t('Įvykio į lažybų kortelę pridėti nepavyko'), 'error');
+          $commands[] = ajax_command_betlipmessage(t('Pasiektas galimas maksimalus įvykių kiekis'), 'error');
+        }else{
+          $bet = offers_getEventById($event_id);
+          if($bet){
+            betslip_log('toggle event', 'Pridedamas įvykis: %event_id - %choise', array('%event_id' => $event_id, '%choise' => $choise));
+            betslip_addEventToUsersBetSlip($event_id, $choise, 1);
+            $row = betslip_eventInUsersBetSlip($event_id, $choise);
+            $row = betslip_draw_row($row, $bet);
+            $commands[] = ajax_command_append('#betslip_rows', $row);
+            $commands[] = ajax_command_invoke('#e_'.$event_id.'_'.$choise, 'addClass', array('active'));
+            $commands[] = ajax_command_invoke('#e_'.$event_id.'_'.$choise.'_day', 'addClass', array('active'));
+            $commands[] = ajax_command_invoke('#e_'.$event_id.'_'.$choise.'_pop', 'addClass', array('active'));
+            $commands[] = ajax_command_invoke('#e_'.$event_id.'_'.$choise.'_popular', 'addClass', array('active'));
+            $commands[] = ajax_command_invoke('#e_'.$event_id.'_'.$choise.'_lastminute', 'addClass', array('active'));
+            $commands[] = ajax_command_invoke('[data-eid="e_'.$event_id.'_'.$choise.'"]', 'addClass', array('active'));
+            if($bet->aid == 103){
+              $commands[] = ajax_command_invoke('#ball_'.$event_id, 'addClass', array('bs'.$choise));
+            }            
+	    
+	    betslip_unselectSuperEvents($commands, $bet, $choise);
+          }
+        }
+	
+      }
+            
+    }
+  }
+  betslip_session('systems', array());
+  betslip_session('last_action', REQUEST_TIME);
+  drupal_static_reset('betslip_getUsersBetSlip');
+  $betslip_data = betslip_getUsersBetSlip();
+  if($action == 'toggle' OR $action == 'remove' OR $action == 'addbets'){
+    if(count($betslip_data) == 2){
+      betslip_session('type', 'multi');
+      betslip_log('type change', 'Naujas tipas: %type. %reason', array('%type' => 'multi', '%reason' => 'Du įvykiai, darom Kombinuotą statymą.'));
+      $updateTypes = true;
+    }elseif(count($betslip_data) < 2){
+      betslip_session('type', 'single');
+      betslip_log('type change', 'Naujas tipas: %type. %reason', array('%type' => 'single', '%reason' => 'Mažiau nei du įvykiai, darom Paprastą statymą.'));
+      $updateTypes = true;
+    }elseif(count($betslip_data) == 3){
+      $updateTypes = true;
+    }
+  }
+  if($type == 'ajax'){
+    $commands[] = ajax_command_remove('#betslip_empty');
+    if(empty($betslip_data)){
+      $commands[] = ajax_command_append('#betslip_rows', betslip_empty_data());
+    }
+    if($updateTypes){
+      $betslipTypesHtml = theme('betslip_types', array('items' => betslip_getTypes(), 'static' => false));
+      $commands[] = ajax_command_replace('#betslip_types_list', $betslipTypesHtml);
+      $commands[] = ajax_command_remove('#betslip_system_bet');
+    }
+    $commands[] = ajax_command_remove('.betslip-error');
+    $betslip_stake = betslip_session('stake');    
+
+    $rate_total = betslip_number_format(betslip_get_rate_total());
+    
+    checkLimitsAjax($commands);    
+    
+    
+    $commands[] = ajax_command_settings(array('betslip' => array('rate_total' => $rate_total, 'bets_total' => betslip_bets_total($betslip_type, $betslip_stake))), true);
+
+    $commands[] = ajax_command_invoke('#sharebetslink', 'attr', array('data-ts-link', betslip_getUsersBetSlipURL()));
+    $commands[] = ajax_command_invoke('#sharebetslink', 'attr', array('data-ts-exptime', betslip_getUsersBetSlipURLExpire()));
+    
+    if($updateTypes){
+      $betslip_bets_form = drupal_get_form('betslip_bets_form');
+      $form = render($betslip_bets_form);
+      $commands[] = ajax_command_replace('#betslip_bottom form', $form);
+    }else{
+      $commands[] = ajax_command_invoke('#betslip_bottom .rate_total', 'html', array($rate_total));
+      $commands[] = ajax_command_invoke('#betslip_bottom .win_total', 'html', array(betslip_number_format(betslip_calculate_possible_winnings())));
+      $commands[] = ajax_command_invoke('#betslip_bottom .count_total', 'html', array(count($betslip_data)));
+      $commands[] = ajax_command_invoke('#betslip_bottom #betslip_stake_total', 'html', array(betslip_number_format(betslip_stake_total($betslip_type, $betslip_stake))));
+    }
+
+    if($betslip_type == 'system'){
+        $betslip_systemBets_form = drupal_get_form('betslip_systemBets_form');
+      $form = render($betslip_systemBets_form);
+      $commands[] = ajax_command_replace('#betslip_system_bet', $form);
+    }
+    print ajax_render($commands);
+    exit;
+  }else{
+    drupal_goto($_SERVER['HTTP_REFERER']);
+  }
+}
+
+function checkLimitsAjax(&$commands)
+{    
+    $betslip_data = betslip_getUsersBetSlip();
+    $betslip_type = betslip_session('type');
+    $rate_total = betslip_get_rate_total();
+    $win_total = betslip_calculate_possible_winnings();
+
+    if($betslip_type != 'single' && !($bet_limit = bets_limits(count($betslip_data)))){
+        $commands[] = ajax_command_betlipmessage(t('Negalimas lažybų kortelėje esančių įvykių kiekis'), 'error');
+    }elseif($betslip_type != 'single' && $bet_limit->coef < $rate_total){
+        $commands[] = ajax_command_betlipmessage(t('Bendras lažybų kortelės koeficientas yra per didelis'), 'error');
+    }elseif($betslip_type != 'single' && $bet_limit->win < $win_total){
+        $commands[] = ajax_command_betlipmessage(t('Galimas laimėjimas yra per didelis'), 'error');
+    }
+}
+
+function betslip_rearrange(){
+  global $user;
+  $commands[] = ajax_command_invoke('#betslip_messages', 'html', array(''));
+  betslip_session('last_action', REQUEST_TIME);
+  if(isset($_POST['slip_ids'])){
+    $slip_ids = $_POST['slip_ids'];
+    if($user->uid == 0){
+      if(isset($_SESSION['betslip']['data'])){
+        $betslipdata = $_SESSION['betslip']['data'];
+      }
+      $_SESSION['betslip']['data'] = array();
+    }
+    foreach($slip_ids as $key => $id){
+      list($name, $event_id, $choise) = explode('_', $id);
+      if($user->uid){
+        $qry = db_update('users_betslip')
+          ->fields(array('weight' => $key + 1))
+          ->condition('uid', $user->uid)
+          ->condition('event_id', $event_id)
+          ->condition('choise', $choise)
+          ->execute();
+      }else{
+        if(isset($betslipdata[$event_id.'_'.$choise])){
+          $_SESSION['betslip']['data'][$event_id.'_'.$choise] = $betslipdata[$event_id.'_'.$choise];
+        }
+      }
+    }
+    drupal_static_reset('betslip_getUsersBetSlip');
+    betslip_log('rearange', 'Pakeičiamas statymų rikiavimas');
+
+    $win_total = betslip_number_format(betslip_calculate_possible_winnings());
+    $commands[] = ajax_command_invoke('#betslip_bottom .win_total', 'html', array($win_total));
+    $betslip_stake_total = betslip_stake_total('system', 1);
+    $commands[] = ajax_command_invoke('#betslip_bottom #betslip_stake_total', 'html', array(betslip_number_format($betslip_stake_total)));
+    $commands[] = ajax_command_invoke('#sharebetslink', 'attr', array('data-ts-link', betslip_getUsersBetSlipURL()));
+    $commands[] = ajax_command_invoke('#sharebetslink', 'attr', array('data-ts-exptime', betslip_getUsersBetSlipURLExpire()));
+  }
+  print ajax_render($commands);
+  exit;
+}
+
+function ajax_command_betlipmessage($message, $type = 'status'){
+  betslip_log('message', 'Žinutė: %message. Tipas: %type.', array('%message' => $message, '%type' => $type));
+  return array(
+    'command' => 'betlipmessage',
+    'message' => $message,
+    'type' => $type,
+  );
+}
+
+function fact($n){
+  $i = $a = 1;
+  while ($i<=$n){
+    $a = $a * $i;
+    $i++;
+  }
+  $a = sprintf('%f', $a);
+  return drupal_substr($a, 0, -7);
+}
+
+function betslip_number_format($number, $decimals = 2, $dec_point = '.', $thousands_sep = ' '){
+  $number = is_numeric($number) ? $number : 0;
+  return number_format($number, $decimals, $dec_point, $thousands_sep);
+
+}

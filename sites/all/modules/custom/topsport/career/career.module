@@ -1,0 +1,219 @@
+<?php
+
+// $Id$
+
+/**
+ * Implements hook_menu().
+ */
+function career_menu() {
+
+    $items['career'] = array(
+      'title' => 'Siūlome darbą',
+      'page callback' => 'career_page',
+      'access arguments' => array('access content'),
+    );
+
+    $items['admin/config/content/career'] = array(
+      'title' => 'Siūlome darbą',
+      'description' => 'Siūlome darbą papildomi nustatymai',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('career_admin'),
+      'access arguments' => array('administer site configuration'),
+      'type' => MENU_NORMAL_ITEM,
+    );
+
+    return $items;
+}
+
+function career_education_list() {
+
+    return array(t('Nebaigtas vidurinis'), t('Vidurinis'), t('Aukštesnysis'), t('Nebaigtas aukštasis'), t('Aukštasis'));
+}
+
+function career_additional_list() {
+
+    return array('sport' => t('Ar domitės sportu?'), 'full_time' => t('Ar galėsite dirbti pilną darbo dieną?'));
+}
+
+function career_page() {
+    $html = '';
+    $career_form = drupal_get_form('career_form');
+    $html = '<div class="panel panel-page"><div class="panel-heading"><h2>'.t('Siūlome darbą lažybų bendrovėje').'</h2></div><div class="panel-body">' . render($career_form) . '</div></div>';
+
+    return $html;
+}
+
+function career_form($form, &$form_state) {
+    drupal_set_title(t('Siūlome darbą lažybų bendrovėje'));
+    global $language;
+    $value = variable_get('career_content_' . $language->language, array('value' => ''));
+    $form['content'] = array(
+      '#type' => 'markup',
+      '#markup' => $value['value'],
+    );
+
+    $form['form_title'] = array(
+      '#type' => 'markup',
+      '#markup' => '<h3>' . t('Informacija apie asmenį') . '</h3>',
+    );
+    $form['firstname'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Vardas'),
+      '#default_value' => '',
+      '#required' => TRUE,
+    );
+    $form['surname'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Pavardė'),
+      '#default_value' => '',
+      '#required' => TRUE,
+    );
+    $form['birthday'] = array(
+      '#type' => 'date_select',
+      '#title' => t('Gimimo data'),
+      '#default_value' => '',
+      '#date_label_position' => 'within',
+      '#date_format' => 'Y-m-d',
+      '#date_year_range' => '-100:+0',
+      '#required' => TRUE,
+    );
+    $form['address'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Adresas'),
+      '#default_value' => '',
+      '#required' => TRUE,
+    );
+    $form['city'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Miestas'),
+      '#default_value' => '',
+      '#required' => TRUE,
+    );
+    $form['phone'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Tel. nr.'),
+      '#default_value' => '',
+      '#required' => TRUE,
+    );
+    $form['email'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Email'),
+      '#default_value' => '',
+      '#required' => FALSE,
+      '#validate' => array('valid_email_address'),
+    );
+    $form['education'] = array(
+      '#type' => 'select',
+      '#title' => t('Išsilavinimas'),
+      '#options' => career_education_list(),
+      '#default_value' => 0,
+      '#required' => TRUE,
+    );
+    $form['experiance'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Darbo patirtis'),
+      '#default_value' => '',
+      '#required' => FALSE,
+      '#cols' => 36,
+      '#rows' => 5,
+      '#resizable' => FALSE,
+      '#attributes' => array('style' => array('width: auto;', 'height: auto;')),
+    );
+
+    $form['additional']['#tree'] = true;
+    $questions = array();
+    foreach (career_additional_list() as $key => $additional) {
+        $form['additional'][$key] = array(
+          '#type' => 'radios',
+          '#title' => $additional,
+          "#default_value" => '0',
+          '#options' => array(0 => t('Ne'), 1 => t('Taip')),
+        );
+    }
+
+
+    $form['career_submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Send'),
+      '#attributes' => array('class' => array('btn-primary'))
+    );
+
+    return $form;
+}
+
+function career_form_validate(&$form, &$form_state) {
+    $mail = $form_state['values']['email'];
+    if ($mail && !valid_email_address($mail)) {
+        form_set_error('email', t('Įveskite teisingą el-pašto adresą'));
+    }
+}
+
+function career_form_submit(&$form, &$form_state) {
+
+    $to = variable_get('career_mail_receiver', variable_get('site_mail', ini_get('sendmail_from')));
+    $from = $form_state['values']['email'];
+
+    $params = $form_state['values'];
+
+    $language = language_default();
+
+    $send = TRUE;
+
+    $result = drupal_mail('career', 'career_message', $to, $language, $params, $from, $send);
+    if ($result['result'] == TRUE) {
+        drupal_set_message(t('Your message has been sent.'));
+    } else {
+        drupal_set_message(t('There was a problem sending your message and it was not sent.'), 'error');
+    }
+}
+
+function career_mail($key, &$message, $params) {
+    $options = array(
+      'langcode' => $message['language']->language,
+    );
+    switch ($key) {
+        case 'career_message':
+            $message['subject'] = t('Darbo siūlymų anketa iš @site-name', array('@site-name' => variable_get('site_name')), $options);
+            $message['body'][] = t('Vardas: @value', array('@value' => check_plain($params['firstname'])), $options);
+            $message['body'][] = t('Pavardė: @value', array('@value' => check_plain($params['surname'])), $options);
+            $message['body'][] = t('Gimimo data: @value', array('@value' => check_plain($params['birthday'])), $options);
+            $message['body'][] = t('Adresas: @value', array('@value' => check_plain($params['address'])), $options);
+            $message['body'][] = t('Miestas: @value', array('@value' => check_plain($params['city'])), $options);
+            $message['body'][] = t('Tel. nr.: @value', array('@value' => check_plain($params['phone'])), $options);
+            $message['body'][] = t('El. paštas: @value', array('@value' => check_plain($params['email'])), $options);
+
+            $career_education_list = career_education_list();
+            $message['body'][] = t('Išsilavinimas: @value', array('@value' => check_plain($career_education_list[$params['education']])), $options);
+            $message['body'][] = t('Darbo patirtis : @value', array('@value' => check_plain($params['experiance'])), $options);
+
+            foreach (career_additional_list() as $key => $additional) {
+                $message['body'][] = $additional . ' ' . ($params['additional'][$key] ? t('Taip') : t('Ne'));
+            }
+            break;
+    }
+}
+
+function career_admin($form, &$form_state) {
+    $languages = language_list();
+
+    $form['career_mail_receiver'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Gavėjo el. paštas'),
+      '#default_value' => variable_get('career_mail_receiver', variable_get('site_mail', ini_get('sendmail_from'))),
+      '#required' => TRUE,
+    );
+
+    foreach ($languages as $lang) {
+        if (!$lang->enabled) {
+            continue;
+        }
+        $value = variable_get('career_content_' . $lang->language, array('value' => ''));
+        $form['career_content_' . $lang->language] = array(
+          '#type' => 'text_format',
+          '#title' => t('Tekstas puslapio viršuje') . ' (' . $lang->native . ')',
+          '#default_value' => $value['value'],
+          '#required' => FALSE,
+        );
+    }
+    return system_settings_form($form);
+}

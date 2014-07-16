@@ -1,0 +1,5 @@
+name = FormAPI Fun 1
+description = Crazy, crazy form tricks.
+core = 7.x
+
+dependencies[] = devel

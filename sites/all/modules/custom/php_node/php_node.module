@@ -1,0 +1,344 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */ 
+function php_node_menu() {
+  $items = array();
+   
+//  $items['phpnode'] = array(
+//    'title' => 'php_node',
+//    'page callback' => 'php_node_basic',
+//     '#markup' => '<div class="block-sharebet"><a class="btn-sharebet" id="sharebetslink" href="#" data-ts-link="" data-ts-exptime="">'.t('Dalintis').'</a></div>' ,
+//    '#prefix' => '<p>',
+//    '#suffix' => '</p>',
+//    'access arguments' => array('access content'),
+//  );
+  
+    $items['phpnode'] = array(
+    'title' => 'phpnodeq', 
+    'page callback' => 'php_node_basic',
+    'access arguments' => array('access content'),
+  );
+     $items['phpnode2'] = array(
+    'title' => 'phpnodeq2', 
+    'page callback' => 'php_node_basic2',
+    'access arguments' => array('access content'),
+  );
+  
+  return $items; 
+}  
+
+
+  function php_node_basic() { 
+  $content = array();
+$node = node_load($nid = 2, $vid = NULL, $reset = FALSE);
+  // This is a very, very simple page element. It will appear on the page,
+  // but other modules can't customize it and themes can't override its markup.
+
+  $content['raw_markup'] = array(
+    '#type' => 'markup',
+    '#markup' => '<?php echo "rr"; ?>|||'.$node->body['und'][0]['value'].$node->field_php['und'][0]['value'],
+    '#prefix' => '<p>',
+    '#suffix' => '</p>',
+  );
+  
+ global $theme_path, $theme_info, $conf;
+$code = $node->body['und'][0]['value'];
+  // Store current theme path.
+  $old_theme_path = $theme_path;
+
+
+  ob_start();
+  print eval('?>' . $code);
+  $content = ob_get_contents();
+  ob_end_clean();
+
+  // Recover original theme path.
+  $theme_path = $old_theme_path;
+
+
+  return $content;
+}
+function php_node_basic3() { 
+  $content = array();
+  $node = node_load($nid = 3, $vid = NULL, $reset = FALSE);
+  // This is a very, very simple page element. It will appear on the page,
+  // but other modules can't customize it and themes can't override its markup.
+  
+ global $theme_path, $theme_info, $conf;
+$code = $node->body['und'][0]['value'];
+  // Store current theme path.
+  $old_theme_path = $theme_path;
+
+
+  ob_start();
+  print eval('?>' . $code);
+  $content = ob_get_contents();
+  ob_end_clean();
+
+  // Recover original theme path.
+  $theme_path = $old_theme_path;
+
+
+
+
+  return $content ;
+}
+function php_node_basic2()  { 
+    
+  $form['title'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Sisteminis pavadinimas'),
+      '#default_value' => !empty($node->title) ? $node->title : '',
+      '#required' => TRUE,
+      '#weight' => -5,
+    );
+    $form['slide_title'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Title'),
+      '#default_value' => isset($node->slide_title) ? $node->slide_title : '',
+      '#required' => FALSE,
+      '#weight' => -4,
+      '#prefix' => '<div id="slideshow-title">',
+      '#suffix' => '</div>',
+    );
+
+    $form['url'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Url'),
+      '#default_value' => isset($node->url) ? $node->url : '',
+      '#required' => FALSE,
+      '#weight' => 9,
+    );
+    $form['eid'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Event Name'),
+      '#default_value' => isset($node->eid) ? $node->eid : '',
+      '#size' => 5,
+      '#maxlength' => 10,
+      '#required' => FALSE,
+      '#weight' => 0,
+      '#ajax' => array(
+        'callback' => 'slideshow_form_callback',
+        'wrapper' => 'slideshow-title',
+        'method' => 'replace',
+        'effect' => 'fade',
+      ),
+    );
+    $form['image_display'] = array(
+      '#type' => 'select',
+      '#title' => t('Paveikslėlio rodymas'),
+      '#default_value' => isset($node->image_display) ? $node->image_display : 1,
+      '#options' => array(1 => t('Sumažintas'), 0 => t('Orginalaus dydžio')),
+      '#required' => FALSE,
+      '#weight' => 0,
+    );
+    $form['weight'] = array(
+      '#type' => 'weight',
+      '#title' => t('Weight'),
+      '#default_value' => isset($node->weight) ? $node->weight : '',
+      '#delta' => 10,
+    );
+  $form['#attached']['js'][] = array( 'data' => '  
+jQuery(document).ready(function(){
+         jQuery( ".key-hole-wrapper" ).mousemove(function( event ) {
+            var x = event.pageX;
+            var y = event.pageY;
+            var xw = jQuery(".key-hole-wrapper").offset().left;
+            var yw = jQuery(".key-hole-wrapper").offset().top;
+            jQuery(".key-hole-map").css("left", x-xw);
+            jQuery(".key-hole-mapp").css("top", y-yw);
+           
+          }); 
+      });', 'type' => 'inline');
+  
+
+
+
+  return $form ;
+}
+
+
+
+
+ 
+//  $variables = array(
+//    'path' => 'http://placekitten.com/440/400',
+//    'alt' => t('This is a magical kitten'),
+//    'title' => t('This is the title'),
+//  );
+//  $content['themed_data'] = array(
+//    '#type' => 'markup',
+//    '#markup' => theme('image', $variables),
+//    '#prefix' => '<div class="menu-magic-image">',
+//    '#suffix' => '</div>',
+//    '#attached' => array(
+//      'css' => array(
+//        drupal_get_path('module', 'menu_magic') . '/menu_magic.css',
+//      ),
+//    ),
+//  );
+//
+//  $content['renderable_element'] = array(
+//    '#theme' => 'item_list',
+//    '#title' => t('How do we know it\'s magic?'),
+//    '#items' => array(
+//      t("Is it made of wood?"),
+//      t("Does it sink in water?"),
+//      t("Does it weigh the same as a duck?"),
+//      t('The current time is %time.', array('%time' => date('r'))),
+//    ),
+//    '#cache' => array(
+//      'keys' => array('menu_magic', 'renderable_element'), // menu_magic:renderable_element
+//      'bin' => 'cache',
+//      'expire' => time() + 30,
+//      'granularity' => DRUPAL_CACHE_PER_PAGE,
+//    ),
+//  );
+
+//  return $content;
+//}
+//    $items['magic2'] = array(
+//    'title' => 'A little magic',
+//    'page callback' => 'menu_magic_basic2',
+//    'access arguments' => array('access content'),
+//  );
+//       
+//
+//  $items['magic/%'] = array(
+//    'title' => 'Even more magical',
+//    'page callback' => 'menu_magic_extra',
+//    'page arguments' => array(1),
+//    'access arguments' => array('access content'),
+//    'file' => 'menu_magic.extra.inc',
+//  );
+//
+//  $items['user/%/magic'] = array(
+//    'title' => 'Magic',
+//    'description' => 'Magical magic for users',
+//    'page callback' => 'menu_magic_user_tab',
+//    'page arguments' => array(1),
+//    'access callback' => 'user_access',
+//    'access arguments' => array('administer users'),
+//    'file' => 'menu_magic.user.inc',
+//    'type' => MENU_LOCAL_TASK,
+//  );
+//
+//  // node_load(%)
+//  $items['node/%node/magic'] = array(
+//    'title' => 'Magic',
+//    'description' => 'Do amazing and magical things',
+//    'page callback' => 'menu_magic_node_context',
+//    'page arguments' => array(1),
+//    'access arguments' => array('access content'),
+//    'file' => 'menu_magic.context.inc',
+//    'type' => MENU_LOCAL_TASK,
+//    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+//  );
+// $form['magic'] = array(
+//    '#markup' => '<div class="block-sharebet"><a class="btn-sharebet" id="sharebetslink" href="#" data-ts-link="" data-ts-exptime="">'.t('Dalintis').'</a></div>' );
+// 
+//  return $items; $form;
+//}
+//
+//function menu_magic_basic() {
+//  $content = array();
+//  global $language, $base_url;
+//  // avoid rendering
+//  $pattern = '$home|^admin|^user$';
+//  if(preg_match($pattern, current_path())){
+//        return null;
+//    }
+//  drupal_add_js(drupal_get_path('module', 'menu_magic') . '/betslip.js');
+//
+//
+//  $bets_active = array();
+//  foreach($betslip_data as $bet){
+//    $bets_active[] = $bet->event_id.'_'.$bet->choise;
+//    $bets_active[] = $bet->event_id.'_'.$bet->choise.'_pop';
+//    $bets_active[] = $bet->event_id.'_'.$bet->choise.'_popular';
+//    $bets_active[] = $bet->event_id.'_'.$bet->choise.'_lastminute';
+//    $bets_active[] = $bet->event_id.'_'.$bet->choise.'_day';
+//  }
+//  $action_toggle = url('betslip/edit/nojs/toggle');
+//  $action_rearrange = url('betslip/edit/rearrange');
+//  $action_addbets = url('betslip/edit/nojs/addbets/');
+//  $js_variables = array('betslip' => array('action_addbets'=> $action_addbets, 'action_toggle' => $action_toggle,
+//	'action_rearrange' => $action_rearrange, 
+//	'bets_active' => $bets_active, 
+//	'share_link_title' => t('Dalinkis "Mano statymai" įvykiais'),
+//	'share_link_description' => t('Naudodami aukščiau pateikta nuoroda, galėsite pasidalinti savo sudarytu "mano statymai" skaičiuoklės turiniu su draugais. Ši nuoroda galios iki %date.'),
+//	'base_url' => $base_url, 'lang' => $language->prefix));   
+//  drupal_add_js($js_variables, "setting");
+//  drupal_add_js('misc/progress.js');
+//
+//  $block['subject'] = t('Mano statymai');
+// 
+//  
+//  // This is a very, very simple page element. It will appear on the page,
+//  // but other modules can't customize it and themes can't override its markup.
+//  $content['raw_markup'] = array(
+//    '#type' => 'markup',
+//     '#markup' => '<div class="block-sharebet"><a class="btn-sharebet" id="sharebetslink" href="#" data-ts-link="" data-ts-exptime="">'.t('Dalintis').'</a></div>' ,
+//    '#prefix' => '<p>',
+//    '#suffix' => '</p>',
+//  );
+//
+//  $variables = array(
+//   // 'path' => 'http://placekitten.com/440/400',
+//    'alt' => t('This is a magical kitten'),
+//    'title' => t('This is the title'),
+//  );
+//  $content['themed_data'] = array(
+//    '#type' => 'markup',
+//    '#markup' => theme('image', $variables),
+//    '#prefix' => '<div class="menu-magic-image">',
+//    '#suffix' => '</div>',
+//    '#attached' => array(
+//      'css' => array(
+//        drupal_get_path('module', 'menu_magic') . '/menu_magic.css',
+//      ),
+//    ),
+//  );
+//
+//  $content['renderable_element'] = array(
+//    '#theme' => 'item_list',
+//    '#title' => t('How do we know it\'s magic?'),
+//    '#items' => array(
+//      t("Is it made of wood?"),
+//      t("Does it sink in water?"),
+//      t("Does it weigh the same as a duck?"),
+//      t('The current time is %time.', array('%time' => date('r'))),
+//    ),
+//    '#cache' => array(
+//      'keys' => array('menu_magic', 'renderable_element'), // menu_magic:renderable_element
+//      'bin' => 'cache',
+//      'expire' => time() + 30,
+//      'granularity' => DRUPAL_CACHE_PER_PAGE,
+//    ),
+//  );
+//
+//  return $content; $block;
+//}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

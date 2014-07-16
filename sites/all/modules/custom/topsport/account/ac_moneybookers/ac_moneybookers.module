@@ -1,0 +1,589 @@
+
+<?php
+// $Id: ac_moneybookers.module Exp $
+
+
+define('AC_MONEYBOOKERS_SECRET_WORD', '0o1080awni');
+define('AC_MONEYBOOKERS_PAY_TO_EMAIL', 'money@topsport.lt');
+
+
+function ac_moneybookers_menu(){
+
+	$items['payment-moneybookers-callback'] = array(
+    'title' => 'Payment Moneybookers Callback',
+    'access callback' => TRUE,
+    'page callback' => 'ac_moneybookers_payment_callback',
+    'type' => MENU_CALLBACK,
+	);
+	return $items;
+}
+
+function ac_moneybookers_account_payment_method(){
+	global $base_url;
+	$icons = $base_url.'/'.drupal_get_path('module', 'ac_moneybookers').'/icons/';
+
+	$defaults = array(
+    'komisiniai' => '0%',
+    'update' => t('Iš karto'),
+    'limit' => t('Min. 10 Lt').'<br/>'.t('Max.&nbsp;50&nbsp;000&nbsp;Lt'),
+    'limit_min' => 10,
+    'limit_max' => 50000,
+    'callback' => 'ac_moneybookers_payment_start',
+    'weight' => 2,
+	);
+
+	//.' <sup class="red">'.t('naujiena!').'</sup>'
+
+	$methods['moneybookers'] = array(
+    'id' => 'moneybookers',
+    'name' => t('Moneybookers'),
+    'title' => '<img src="'.$icons.'moneybookers-skrill-logo.png" title="'.t('Moneybookers').'" />',
+    'category' => 'ewallet',
+    'countries' => array(),
+	);
+
+	$methods['VSA'] = array(
+    'id' => 'VSA',
+    'name' => t('Visa'),
+    'title' => '<img src="'.$icons.'visa.gif" title="'.t('Visa').'" />',
+    'category' => 'credit',
+    'countries' => array(),
+	);
+
+	$methods['MSC'] = array(
+    'id' => 'MSC',
+    'name' => t('MasterCard'),
+    'title' => '<img src="'.$icons.'mastercard.gif" title="'.t('MasterCard').'" />',
+    'category' => 'credit',
+    'countries' => array(),
+	);
+
+	$methods['VSD'] = array(
+    'id' => 'VSD',
+    'name' => t('Visa Delta/Debit'),
+    'title' => '<img src="'.$icons.'visadebit-by-mb.gif" title="'.t('Visa Delta/Debit').'" />',
+    'category' => 'credit',
+    'countries' => array('GB'),
+	);
+
+	$methods['VSE'] = array(
+    'id' => 'VSE',
+    'name' => t('Visa Electron'),
+    'title' => '<img src="'.$icons.'visaelectron.gif" title="'.t('Visa Electron').'" />',
+    'category' => 'credit',
+    'countries' => array(),
+	);
+
+	$methods['MAE'] = array(
+    'id' => 'MAE',
+    'name' => t('Maestro'),
+    'title' => '<img src="'.$icons.'maestro.gif" title="'.t('Maestro').'" />',
+    'category' => 'credit',
+    'countries' => array('UK', 'ES', 'AT'),
+	);
+
+	$methods['AMX'] = array(
+    'id' => 'AMX',
+    'name' => t('American Express'),
+    'title' => '<img src="'.$icons.'amex.gif" title="'.t('American Express').'" />',
+    'category' => 'credit',
+    'countries' => array(),
+	);
+
+	$methods['DIN'] = array(
+    'id' => 'DIN',
+    'name' => t('Diners'),
+    'title' => '<img src="'.$icons.'diners.png" title="'.t('Diners').'" />',
+    'category' => 'credit',
+    'countries' => array(),
+	);
+
+	$methods['JCB'] = array(
+    'id' => 'JCB',
+    'name' => t('JCB'),
+    'title' => '<img src="'.$icons.'jcb.gif" title="'.t('JCB').'" />',
+    'category' => 'credit',
+    'countries' => array(),
+	);
+
+	$methods['LSR'] = array(
+    'id' => 'LSR',
+    'name' => t('Laser'),
+    'title' => '<img src="'.$icons.'laser.gif" title="'.t('Laser').'" />',
+    'category' => 'credit',
+    'countries' => array('IE'),
+	);
+
+	$methods['GCB'] = array(
+    'id' => 'GCB',
+    'name' => t('Carte Bleue'),
+    'title' => '<img src="'.$icons.'cartebleue.gif" title="'.t('Carte Bleue').'" />',
+    'category' => 'credit',
+    'countries' => array('FR'),
+	);
+
+	$methods['DNK'] = array(
+    'id' => 'DNK',
+    'name' => t('Dankort'),
+    'title' => '<img src="'.$icons.'dankort.gif" title="'.t('Dankort').'" />',
+    'category' => 'credit',
+    'countries' => array('DK'),
+	);
+
+	$methods['PSP'] = array(
+    'id' => 'PSP',
+    'name' => t('PostePay'),
+    'title' => '<img src="'.$icons.'postepay.gif" title="'.t('PostePay').'" />',
+    'category' => 'credit',
+    'countries' => array('IT'),
+	);
+
+	$methods['CSI'] = array(
+    'id' => 'CSI',
+    'name' => t('CartaSi'),
+    'title' => '<img src="'.$icons.'cartasi.gif" title="'.t('CartaSi').'" />',
+    'category' => 'credit',
+    'countries' => array('IT'),
+	);
+
+	$methods['OBT'] = array(
+    'id' => 'OBT',
+    'name' => t('Online Bank Transfer'),
+    'title' => '<img src="'.$icons.'obt-en-by-mb.gif" title="'.t('Online Bank Transfer').'" />',
+    'category' => 'banklink',
+    'countries' => array('LV', 'EE', 'PL', 'SE', 'FI', 'DK', 'GB', 'DE'),
+	);
+
+	$methods['GIR'] = array(
+    'id' => 'GIR',
+    'name' => t('Giropay'),
+    'title' => '<img src="'.$icons.'giropay.gif" title="'.t('Giropay').'" />',
+    'category' => 'banklink',
+    'countries' => array('DE'),
+	);
+
+	$methods['DID'] = array(
+    'id' => 'DID',
+    'name' => t('Direct Debit / ELV'),
+    'title' => '<img src="'.$icons.'direct-debit-evl.png" title="'.t('Direct Debit / ELV').'" />',
+    'category' => 'banklink',
+    'countries' => array('DE'),
+	);
+
+	$methods['SFT'] = array(
+    'id' => 'SFT',
+    'name' => t('Sofortueberweisung'),
+    'title' => '<img src="'.$icons.'sofort.gif" title="'.t('Sofortueberweisung').'" />',
+    'category' => 'banklink',
+    'countries' => array('DE', 'AT', 'BE', 'NL', 'CH', 'GB'),
+	);
+
+	$methods['ENT'] = array(
+    'id' => 'ENT',
+    'name' => t('eNETS'),
+    'title' => '<img src="'.$icons.'enets.gif" title="'.t('eNETS').'" />',
+    'category' => 'banklink',
+    'countries' => array('SG'),
+	);
+
+	$methods['EBT'] = array(
+    'id' => 'EBT',
+    'name' => t('Nordea Solo'),
+    'title' => '<img src="'.$icons.'nordea.gif" title="'.t('Nordea Solo').'" />',
+    'category' => 'banklink',
+    'countries' => array('SE'),
+	);
+
+	$methods['SO2'] = array(
+    'id' => 'SO2',
+    'name' => t('Nordea Solo'),
+    'title' => '<img src="'.$icons.'nordea.gif" title="'.t('Nordea Solo').'" />',
+    'category' => 'banklink',
+    'countries' => array('FI'),
+	);
+
+	$methods['IDL'] = array(
+    'id' => 'IDL',
+    'name' => t('iDEAL'),
+    'title' => '<img src="'.$icons.'ideal.gif" title="'.t('iDEAL').'" />',
+    'category' => 'banklink',
+    'countries' => array('NL'),
+	);
+
+	$methods['NPY'] = array(
+    'id' => 'NPY',
+    'name' => t('EPS (Netpay)'),
+    'title' => '<img src="'.$icons.'eps.gif" title="'.t('EPS (Netpay)').'" />',
+    'category' => 'banklink',
+    'countries' => array('AT'),
+	);
+
+	$methods['PLI'] = array(
+    'id' => 'PLI',
+    'name' => t('POLi'),
+    'title' => '<img src="'.$icons.'poli.gif" title="'.t('POLi').'" />',
+    'category' => 'banklink',
+    'countries' => array('AU'),
+	);
+
+	$methods['EPY'] = array(
+    'id' => 'EPY',
+    'name' => t('ePay.bg'),
+    'title' => '<img src="'.$icons.'epay.gif" title="'.t('ePay.bg').'" />',
+    'category' => 'banklink',
+    'countries' => array('BG'),
+	);
+
+	$methods['PWY5'] = array(
+    'id' => 'PWY5',
+    'name' => t('ING Bank Śląski'),
+    'title' => '<img src="'.$icons.'ing.png" title="'.t('ING Bank Śląski').'" />',
+    'category' => 'banklink',
+    'countries' => array('PL'),
+	);
+	$methods['PWY6'] = array(
+    'id' => 'PWY6',
+    'name' => t('PKO BP (PKO Inteligo)'),
+    'title' => '<img src="'.$icons.'pko-bg-poland.png" title="'.t('PKO BP (PKO Inteligo)').'" />',
+    'category' => 'banklink',
+    'countries' => array('PL'),
+	);
+	$methods['PWY7'] = array(
+    'id' => 'PWY7',
+    'name' => t('Multibank (Multitransfer)'),
+    'title' => '<img src="'.$icons.'multitransfer.gif" title="'.t('Multibank (Multitransfer)').'" />',
+    'category' => 'banklink',
+    'countries' => array('PL'),
+	);
+	$methods['PWY14'] = array(
+    'id' => 'PWY14',
+    'name' => t('Lukas Bank'),
+    'title' => '<img src="'.$icons.'lukas-bank-poland.png" title="'.t('Lukas Bank').'" />',
+    'category' => 'banklink',
+    'countries' => array('PL'),
+	);
+	$methods['PWY15'] = array(
+    'id' => 'PWY15',
+    'name' => t('Bank BPH'),
+    'title' => '<img src="'.$icons.'bank-bph-poland.png" title="'.t('Bank BPH').'" />',
+    'category' => 'banklink',
+    'countries' => array('PL'),
+	);
+	$methods['PWY17'] = array(
+    'id' => 'PWY17',
+    'name' => t('InvestBank'),
+    'title' => '<img src="'.$icons.'investbank.png" title="'.t('InvestBank').'" />',
+    'category' => 'banklink',
+    'countries' => array('PL'),
+	);
+	$methods['PWY18'] = array(
+    'id' => 'PWY18',
+    'name' => t('PeKaO S.A.'),
+    'title' => '<img src="'.$icons.'bankpekao.png" title="'.t('PeKaO S.A.').'" />',
+    'category' => 'banklink',
+    'countries' => array('PL'),
+	);
+	$methods['PWY19'] = array(
+    'id' => 'PWY19',
+    'name' => t('Citibank handlowy'),
+    'title' => '<img src="'.$icons.'citibank.png" title="'.t('Citibank handlowy').'" />',
+    'category' => 'banklink',
+    'countries' => array('PL'),
+	);
+	$methods['PWY20'] = array(
+    'id' => 'PWY20',
+    'name' => t('Bank Zachodni WBK (Przelew24)'),
+    'title' => '<img src="'.$icons.'wbk.png" title="'.t('Bank Zachodni WBK (Przelew24)').'" />',
+    'category' => 'banklink',
+    'countries' => array('PL'),
+	);
+	$methods['PWY21'] = array(
+    'id' => 'PWY21',
+    'name' => t('BGŻ'),
+    'title' => '<img src="'.$icons.'bank-bgz.png" title="'.t('BGŻ').'" />',
+    'category' => 'banklink',
+    'countries' => array('PL'),
+	);
+	$methods['PWY22'] = array(
+    'id' => 'PWY22',
+    'name' => t('Millenium'),
+    'title' => '<img src="'.$icons.'millenium-bank.png" title="'.t('Millenium').'" />',
+    'category' => 'banklink',
+    'countries' => array('PL'),
+	);
+	$methods['PWY25'] = array(
+    'id' => 'PWY25',
+    'name' => t('mBank (mTransfer)'),
+    'title' => '<img src="'.$icons.'mtransfer.gif" title="'.t('mBank (mTransfer)').'" />',
+    'category' => 'banklink',
+    'countries' => array('PL'),
+	);
+	$methods['PWY26'] = array(
+    'id' => 'PWY26',
+    'name' => t('Płacę z Inteligo'),
+    'title' => '<img src="'.$icons.'inteligo.gif" title="'.t('Płacę z Inteligo').'" />',
+    'category' => 'banklink',
+    'countries' => array('PL'),
+	);
+	$methods['PWY28'] = array(
+    'id' => 'PWY28',
+    'name' => t('Bank Ochrony Środowiska'),
+    'title' => '<img src="'.$icons.'bank-ochrony-srodowiska.png" title="'.t('Bank Ochrony Środowiska').'" />',
+    'category' => 'banklink',
+    'countries' => array('PL'),
+	);
+	$methods['PWY32'] = array(
+    'id' => 'PWY32',
+    'name' => t('Nordea'),
+    'title' => '<img src="'.$icons.'nordea.gif" title="'.t('Nordea').'" />',
+    'category' => 'banklink',
+    'countries' => array('PL'),
+	);
+	$methods['PWY33'] = array(
+    'id' => 'PWY33',
+    'name' => t('Fortis Bank'),
+    'title' => '<img src="'.$icons.'fortis-bank.png" title="'.t('Fortis Bank').'" />',
+    'category' => 'banklink',
+    'countries' => array('PL'),
+	);
+	$methods['PWY36'] = array(
+    'id' => 'PWY36',
+    'name' => t('Deutsche Bank PBC S.A.'),
+    'title' => '<img src="'.$icons.'deutshe-bank.png" title="'.t('Deutsche Bank PBC S.A.').'" />',
+    'category' => 'banklink',
+    'countries' => array('PL'),
+	);
+
+	foreach($methods as $key => $method){
+		$methods[$key] = array_merge($defaults, $method);
+	}
+
+	return $methods;
+}
+
+function ac_moneybookers_payment_start($form, &$form_state){
+
+	return ac_moneybookers_payment_form($form, $form_state);
+
+}
+
+function ac_moneybookers_payment_form($form, &$form_state){
+	global $language;
+	$account = $form['#user'];
+	
+	// adding check for blocked from user payment gateway
+	$method = 'moneybookers';
+	$title = t('Moneybookers');
+	account_deposit_is_active($method, array('@PaymentName' => $title));	
+
+	$payment_form = array();
+	$payment_form['#user'] = $account;
+	$payment_form['#action'] = 'https://www.moneybookers.com/app/payment.pl';
+
+	$oid = account_createOrderUser($form, $form_state);
+	list($lang_code) = explode('-', $language->language);
+
+	$request = array(
+	//  ---------------------------------
+	//  ------ Merchant Details ---------
+    'pay_to_email' => AC_MONEYBOOKERS_PAY_TO_EMAIL,
+    'recipient_description' => variable_get('site_name',''),
+    'transaction_id' => $oid,
+    'return_url' => url('account/deposits/accept', array('absolute' => TRUE)),
+    'return_url_text' => 'Return to ' . variable_get('site_name',''),
+    'cancel_url' => url('account/deposits/cancel', array('absolute' => TRUE)),
+    'status_url' => url('payment-moneybookers-callback', array('absolute' => TRUE)),
+	//     'status_url2' => 'evaldas@uzkuras.eu',
+    'language' => strtoupper($lang_code),
+    'hide_login' => '0',
+    'logo_url' => theme_get_setting('logo'),
+	//  ---------------------------------
+	//  ------ Customer Details ---------
+    'pay_from_email' => $account->mail,
+	//    'title' => '',
+    'firstname' => $account->data['firstname'],
+    'lastname' => $account->data['surname'],
+    'date_of_birth' => date('dmY', strtotime($account->data['birthday'])),//'ddmmyyyy',  // must be setup
+    'address' => $account->data['street'].' '.$account->data['house'].($account->data['flat'] ? '-'.$account->data['flat'] : ''), // street
+    'address2' => $account->data['city'],  // town
+    'phone_number' => $account->data['mobile_number'],    //phone
+    'postal_code' => $account->data['zip'], //  zip
+    'city' => $account->data['city'], //  city
+	//    'state' => '', //  state
+    'country' => $account->data['country'], //  country
+	//  ---------------------------------
+	//  ------ Payment Details ----------
+    'amount' => $form_state['values']['amount'],
+    'currency' => $form_state['values']['currency'],
+    'detail1_description' => 'Sąskaitos papildymas',
+    'detail1_text' => 'UAB TOP SPORT įmoka Nr.: '.$oid,
+
+    'payment_methods' => ($form_state['values']['payment_method'] == 'moneybookers' ? '' : $form_state['values']['payment_method']),
+	);
+
+	foreach($request as $key => $value){
+		$payment_form[$key] = array('#type' => 'hidden', '#value' =>  htmlspecialchars($value));
+	}
+
+	$payment_form[] = array(
+    'payment_method_icon' => array(
+		'#markup' => _account_payment_method_data($form_state['values']['payment_method'], 'title'),
+		'#prefix' => '<div>',
+		'#suffix' => '</div>',
+		),
+		
+    'payment_method' => array(
+      '#markup' =>  '<strong>'.t('Įmokos būdas:').'</strong> '._account_payment_method_data($form_state['values']['payment_method'], 'name'),
+      '#prefix' => '<div class="form-item">',
+      '#suffix' => '</div>',
+	),
+    'payment_update' => array(
+      '#markup' => t('Įmokos įskaitymo trukmė').': '._account_payment_method_data($form_state['values']['payment_method'], 'update'),
+	),
+    'amount' => array(
+      '#markup' =>  '<strong>'.t('Suma:').'</strong> '.account_currency_string($form_state['values']['amount'], $form_state['values']['currency']),
+      '#prefix' => '<div class="form-item">',
+      '#suffix' => '</div>',
+	),
+	);
+
+	$payment_form['back'] = array(
+    '#markup' => l(t('Atgal'), 'account/deposits', array('attributes' => array('class' => array('form-submit', 'reset')))),
+    '#weight' => '20',
+	);
+
+	$payment_form['submit_action'] = array(
+    '#type' => 'submit',
+    '#value' => t('Patvirtinti'),
+    '#weight' => '21',
+    '#states' => array(
+      'enabled' => array(
+        ':input[name="info_danger"]' => array('checked' => TRUE),
+	),
+	),
+	);
+
+	return $payment_form;
+}
+
+function uc_moneybookers_payment_cancelled_form() {
+	$form['uc_moneybookers_payment_cancelled_form'] = array(
+    '#value' => '<strong>' . t('Your payment was canceld.') . '</strong><br/>' .
+	t('Feel free to continue shopping on our site.'),
+    '#prefix' => '<div class="moneybookers_infotext">',
+    '#suffix' => '</div>',
+	);
+	$form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('continue'),
+	);
+	$form['#action'] = url('cart');
+
+	return $form;
+}
+
+/**
+ *  Function to receive the notification from Moneybookers about
+ *  handled payment
+ */
+function ac_moneybookers_payment_callback() {
+	global $language;
+	watchdog('moneybookers', 'Notification data. <pre>@data</pre>', array('@data' => print_r($_REQUEST, true)));
+
+	//  does the call have a transaction id? If not, forget it!
+	if (!isset($_POST['transaction_id'])) {
+		watchdog('moneybookers', 'Notification attempt without order ID. <pre>@data</pre>',  array('@data' => print_r($_REQUEST, true)), WATCHDOG_ERROR);
+		return;
+	}
+
+	//  Is the md5 hash valid?
+	if ( !ac_moneybookers_md5check($_POST['merchant_id'], $_POST['transaction_id'],
+	$_POST['mb_amount'], $_POST['mb_currency'], $_POST['status'], $_POST['md5sig'])) {
+		watchdog('moneybookers', 'Wrong MD5 signature. <pre>@data</pre>',  array('@data' => print_r($_REQUEST, true)), WATCHDOG_ERROR);
+		return;
+	}
+
+	//  Do we have the corresponding order?
+	$order_id = intval($_POST['transaction_id']);
+	$uid = account_getOrderUser($order_id);
+	if ($uid == FALSE) {
+		watchdog('moneybookers', 'Notification attempt for non-existent order. <pre>@data</pre>',  array('@data' => print_r($_REQUEST, true)), WATCHDOG_ERROR);
+		return;
+	}
+
+	$pay_to_email = check_plain($_POST['pay_to_email']);
+	$pay_from_email = check_plain($_POST['pay_from_email']);
+	$merchant_id = intval($_POST['merchant_id']);
+	$customer_id = intval($_POST['customer_id']);
+	$mb_transaction_id = check_plain($_POST['mb_transaction_id']);
+	$mb_amount = check_plain($_POST['mb_amount']);
+	$mb_currency = check_plain($_POST['mb_currency']);
+	$status = intval($_POST['status']);
+	$md5sig = check_plain($_POST['md5sig']);
+	$amount = check_plain($_POST['amount']);
+	$currency = check_plain($_POST['currency']);
+	$payment_type = check_plain($_POST['payment_type']);
+
+	list($lang_code) = explode('-', $language->language);
+
+	switch($status) {
+		case 2:   // processed
+			$account = user_load($uid);
+			$params = array(
+        'user_id'       => userinfo_get_topsportId($account),
+        'amount'        => account_currency_api_convert($currency, 'LTL', $amount),
+        'extra_amount'  => 0,
+        'order_id'      => $order_id,
+        'merchant_id'   => $merchant_id,
+        'language'      => $lang_code,
+        'currency'      => 'LTL',
+        'pay_text'      => 'UAB TOP SPORT įmoka Nr.: '.$order_id,
+        'payment'       => 'moneybookers',
+        'status'        => 'done',
+        'error'         => '',
+        'client_name'   => account_getCorrectName($account->data['firstname'].($account->data['middlename'] ? ' '.$account->data['middlename'] : '')),
+        'client_surename' => account_getCorrectName($account->data['surname']),
+			);
+			account_payment_done($account, $params);
+			break;
+		case 0:   // pending
+			account_updateOrderData($order_id, array('status' => 'pending'));
+			break;
+		case -1:  // canceled
+			account_updateOrderData($order_id, array('status' => 'canceled'));
+			break;
+		case -2:  // failed
+			account_updateOrderData($order_id, array('status' => 'failed'));
+			break;
+		case -3:  // chargeback
+			account_updateOrderData($order_id, array('status' => 'chargeback'));
+			break;
+	}
+
+}
+
+function ac_moneybookers_md5check($merchant_id, $transaction_id, $mb_amount, $mb_currency, $status, $mb_md5sig) {
+	$md5value = strtoupper(md5(AC_MONEYBOOKERS_SECRET_WORD));
+	$txt = $merchant_id . $transaction_id . $md5value . $mb_amount . $mb_currency . $status;
+	if(strtoupper(md5($txt)) == $mb_md5sig) return TRUE;
+	return FALSE;
+}
+
+
+function ac_moneybookers_validate_secret_word(){
+	$url = 'https://www.moneybookers.com/app/secret_word_check.pl';
+	$email = AC_MONEYBOOKERS_PAY_TO_EMAIL;
+	$secret = md5(AC_MONEYBOOKERS_SECRET_WORD);
+	$data = 'email=' . $email . '&';
+	$data .= 'secret=' . $secret . '&';
+	$data .= 'cust_id=18643264';
+
+	$response = drupal_http_request($url, array('method' => 'POST', 'data' => $data));
+	$check = substr($response->data, 0, 2);
+	if ($check == 'OK') {
+		drupal_set_message(t('Secret word successfully checked!<br>You can now save the configuration!'), 'status', FALSE);
+	}
+	else {
+		drupal_set_message(t('Secret word not verified! Check failed!'), 'error', FALSE);
+	}
+}

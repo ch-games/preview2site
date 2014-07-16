@@ -1,0 +1,8 @@
+; $Id$
+name = Dienos statymai
+description = "Blokas rodantis dienos statymus"
+dependencies[] = topsport
+core = 7.x
+version = 7.x-0.x-dev
+package = TopSport
+files[] = popday.module

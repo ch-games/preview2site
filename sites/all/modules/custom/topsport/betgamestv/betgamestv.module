@@ -1,0 +1,116 @@
+<?php
+
+//define('BTV_FRONT_SERVER_URL', 'http://topsport.betgames.tv/ext/client/index/topsport/');
+define('BTV_FRONT_SERVER_URL', 'http://demo.betgames.tv/ext/game/odds/topsport/5/');
+//http://demo.betgames.tv/ext/game/odds/topsport/5
+
+define('BTV_FRONT_SERVER_URL_BS3', 'http://topsport.betgames.tv');
+// http://demo.betgames.tv
+// http://new.betgames.tv
+// http://topsport.betgames.tv
+
+function betgamestv_menu(){
+    $items['api/betgamestv'] = array(
+        'title'            => 'Bet Games TV API service',
+        'page callback'    => 'betgamestv_api_service',
+        'file'             => 'betgamestv.apiservice.inc',
+        'access arguments' => array('access content'),
+        'type'             => MENU_CALLBACK,
+    ); 
+    
+    $items['betgamestv'] = array(
+        'title'            => 'Live Lottery',
+        'page callback'    => 'betgamestv_iframe_page',
+        'file'             => 'betgamestv.apiservice.inc',
+        'access arguments' => array('access content'),        
+    );
+    return $items;
+}
+
+function betgamestv_init() {    
+	if ( strpos($_GET['q'], 'user/logout' ) !== FALSE ) {
+        global $user;
+        require_once drupal_get_path( 'module', 'betgamestv' ) . '/betgamestv.apiservice.inc';
+		_betgamestv_api_DestroyToken($user->uid);
+	}
+}
+
+function betgamestv_iframe_page($game_id = ''){   
+    $timezone = 'Europe/Vilnius';
+    $bt_params = array();     
+	drupal_set_title(t('Loterija 7/42'));    
+    if ( betgamestv_WebOperationsAreAllowed() ){
+        drupal_add_js('
+        function account_balance_update(){    		
+    		var url = "/front/User/balance";
+    		jQuery.ajax({
+			 	dataType: "json",
+			  	url: url,
+				success: function(data){
+    				if(data.BalanceString){
+    					jQuery(".my-balance a").html(data.BalanceString);
+    				}
+				}
+			});
+        	setTimeout(account_balance_update, 10000);	
+        }        		
+        jQuery(document).ready(function($){	    
+          setTimeout(account_balance_update, 10000);          
+        });' , 'inline');
+    
+        global $user, $language;
+        if(isset($user->timezone) && strlen($user->timezone) > 0){
+            $timezone = $user->timezone;            
+        }
+        $date = new DateTime(date('Y-m-d'), new DateTimeZone($timezone));
+        $tz = $date->getOffset() / 60 / 60;
+        $bt_params['server'] = BTV_FRONT_SERVER_URL_BS3;
+        $bt_params['partner'] = 'topsport';
+        if ( user_is_logged_in() AND isset($user->data['tsuid']) AND $user->data['tsuid'] > 0 ){            
+            $bt_params['token'] = _betgamestv_api_getToken($user->uid);
+        }      	
+        $bt_params['language'] = substr($language->language, 0, 2);
+        $bt_params['timezone'] = $tz;        
+        if(strlen($game_id)) $bt_params['current_game'] = betgamestv_getGamesAlias($game_id);
+        
+        
+        $html = '
+       <script type="text/javascript"> 
+  var _bt = _bt || [];    
+  '. prepeareIframeParams($bt_params).'
+  (function(){
+  document.write("<"+"script type=\"text/javascript\" src=\"'.BTV_FRONT_SERVER_URL_BS3.'/design/client/js/betgames.js\"><"+"/script>");
+  })();
+ </script>
+       <script type="text/javascript">BetGames.frame(_bt);</script><style>#content.betgamestv-frame{margin-left:0; margin-right:0;}</style>';
+        //drupal_add_js($html);
+        return $html;
+    } else {
+        drupal_set_message( t('Atsiprašome už nepatogumus, tačiau loterija 7/42 laikinai nepasiekiami, bandykite prisijungti vėliau.'), 'warning' );
+		drupal_goto();
+		return false;
+    }    
+}
+
+function betgamestv_WebOperationsAreAllowed(){
+    return true;
+}
+
+function prepeareIframeParams($parameters = array()){
+    $js = '';
+    foreach ($parameters as $key => $name){
+        $js .= '_bt.push(["'.$key .'", "'.$name.'"]);';
+    }
+    return $js;
+}
+
+function betgamestv_getGamesAlias($game_id){
+    $games_alias = array(
+      'poker' => 5,
+      'pokeris' => 5,
+    );
+    if(isset($games_alias[$game_id])) {
+        $game_id = $games_alias[$game_id];
+    }
+    return $game_id;
+}

@@ -1,0 +1,128 @@
+<?php
+function betgamestv_schema() {
+    $schema['consumer_oauth'] = array(
+        'description' => 'Stores user token and liftimes',
+        'fields' => array(
+            'id' => array(
+                'type' 		  => 'serial',
+                'unsigned' 	  => TRUE,
+                'not null' 	  => TRUE,
+            ),
+            'consumer_id' => array(
+                'type' 		  => 'int',
+                'length'      => 0,
+                'unsigned' 	  => TRUE,
+                'not null' 	  => TRUE,
+            ),            
+            'token' => array(
+                'type' 		  => 'varchar',
+                'length'      => 255,
+                'not null' 	  => TRUE,
+            ),
+            'created' => array(
+                'type' 		  => 'int',
+                'length'      => 0,
+                'unsigned' 	  => TRUE,
+                'not null' 	  => TRUE,
+            ),
+            'ttl' => array(
+                'type' 		  => 'int',
+                'length'      => 0,
+                'unsigned' 	  => TRUE,
+                'not null' 	  => TRUE,
+            ),
+            'uid' => array(
+                'type' 		  => 'int',
+                'length'      => 0,
+                'unsigned' 	  => TRUE,
+                'not null' 	  => TRUE,
+            ),
+        ),
+        'primary key' => array('id'),
+        'indexes' => array(
+            'consumer_oauth_id'          => array('id'),
+            'consumer_oauth_consumer_id' => array('consumer_id'),
+            'consumer_oauth_token'       => array('token'),
+            'consumer_oauth_uid'         => array('uid'),
+        ),
+        'foreign keys' => array(
+	      	'consumer_users' => array(
+	        	'table'   => 'users',
+	        	'columns' => array('uid' => 'uid'),
+	      	),
+            'consumeroauth_consumer' => array(
+	        	'table'   => 'consumer',
+	        	'columns' => array('consumer_id' => 'id'),
+	      	),
+		),
+    );
+    
+    $schema['consumer'] = array(
+        'description' => 'Stores thirparty data',
+        'fields' => array(
+            'id' => array(
+                'type' 		  => 'serial',
+                'unsigned' 	  => TRUE,
+                'not null' 	  => TRUE,
+            ),
+            'title' => array(
+                'type' 		  => 'text',
+                'not null' 	  => TRUE,
+            ),
+            'description' => array(
+                'type' 		  => 'text',
+                'not null' 	  => TRUE,
+            ),            
+            'created' => array(
+                'type' 		  => 'int',
+                'length'      => 0,
+                'unsigned' 	  => TRUE,
+                'not null' 	  => TRUE,
+            ),            
+            'key' => array(
+                'type' 		  => 'varchar',
+                'length'      => 255,
+                'not null' 	  => TRUE,
+            ),            
+            'secret' => array(
+                'type' 		  => 'varchar',
+                'length'      => 255,
+                'not null' 	  => TRUE,
+            )
+        ),
+        'primary key' => array('id'),
+        'indexes' => array(
+            'consumer_id'     => array('id'),
+            'consumer_key'    => array('key'),
+            'consumer_secret' => array('secret'),
+        ),        
+    );  
+    
+    $schema['consumer_users_map'] = array(
+        'description' => 'Stores thirparty data',
+        'fields' => array(
+            'id' => array(
+                'type' 		  => 'serial',
+                'unsigned' 	  => TRUE,
+                'not null' 	  => TRUE,
+            ),           
+            'consumer_id' => array(
+                'type' 		  => 'int',
+                'length'      => 0,
+                'unsigned' 	  => TRUE,
+                'not null' 	  => TRUE,
+            ),            
+            'tsuid' => array(
+                'type' 		  => 'varchar',
+                'length'      => 255,
+                'not null' 	  => TRUE,
+            )
+        ),
+        'primary key' => array('id'),
+        'indexes' => array(
+            'consumer_users_map_id'                => array('id'),
+            'consumer_users_map_consumer_id_tsuid' => array('consumer_id', 'tsuid'),
+        ),        
+    ); 
+    return $schema;
+}

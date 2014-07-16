@@ -1,0 +1,21 @@
+<?php
+
+
+
+/**
+ * Blokelio rodymas pagal laika
+ */
+function topsport_update_7000(&$sandbox) {
+
+	$newcol =  array(
+    'type' => 'blob', 
+    'not null' => FALSE, 
+    'size' => 'big', 
+    'serialize' => TRUE, 
+	);
+
+	db_add_field('block', 'date_restriction', $newcol);
+
+}
+
+?>

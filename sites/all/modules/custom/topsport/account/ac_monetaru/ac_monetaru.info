@@ -1,0 +1,7 @@
+; $Id: 
+name = Payment - Moneta.ru
+description = Integrates Moneta.ru payment services.
+;dependencies[] = account
+package = TopSport
+core = 7.x
+files[] = ac_monetaru.module

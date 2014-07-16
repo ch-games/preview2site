@@ -1,0 +1,3 @@
+name = php_node
+description = Demonstrate the use of hook_menu.
+core = 7.x

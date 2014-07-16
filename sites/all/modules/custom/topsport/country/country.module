@@ -1,0 +1,48 @@
+<?php
+
+// $Id$
+
+function country_updateContryList(){
+	db_delete('countries')->execute();
+	$countries = topsport_searchCountries();
+	foreach($countries['Country'] as $country){
+		db_insert('countries')
+		->fields(array(
+      'cid' => $country['Id'], 
+      'code' => $country['CountryCode'],
+      'title' => $country['Name']['EN'],
+		))
+		->execute();
+	}
+
+}
+
+function country_countries_alter(&$countries){
+	$tpCountries = db_select('countries', 'c')
+	->fields('c', array('code', 'cid'))
+	->condition('code', '', '<>')
+	->execute()
+	->fetchAllKeyed(0, 1);
+	foreach($countries as $code => $country){
+		if(!isset($tpCountries[$code])){
+			unset($countries[$code]);
+		}
+	}
+}
+
+function country_GetIdByCode($code){
+	return db_select('countries', 'c')
+	->fields('c', array('cid'))
+	->condition('code', $code)
+	->execute()
+	->fetchField();
+}
+function country_GetCodeById($cid){
+
+	return db_select('countries', 'c')
+	->fields('c', array('code'))
+	->condition('cid', $cid)
+	->execute()
+	->fetchField();
+
+}

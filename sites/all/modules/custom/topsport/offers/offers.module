@@ -1,0 +1,4143 @@
+<?php
+
+function offers_preprocess_html(&$variables){
+  if(offers_show_europeview()){
+    $variables['classes_array'][] = 'europeview';
+  }
+}
+
+/*
+function offers_init(){
+  global $user;
+  $paths = path_get_admin_paths();
+  if(!drupal_match_path($_GET['q'], $paths['admin'])){
+    if($user->uid > 0 AND (!isset($user->data['europeview']))){
+      drupal_add_js("jQuery(document).ready(function(){ jQuery.colorbox({onLoad: function(){ jQuery('#cboxClose').remove();}, overlayClose: false, escKey: false, close: false, width: 480, href:'".url('naujas-pasiulos-atvaizdavimas')."'}); });", array('type' => 'inline', 'scope' => 'footer', 'weight' => 5));
+    }
+  }
+}
+*/
+
+/**
+ * Implements hook_menu().
+ */
+function offers_menu() {
+  $items['offers'] = array(
+    'title' => 'Visa pasiūla',
+    'page callback' => 'offers_display_offers',
+    'page arguments' => array('all', 2),
+    'access arguments' => array('access content'),
+    'type' => MENU_SUGGESTED_ITEM,
+  );
+
+  $items['offers/today'] = array(
+    'title' => 'Lažybos šiandien',
+    'page callback' => 'offers_display_offers',
+    'page arguments' => array('today', 2),
+    'access arguments' => array('access content'),
+    'type' => MENU_SUGGESTED_ITEM,
+  );
+  $items['offers/today/%'] = array(
+    'title' => 'Sporto šaka',
+    'page callback' => 'offers_display_offers',
+    'page arguments' => array('today', 2),
+    'access arguments' => array('access content'),
+    'type' => MENU_SUGGESTED_ITEM,
+  );
+
+  $items['offers/tomorrow'] = array(
+    'title' => 'Lažybos rytoj',
+    'page callback' => 'offers_display_offers',
+    'page arguments' => array('tomorrow', 2),
+    'access arguments' => array('access content'),
+    'type' => MENU_SUGGESTED_ITEM,
+  );
+  $items['offers/tomorrow/%'] = array(
+    'title' => 'Sporto šaka',
+    'page callback' => 'offers_display_offers',
+    'page arguments' => array('tomorrow', 2),
+    'access arguments' => array('access content'),
+    'type' => MENU_SUGGESTED_ITEM,
+  );
+
+  $items['offers/last-minute'] = array(
+    'title' => 'Paskutinė minutė',
+    'page callback' => 'offers_display_offers',
+    'page arguments' => array('last-minute', 2),
+    'access arguments' => array('access content'),
+    'type' => MENU_SUGGESTED_ITEM,
+  );
+  $items['offers/last-minute/%'] = array(
+    'title' => 'Sporto šaka',
+    'page callback' => 'offers_display_offers',
+    'page arguments' => array('last-minute', 2),
+    'access arguments' => array('access content'),
+    'type' => MENU_SUGGESTED_ITEM,
+  );
+
+  $items['offers/long'] = array(
+    'title' => 'Ilgalaikė pasiūla',
+    'page callback' => 'offers_display_offers',
+    'page arguments' => array('long', 2),
+    'access arguments' => array('access content'),
+    'type' => MENU_SUGGESTED_ITEM,
+  );
+  $items['offers/long/%'] = array(
+    'title' => 'Sporto šaka',
+    'page callback' => 'offers_display_offers',
+    'page arguments' => array('long', 2),
+    'access arguments' => array('access content'),
+    'type' => MENU_SUGGESTED_ITEM,
+  );
+
+  $items['offers/weekend'] = array(
+    'title' => 'Savaitgalio lažybos',
+    'page callback' => 'offers_display_offers',
+    'page arguments' => array('weekend', 2),
+    'access arguments' => array('access content'),
+    'type' => MENU_SUGGESTED_ITEM,
+  );
+  $items['offers/weekend/%'] = array(
+    'title' => 'Sporto šaka',
+    'page callback' => 'offers_display_offers',
+    'page arguments' => array('weekend', 2),
+    'access arguments' => array('access content'),
+    'type' => MENU_SUGGESTED_ITEM,
+  );
+
+  $items['offers/superbet'] = array(
+    'title' => 'Superstatymas',
+    'page callback' => 'offers_display_offers',
+    'page arguments' => array('superbet', 2),
+    'access arguments' => array('access content'),
+    'type' => MENU_SUGGESTED_ITEM,
+  );
+  $items['offers/superbet/%'] = array(
+    'title' => 'Sporto šaka',
+    'page callback' => 'offers_display_offers',
+    'page arguments' => array('superbet', 2),
+    'access arguments' => array('access content'),
+    'type' => MENU_SUGGESTED_ITEM,
+  );
+
+  $items['offers/septynetas'] = array(
+    'title' => 'Septynetas',
+    'page callback' => 'offers_display_offers',
+    'page arguments' => array('septynetas'),
+    'access arguments' => array('access content'),
+    'type' => MENU_SUGGESTED_ITEM,
+  );
+
+  $items['offers/search'] = array(
+    'title' => 'Pasiūlos paieška',
+    'title callback' => 'offers_search_page_title',
+    'title arguments' => array(2),
+    'page callback' => 'offers_display_offers',
+    'page arguments' => array('search'),
+    'access arguments' => array('access content'),
+    'type' => MENU_SUGGESTED_ITEM,
+  );
+
+  $items['offers/results'] = array(
+    'title' => 'Lažybų rezultatai',
+    'description' => 'Paskelbti lažybų rezultatai',
+    'page callback' => 'offers_display_results',
+    'access arguments' => array('access content'),
+    'type' => MENU_SUGGESTED_ITEM,
+  );
+  $items['offers/results/search'] = array(
+    'title' => 'Lažybų rezultatai',
+    'description' => 'Paskelbti lažybų rezultatai',
+    'access arguments' => array('access content'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+  /*$items['offers/results/stats'] = array(
+    'title' => 'Statistika',
+    'description' => 'Įvykusių sporto įvykių detali statistika',
+    'page callback' => 'offers_goto_betradar',
+    'page arguments' => array('stats'),
+    'access arguments' => array('access content'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 5,
+  );
+  $items['offers/results/livescore'] = array(
+    'title' => 'Livescore',
+    'description' => 'Realiu metu vykstančių įvykių rezultatai',
+    'page callback' => 'offers_goto_betradar',
+    'page arguments' => array('livescore'),
+    'access arguments' => array('access content'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 10,
+  );*/
+  $items['offers/results/check-card'] = array(
+    'title' => 'Tikrinti lažybų kortelę',
+    'description' => 'Patikrinti lažybų kortelės būseną',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('offers_results_check_card'),
+    'access arguments' => array('access content'),
+    'type' => MENU_SUGGESTED_ITEM,
+    'weight' => 15,
+  );
+
+  $items['offers/calendar'] = array(
+    'title' => 'Lažybų kalendorius',
+    'title callback' => 'offers_menu_title',
+    'title arguments' => array('calendar', 2),
+    'page callback' => 'offers_display_calendar',
+    'access arguments' => array('access content'),
+    'type' => MENU_SUGGESTED_ITEM,
+  );
+
+  $items['admin/offers/updater'] = array(
+    'title' => 'Offers updater',
+    'description' => 'Update Offers data',
+    'page callback' => 'offers_updater_page',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  
+  $items['admin/offers/results/updater'] = array(
+    'title' => 'Offers results updater',
+    'description' => 'Update Offers results data',
+    'page callback' => 'offers_results_updater_page',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['admin/offers/groups/updater'] = array(
+    'title' => 'Offers groups updater',
+    'description' => 'Update groups results data',
+    'page callback' => 'offers_groups_updater_page',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['admin/offers/patterns/updater'] = array(
+    'title' => 'Offers patterns updater',
+    'description' => 'Update patterns results data',
+    'page callback' => 'offers_patterns_updater_page',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+
+  //@deprecated
+  $items['get-offers-xml'] = array(
+    'title' => 'Pasiūlos XML',
+    'page callback' => 'offers_get_offers_xml',
+    'access callback' => 'offers_can_get_xml',
+    'type' => MENU_CALLBACK,
+  );
+
+  //@deprecated
+  $items['lt/get-offers-xml'] = array(
+    'title' => 'Pasiūlos XML',
+    'page callback' => 'offers_get_offers_xml',
+    'access callback' => 'offers_can_get_xml',
+    'type' => MENU_CALLBACK,
+  );
+	
+  //@deprecated
+  $items['naujas-pasiulos-atvaizdavimas'] = array(
+    'title' => 'Naujas pasiūlos atvaizdavimas',
+    'page callback' => 'offers_new_view_page',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+function offers_new_view_page(){
+  drupal_set_title(t('Pristatome naują lažybų pasiūlos atvaizdavimą!'));
+
+  $path = drupal_get_path('module', 'offers').'/img/';
+  $build = array();
+  $build[] = array('#markup' => '<div class="">');
+  $build[] = array(
+    '#prefix' => '<h1 style="font-size: 13px;line-height: 15px;color: #0266B2;">',
+    '#markup' => t('Klasikinis lažybų pasiūlos atvaizdavimo būdas:'),
+    '#suffix' => '</h1>',
+  );
+  $image = image_load($path.'old-offers-view.png');
+  if(!empty($image)){
+    $build[] = array(
+      '#theme' => 'image',
+      '#path' => $path.'old-offers-view.png',
+      '#width' => $image->info['width'],
+      '#height' => $image->info['height'],
+    );
+  }
+  $build[] = array('#markup' => '</div>');
+  $build[] = array('#markup' => '<div class="">');
+  $build[] = array(
+    '#prefix' => '<h1 style="font-size: 13px;line-height: 15px;color: #0266B2;">',
+    '#markup' => t('Supaprastintas lažybų pasiūlos atvaizdavimo būdas:'),
+    '#suffix' => '</h1>',
+  );
+  $image = image_load($path.'new-offers-view.png');
+  if(!empty($image)){
+    $build[] = array(
+      '#theme' => 'image',
+      '#path' => $path.'new-offers-view.png',
+      '#width' => $image->info['width'],
+      '#height' => $image->info['height'],
+    );
+  }
+  $build[] = array('#markup' => '</div>');
+  $build[] = array('#markup' => '<div class="clearfix"></div>');
+  $build[] = array(
+    '#prefix' => '<p style="font-size: 11px">',
+    '#markup' => t('Šis lažybų atvaizdavimo stilius skirtas lažybų pradedantiesiems ir mėgėjams, kuris konkrečiau gali pateikti baigčių reikšmes ypač papildomoje pasiūloje.'),
+    '#suffix' => '</p>',
+  );
+  $build[] = array(
+    '#prefix' => '<center>',
+    '#markup' => l(t('Keisti į naują atvaizdavimą'), 'account/europeview/new', array('html' => true, 'attributes' => array('class' => array('choose-europeview choose-europeview-new')))),
+    '#suffix' => ' ',
+  );
+  $build[] = array(
+    '#prefix' => ' ',
+    '#markup' => l(t('Naudoti klasikinį atvaizdavimą'), 'account/europeview/old', array('html' => true, 'attributes' => array('class' => array('choose-europeview choose-europeview-old')))),
+    '#suffix' => '</center>',
+  );
+  $build[] = array(
+    '#prefix' => '<p style="margin-bottom: 0;font-size: 11px;">',
+    '#markup' => '<strong>'.t('Dėmesio!').'</strong> '.t('Keisti pasiūlos atvaizdavimo stilių galėsite mano nustatymai skiltyje.'),
+    '#suffix' => '</p>',
+  );
+  return $build;
+}
+
+function offers_menu_alter(&$callbacks) {
+  $callbacks['admin/structure/menu/manage/offers'] = $callbacks['admin/structure/menu/manage/%menu'];
+  $callbacks['admin/structure/menu/manage/offers']['page arguments'] = array('offers_menu_overview_form');
+}
+
+/*function offers_goto_betradar($location) {
+  global $language;
+  list($lang_code) = explode('-', $language->language);
+  switch($location){
+    case 'stats':
+      drupal_goto('http://stats.betradar.com/s4/?clientid=110&language='.$lang_code);
+      break;
+    case 'livescore':
+      drupal_goto('http://livescore.betradar.com/?alias=topsport&language='.$lang_code);
+      break;
+    default:
+      return MENU_NOT_FOUND;
+      break;
+  }
+}*/
+
+function offers_menu_overview_form($form, &$form_state) {
+  global $menu_admin;
+  $menu = menu_load('offers');
+  drupal_set_title($menu['title']);
+  $form['#attached']['css'] = array(drupal_get_path('module', 'menu') . '/menu.css');
+  $sql = "
+    SELECT m.load_functions, m.to_arg_functions, m.access_callback, m.access_arguments, m.page_callback, m.page_arguments, m.delivery_callback, m.title, m.title_callback, m.title_arguments, m.type, m.description, ml.*
+    FROM {menu_links} ml LEFT JOIN {menu_router} m ON m.path = ml.router_path
+    WHERE ml.menu_name = :menu AND ml.depth = 1
+    ORDER BY p1 ASC, p2 ASC, p3 ASC, p4 ASC, p5 ASC, p6 ASC, p7 ASC, p8 ASC, p9 ASC";
+  $result = db_query($sql, array(':menu' => $menu['menu_name']), array('fetch' => PDO::FETCH_ASSOC));
+  $links = array();
+  foreach ($result as $item) {
+    $links[] = $item;
+  }
+  $tree = menu_tree_data($links);
+  $node_links = array();
+  menu_tree_collect_node_links($tree, $node_links);
+  // We indicate that a menu administrator is running the menu access check.
+  $menu_admin = TRUE;
+  menu_tree_check_access($tree, $node_links);
+  $menu_admin = FALSE;
+
+  $form = array_merge($form, _menu_overview_tree_form($tree));
+  $form['#menu'] =  $menu;
+
+  if (element_children($form)) {
+    $form['actions'] = array('#type' => 'actions');
+    $form['actions']['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Save configuration'),
+    );
+  }
+  else {
+    $form['#empty_text'] = t('There are no menu links yet. <a href="@link">Add link</a>.', array('@link' => url('admin/structure/menu/manage/' . $form['#menu']['menu_name'] . '/add')));
+  }
+  $form['#theme'] = 'menu_overview_form';
+  $form['#submit'] = array('menu_overview_form_submit');
+  return $form;
+}
+
+function offers_form_node_admin_content_alter(&$form, &$form_state){
+  if(isset($form['admin'])){
+    $form['admin'] = offers_node_admin_nodes();
+  }
+}
+
+function offers_node_admin_nodes() {
+  $admin_access = user_access('administer nodes');
+
+  // Build the 'Update options' form.
+  $form['options'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Update options'),
+    '#attributes' => array('class' => array('container-inline')),
+    '#access' => $admin_access,
+  );
+  $options = array();
+  foreach (module_invoke_all('node_operations') as $operation => $array) {
+    $options[$operation] = $array['label'];
+  }
+  $form['options']['operation'] = array(
+    '#type' => 'select',
+    '#title' => t('Operation'),
+    '#title_display' => 'invisible',
+    '#options' => $options,
+    '#default_value' => 'approve',
+  );
+  $form['options']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Update'),
+    '#validate' => array('node_admin_nodes_validate'),
+    '#submit' => array('node_admin_nodes_submit'),
+  );
+
+  // Enable language column if translation module is enabled or if we have any
+  // node with language.
+  $multilanguage = (module_exists('translation') || db_query_range("SELECT 1 FROM {node} WHERE language <> :language", 0, 1, array(':language' => LANGUAGE_NONE))->fetchField());
+
+  // Build the sortable table header.
+  $header = array(
+    'title' => array(
+      'data' => t('Title'),
+      'field' => 'n.title',
+  ),
+    'type' => array(
+      'data' => t('Type'),
+      'field' => 'n.type',
+  ),
+    'author' => t('Author'),
+    'status' => array(
+      'data' => t('Status'),
+      'field' => 'n.status',
+  ),
+    'changed' => array(
+      'data' => t('Updated'),
+      'field' => 'n.changed',
+      'sort' => 'desc',
+  ),
+  );
+  if ($multilanguage) {
+    $header['language'] = array(
+      'data' => t('Language'),
+      'field' => 'n.language',
+    );
+  }
+  $header['operations'] = array('data' => t('Operations'));
+
+  $query = db_select('node', 'n')->extend('PagerDefault')->extend('TableSort');
+  $query->condition('type', 'offers', '<>');
+  node_build_filter_query($query);
+
+  if (!user_access('bypass node access')) {
+    // If the user is able to view their own unpublished nodes, allow them
+    // to see these in addition to published nodes. Check that they actually
+    // have some unpublished nodes to view before adding the condition.
+    if (user_access('view own unpublished content') && $own_unpublished = db_query('SELECT nid FROM {node} WHERE uid = :uid AND status = :status', array(':uid' => $GLOBALS['user']->uid, ':status' => 0))->fetchCol()) {
+      $query->condition(db_or()
+      ->condition('n.status', 1)
+      ->condition('n.nid', $own_unpublished, 'IN')
+      );
+    }
+    else {
+      // If not, restrict the query to published nodes.
+      $query->condition('n.status', 1);
+    }
+  }
+  $nids = $query
+  ->fields('n', array('nid'))
+  ->limit(500)
+  ->orderByHeader($header)
+  ->execute()
+  ->fetchCol();
+  $nodes = node_load_multiple($nids);
+
+  // Prepare the list of nodes.
+  $languages = language_list();
+  $destination = drupal_get_destination();
+  $options = array();
+  foreach ($nodes as $node) {
+    $l_options = $node->language != LANGUAGE_NONE && isset($languages[$node->language]) ? array('language' => $languages[$node->language]) : array();
+    $options[$node->nid] = array(
+      'title' => array(
+        'data' => array(
+          '#type' => 'link',
+
+          '#title' => $node->title,
+          '#href' => 'node/' . $node->nid,
+          '#options' => $l_options,
+          '#suffix' => ' ' . theme('mark', array('type' => node_mark($node->nid, $node->changed))),
+    ),
+    ),
+      'type' => check_plain(node_type_get_name($node)),
+      'author' => theme('username', array('account' => $node)),
+      'status' => $node->status ? t('published') : t('not published'),
+      'changed' => format_date($node->changed, 'short'),
+    );
+    if ($multilanguage) {
+      if ($node->language == LANGUAGE_NONE || isset($languages[$node->language])) {
+        $options[$node->nid]['language'] = $node->language == LANGUAGE_NONE ? t('Language neutral') : t($languages[$node->language]->name);
+      }
+      else {
+        $options[$node->nid]['language'] = t('Undefined language (@langcode)', array('@langcode' => $node->language));
+      }
+    }
+    // Build a list of all the accessible operations for the current node.
+    $operations = array();
+    if (node_access('update', $node)) {
+      $operations['edit'] = array(
+        'title' => t('edit'),
+        'href' => 'node/' . $node->nid . '/edit',
+        'query' => $destination,
+      );
+    }
+    if (node_access('delete', $node)) {
+      $operations['delete'] = array(
+        'title' => t('delete'),
+        'href' => 'node/' . $node->nid . '/delete',
+        'query' => $destination,
+      );
+    }
+    $options[$node->nid]['operations'] = array();
+    if (count($operations) > 1) {
+      // Render an unordered list of operations links.
+      $options[$node->nid]['operations'] = array(
+        'data' => array(
+          '#theme' => 'links__node_operations',
+          '#links' => $operations,
+          '#attributes' => array('class' => array('links', 'inline')),
+      ),
+      );
+    }
+    elseif (!empty($operations)) {
+      // Render the first and only operation as a link.
+      $link = reset($operations);
+      $options[$node->nid]['operations'] = array(
+        'data' => array(
+          '#type' => 'link',
+          '#title' => $link['title'],
+          '#href' => $link['href'],
+          '#options' => array('query' => $link['query']),
+      ),
+      );
+    }
+  }
+
+  // Only use a tableselect when the current user is able to perform any
+  // operations.
+  if ($admin_access) {
+    $form['nodes'] = array(
+      '#type' => 'tableselect',
+      '#header' => $header,
+      '#options' => $options,
+      '#empty' => t('No content available.'),
+    );
+  }
+  // Otherwise, use a simple table.
+  else {
+    $form['nodes'] = array(
+      '#theme' => 'table',
+      '#header' => $header,
+      '#rows' => $options,
+      '#empty' => t('No content available.'),
+    );
+  }
+
+  //$form['pager'] = array('#markup' => theme('pager'));
+  return $form;
+}
+
+function offers_theme() {
+  $theme_hooks = array(
+    'offers_list' => array(
+      'template' => 'offers-list',
+      'variables' => array('content' => NULL),
+  ),
+    'offers_rules' => array(
+      'template' => 'offers-rules',
+      'variables' => array('content' => NULL, 'title' => NULL),
+  ),
+    'offers_list_area' => array(
+      'template' => 'offers-list-area',
+      'variables' => array('area_id' => null, 'title' => NULL, 'content' => NULL),
+  ),
+    'offers_list_country' => array(
+      'template' => 'offers-list-country',
+      'variables' => array('area_id' => null, 'country_id' => null, 'title' => NULL, 'content' => NULL),
+  ),
+    'offers_list_module' => array(
+      'template' => 'offers-list-module',
+      'variables' => array('module_id' => NULL, 'title' => NULL, 'content' => NULL),
+  ),
+    'offers_list_gametype' => array(
+      'template' => 'offers-list-gametype',
+      'variables' => array('gameType_id' => null, 'title' => NULL, 'content' => NULL, 'eid' => NULL),
+  ),
+    'offers_list_offer' => array(
+      'template' => 'offers-list-offer',
+      'variables' => array('title' => NULL, 'content' => NULL),
+  ),
+    'offers_list_lottery' => array(
+      'template' => 'offers-list-lottery',
+      'variables' => array('title' => NULL, 'coefNames' => array(), 'offerData' => array()),
+  ),
+
+    'offers_list_gametype_europeview' => array(
+      'template' => 'offers-list-gametype-europeview',
+      'variables' => array('gameType_id' => null, 'title' => NULL, 'content' => NULL, 'eid' => NULL),
+  ),
+    'offers_list_offer_europeview' => array(
+      'template' => 'offers-list-offer-europeview',
+      'variables' => array('title' => NULL, 'content' => NULL),
+  ),
+  );
+  return $theme_hooks;
+}
+
+/**
+ * Implements hook_node_info().
+ */
+function offers_node_info(){
+  variable_set('language_content_type_offers', 2);
+  return array(
+    'offers' => array(
+      'name' => t('Offer category'),
+      'base' => 'offers',
+      'description' => t('A <em>offers</em> page display list of available <em>offers</em>.'),
+      'title_label' => t('Offer category name'),
+      'has_body' => FALSE,
+  ),
+    'offers_rules' => array(
+      'name' => t('Lažybų taisyklės'),
+      'base' => 'offers_rules',
+      'description' => t('Turinio tipas, skirtas lažybų taisyklėms pridėti prie tam tikros sporto šakos'),
+  )
+  );
+}
+
+/**
+ * Implements hook_field_extra_fields().
+ */
+function offers_field_extra_fields(){
+  $extra['node']['offers'] = array(
+    'display' => array(
+      'list_offers' => array(
+        'label' => t('List with offers'),
+        'description' => t('List with offers'),
+        'weight' => 0,
+  ),
+      'offers_rules' => array(
+        'label' => t('Lažybų taisyklės'),
+        'description' => t('Lažybų taisyklės'),
+        'weight' => 10,
+  ),
+  )
+  );
+
+  return $extra;
+}
+
+/**
+ * Implements hook_form().
+ */
+function offers_form($node, &$form_state){
+  global $user;
+
+  $admin = user_access('bypass node access') || user_access('edit any offers content') || (user_access('edit own offers content') && $user->uid == $node->uid);
+
+  $type = node_type_get_type($node);
+
+  $form_state['cache'] = TRUE;
+
+  $form['title'] = array(
+    '#type' => 'textfield',
+    '#title' => check_plain($type->title_label),
+    '#required' => TRUE,
+    '#default_value' => $node->title,
+    '#weight' => -5,
+  );
+
+
+  $form['settings'] = array(
+    '#type' => 'fieldset',
+    '#collapsible' => TRUE,
+    '#title' => t('Offer category settings'),
+    '#weight' => -3,
+    '#access' => $admin,
+  );
+
+  $form['settings']['offers_area_id'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Area ID'),
+    '#default_value' => isset($node->offers_area_id) ? $node->offers_area_id : '',
+    '#size' => 5,
+    '#maxlength' => 10,
+    '#description' => t('Offers category area ID'),
+    '#access' => $admin,
+    '#required' => TRUE
+  );
+
+  $form['settings']['offers_country_id'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Country ID'),
+    '#default_value' => isset($node->offers_country_id) ? $node->offers_country_id : '',
+    '#size' => 5,
+    '#maxlength' => 10,
+    '#description' => t('Offers category country ID'),
+    '#access' => $admin,
+    '#required' => FALSE
+  );
+
+  $form['settings']['offers_module_id'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Module ID'),
+    '#default_value' => isset($node->offers_module_id) ? $node->offers_module_id : '',
+    '#size' => 5,
+    '#maxlength' => 10,
+    '#description' => t('Offers category module ID'),
+    '#access' => $admin,
+    '#required' => FALSE
+  );
+
+  $form['settings']['offers_event_id'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Event ID'),
+    '#default_value' => isset($node->offers_event_id) ? $node->offers_event_id : '',
+    '#size' => 5,
+    '#maxlength' => 10,
+    '#description' => t('Offers category event ID'),
+    '#access' => $admin,
+    '#required' => FALSE
+  );
+  return $form;
+}
+
+/**
+ * Implements hook_insert().
+ */
+function offers_insert($node) {
+  $node->active = 1;
+  db_insert('offers_cat')
+  ->fields(array(
+    'nid' => $node->nid,
+      'area_id' => $node->offers_area_id,
+      'country_id' => ($node->offers_country_id !== '' ? $node->offers_country_id : null),
+      'module_id' => ($node->offers_module_id !== '' ? $node->offers_module_id : null),
+    'event_id' => ($node->offers_event_id !== '' ? $node->offers_event_id : null),
+    'language' => $node->language,
+  ))
+  ->execute();
+}
+
+/**
+ * Implements hook_load().
+ */
+function offers_load(&$nodes) {
+  global $user;
+  foreach ($nodes as $node) {
+    $offer = db_query("SELECT area_id, country_id, module_id, event_id FROM {offers_cat} WHERE nid = :nid", array(':nid' => $node->nid))->fetchObject();
+    foreach ($offer as $key => $value) {
+      $nodes[$node->nid]->{'offers_'.$key} = $value;
+    }
+  }
+}
+
+/**
+ * Implements hook_update().
+ */
+function offers_update(&$node) {
+  // Update offer settings.
+  db_update('offers_cat')
+  ->fields(array(
+    'area_id' => $node->offers_area_id,
+    'country_id' => ($node->offers_country_id !== '' ? $node->offers_country_id : null),
+    'module_id' => ($node->offers_module_id !== '' ? $node->offers_module_id : null),
+    'event_id' => ($node->offers_event_id !== '' ? $node->offers_event_id : null),
+  ))
+  ->condition('nid', $node->nid)
+  ->execute();
+}
+
+/**
+ * Implements hook_delete().
+ */
+function offers_delete(&$node) {
+  db_delete('offers_cat')
+  ->condition('nid', $node->nid)
+  ->execute();
+}
+
+/**
+ * Implements hook_view().
+ */
+function offers_view(&$node, $view_mode) {
+  global $user, $language;
+
+  $node->content['list_offers'] = array('#markup' => offers_view_offers($node, $view_mode));
+  //   $nid = db_select('offers_rules', 'r')->fields('r', array('nid'))->condition('language', $language->language)->condition('area_id', $node->offers_area_id)->execute()->fetchObject();
+  //   if(!empty($nid)){
+  //     $rules = node_load($nid->nid);
+  //     $node->content['offers_rules'] = array('#markup' => theme('offers_rules', array('content' => $rules->body[$language->language]['0']['safe_value'], 'title' => t('Lažybų taisyklės'))));
+  //   }
+  return $node;
+}
+
+
+/**
+ * Implements hook_form().
+ */
+function offers_rules_form($node, &$form_state){
+  global $user;
+
+  $admin = user_access('bypass node access') || user_access('edit any offers content') || (user_access('edit own offers content') && $user->uid == $node->uid);
+
+  $type = node_type_get_type($node);
+
+  $form_state['cache'] = TRUE;
+
+  $form['title'] = array(
+    '#type' => 'textfield',
+    '#title' => check_plain($type->title_label),
+    '#required' => TRUE,
+    '#default_value' => $node->title,
+    '#weight' => -5,
+  );
+
+  $areasoptions = array();
+
+  $areas = db_query('SELECT
+                            DISTINCT ON (aid)
+                            e.aid, 
+                            TRIM(substring(e.category from 1 for position(\'»\' in e.category)-1)) as title
+                    FROM
+                            ts_offers_events e
+                    WHERE
+                            e.date > extract(epoch from now())::INT 
+                            AND e.language = \'lt\' 
+                            AND e.peid is null 
+                            AND e.aid NOT IN(103, 128) 
+                            AND e.enabled = 1
+                    GROUP BY
+                            e.aid, e.category')->fetchAll();  
+  foreach($areas as $area){
+    $areasoptions[$area->aid] = $area->title;
+  }
+  $form['offers_area_id'] = array(
+    '#type' => 'select',
+    '#title' => t('Sporto šaka'),
+    '#options' => $areasoptions,
+    '#empty_value' => '',
+    '#default_value' => isset($node->offers_area_id) ? $node->offers_area_id : '',
+    '#required' => TRUE,
+    '#weight' => -4,
+  );
+
+  return $form;
+}
+
+/**
+ * Implements hook_insert().
+ */
+function offers_rules_insert($node) {
+  db_insert('offers_rules')
+  ->fields(array(
+    'nid' => $node->nid,
+    'area_id' => $aid = $node->offers_area_id,
+    'language' => $node->language,
+  ))
+  ->execute();
+    $_key = implode('-', array('odds_getSportRulesBlock', $aid, $node->language)); 
+    cache_clear_all($_key, 'cache');
+}
+
+/**
+ * Implements hook_load().
+ */
+function offers_rules_load(&$nodes) {
+  global $user;
+  foreach ($nodes as $node) {
+    $offer = db_query("SELECT area_id FROM {offers_rules} WHERE nid = :nid", array(':nid' => $node->nid))->fetchObject();
+    if($offer){
+        foreach ($offer as $key => $value) {
+          $nodes[$node->nid]->{'offers_'.$key} = $value;
+        }
+    }
+  }
+}
+
+/**
+ * Implements hook_update().
+ */
+function offers_rules_update(&$node) {
+  // Update offer settings.
+  db_update('offers_rules')
+  ->fields(array(
+    'area_id' => $aid = $node->offers_area_id,
+  ))
+  ->condition('nid', $node->nid)
+  ->execute();
+  
+    $_key = implode('-', array('odds_getSportRulesBlock', $aid, $node->language)); 
+    cache_clear_all($_key, 'cache');
+}
+
+/**
+ * Implements hook_delete().
+ */
+function offers_rules_delete(&$node) {
+  db_delete('offers_rules')
+  ->condition('nid', $node->nid)
+  ->execute();
+  
+    $aid = $node->offers_area_id;
+    $_key = implode('-', array('odds_getSportRulesBlock', $aid, $node->language)); 
+    cache_clear_all($_key, 'cache');
+}
+
+
+function offers_menu_title($type = 'all', $arg = null, $count = null){
+  if($count === null AND !in_array($type, array('calendar', 'results'))){
+    $count = offers_getOffersCount($type, $arg);
+  }
+  switch($type){
+    case 'today':
+      $title = t('Lažybos šiandien %count', array('%count' => $count));
+      break;
+    case 'tomorrow':
+      $title = t('Lažybos rytoj %count', array('%count' => $count));
+      break;
+    case 'long':
+      $title = t('Ilgalaikė pasiūla %count', array('%count' => $count));
+      break;
+    case 'last-minute':
+      $title = t('Paskutinė minutė %count', array('%count' => $count));
+      break;
+    case 'weekend':
+      $title = t('Savaitgalio lažybos %count', array('%count' => $count));
+      break;
+    case 'superbet':
+      $title = t('Superstatymas %count', array('%count' => $count));
+      break;
+    case 'septynetas':
+      $title = t('Septynetas %count', array('%count' => $count));
+      break;
+    case 'calendar':
+      $title = t('Lažybų kalendorius');
+      break;
+    case 'results':
+      $title = t('Lažybų rezultatai');
+      break;
+    case 'all':
+    default:
+      $title = t('Visa pasiūla %count', array('%count' => $count));
+      break;
+  }
+  return $title;
+}
+
+function offers_getOffersCount($type, $arg, $cat = array('aid' => null, 'cid' => null, 'mid' => null, 'eid' => null)){
+  $counts = &drupal_static(__FUNCTION__);
+  $arg_list = func_get_args();
+  $hash = hash('sha256', serialize($arg_list));
+
+  if(!isset($counts)){
+    if($cache = cache_get(__FUNCTION__, 'cache')){
+      //if($cache->expire > REQUEST_TIME){
+      $counts = $cache->data;
+      //}
+    }else{
+      $counts = array();
+
+    }
+  }
+
+  if (!isset($counts[$hash])){
+    $counts[$hash] = offers_getAvailableEvents($type, $arg, $cat);
+    $counts[$hash] = count($counts[$hash]);
+    cache_set(__FUNCTION__, $counts, 'cache', offers_getOffersCacheLifeTime());
+  }
+
+  return $counts[$hash];
+}
+
+function offers_getAreaIcon($aid, $over = false, $width = '22px', $title = ''){
+  $variables = array(
+    'path' => '/sites/all/img/icons/area/'.$aid.($over ? '-over' : '').'.png',
+    'alt' => '',
+    'title' => $title,
+    'width' => $width,
+    'height' => null,
+    'attributes' => array('class' => 'area-icon'),
+  );
+  return theme_image($variables);
+}
+
+function offers_getModuleIcon($mid, $title = ''){
+  $ext = null;
+  if(file_exists(DRUPAL_ROOT.'/sites/all/img/icons/module_png/'.$mid.'.png')){
+    $ext = 'png';
+  }elseif(file_exists(DRUPAL_ROOT.'/sites/all/img/icons/module_gif/'.$mid.'.gif')){
+    $ext = 'gif';
+  }
+  if($ext){
+    $variables = array(
+      'path' => '/sites/all/img/icons/module_'.$ext.'/'.$mid.'.'.$ext,
+      'alt' => '',
+      'title' => $title,
+      'width' => null,
+      'height' => null,
+      'attributes' => array('class' => 'area-icon'),
+    );
+    return theme_image($variables);
+  }else{
+    $variables = array(
+      'path' => '/sites/all/img/icons/module-icon.png',
+      'alt' => '',
+      'title' => $title,
+      'width' => null,
+      'height' => null,
+      'attributes' => array('class' => 'module-icon'),
+    );
+    return theme_image($variables);
+  }
+  return '';
+}
+
+function offers_dateTimeFormat($time, $showIcon = true){
+  $tomorrow = strtotime('tomorrow');
+  $onemoreday = strtotime('+1 day', $tomorrow);
+  $dif = $time - REQUEST_TIME;
+
+  $icon_variables = array(
+    'path' => '/sites/all/img/icons/siandien.gif',
+    'alt' => '',
+    'title' => t('šiandien'),
+    'width' => null,
+    'height' => null,
+    'attributes' => array('class' => 'today-icon'),
+  );
+  if($dif < 3600 AND $dif > 0){
+    return ($showIcon ? theme_image($icon_variables).' ' : '').t('už %min min', array('%min' => round($dif/60, 0)));
+  }elseif($time < $tomorrow){
+    return ($showIcon ? theme_image($icon_variables).' ' : '').' '.t('šiandien').' '.format_date($time, 'custom', 'H:i');
+  }elseif($time < $onemoreday){
+    return t('rytoj').' '.format_date($time, 'custom', 'H:i');
+  }
+  if(date('Y') != date('Y', $time)){
+    return format_date($time, 'custom', 'Y-m-d H:i');
+  }
+  return format_date($time, 'custom', 'm-d H:i');
+}
+
+/**
+ * @deprecated since version 3.0 when started module odds
+ */
+function offers_regenerate_menu_links(){
+  $mlids = db_select('menu_links', 'ml')
+  ->fields('ml', array('mlid', 'mlid'))
+  ->condition('menu_name', 'offers')
+  ->condition('depth', 4, '<')
+  ->execute()
+  ->fetchAllKeyed();
+  $changed = FALSE;
+  foreach($mlids as $mlid){
+    $menu_item = menu_link_load($mlid);
+    $menu_item_original = $menu_item;
+    $count = offers_getOffersCount('all', null, $cat = array(
+      'aid' => isset($menu_item['options']['offer']['aid'])?$menu_item['options']['offer']['aid'] : null,
+      'cid' => isset($menu_item['options']['offer']['cid']) ? $menu_item['options']['offer']['cid'] : null,
+      'mid' =>  isset($menu_item['options']['offer']['mid']) ? $menu_item['options']['offer']['mid'] : null,
+      'eid' => isset($menu_item['options']['offer']['eid']) ? $menu_item['options']['offer']['eid'] : null,
+    ));
+    $menu_item['options']['offer']['count'] = $count;
+    $menu_item['hidden'] = (int)!(bool)$count;
+    if(!empty($menu_item['options']['offer']['eid'])
+    OR ( isset($menu_item['options']['offer']['mid']) && $menu_item['options']['offer']['mid'] === null && isset($menu_item['options']['offer']['cid']) && ($menu_item['options']['offer']['cid'] === '0' OR $menu_item['options']['offer']['cid'] === 0))
+    OR ( isset($menu_item['options']['offer']['aid']) && $menu_item['options']['offer']['aid'] == 16)
+    ){
+      $menu_item['hidden'] = 1;
+    }
+    if(!isset($menu_item_original['options']['offer']['count']) OR $menu_item_original['options']['offer']['count'] != $menu_item['options']['offer']['count']
+    OR $menu_item_original['hidden'] != $menu_item['hidden']){
+      menu_link_save($menu_item);
+      $changed = TRUE;
+    }
+  }
+  if($changed){
+    cache_clear_all('offers', 'cache_block', TRUE);
+  }
+}
+
+
+function offers_regenerate_nodes(){
+  $nids = db_select('offers_cat', 'oc')
+  ->fields('oc', array('nid'))
+  ->isNotNull('area_id')
+  ->isNotNull('country_id')
+  ->isNotNull('module_id')
+  ->isNotNull('event_id')
+  ->condition('language', 'lt')
+  ->execute()
+  ->fetchAll();
+  foreach($nids as $nid){
+    $event_node = node_load($nid->nid);
+    node_object_prepare($event_node);
+    $event_node = node_submit($event_node);
+    node_save($event_node);
+    $event_node->path['pathauto'] = 0;
+    $event_node->path['alias'] = '';
+    $event_node->menu['enabled'] = '0';
+    node_save($event_node);
+  }
+  $nids = db_select('offers_cat', 'oc')
+  ->fields('oc', array('nid'))
+  ->isNotNull('area_id')
+  ->isNull('country_id')
+  ->isNull('module_id')
+  ->isNull('event_id')
+  ->condition('language', 'lt')
+  ->execute()
+  ->fetchAll();
+}
+
+function offers_remove_dublicate_nodes(){
+  $result = db_query('
+    SELECT count(nid) as kiekis, "language", "area_id", "country_id", "module_id", "event_id"
+    FROM "public"."ts_offers_cat"
+    GROUP BY "language", "area_id", "country_id", "module_id", "event_id"
+    HAVING count(nid) > 1
+    ORDER BY kiekis DESC, "language" ASC
+  ')->fetchAll();
+
+  foreach($result as $cat){
+    $nids = db_select('offers_cat', 'oc')
+    ->fields('oc', array('nid'))
+    ->condition('language', $cat->language)
+    ->condition('area_id', $cat->area_id)
+    ->condition('country_id', $cat->country_id)
+    ->condition('module_id', $cat->module_id)
+    ->condition('event_id', $cat->event_id)
+    ->orderBy('nid', 'ASC')
+    ->execute()
+    ->fetchAll();
+
+    node_delete($nids['1']->nid);
+  }
+}
+
+function offers_remove_old_pages(){
+  $nodes = db_select('offers_cat', 'oc');
+  $nodes->addJoin('LEFT', 'offers_events', 'oe', 'oc.event_id = oe.peid');
+  $nodes->addField('oc', 'nid');
+  $nodes->addExpression('count(oe.peid)', 'count');
+  $nodes->isNotNull('area_id')
+  ->isNotNull('country_id')
+  ->isNotNull('module_id')
+  ->isNotNull('event_id')
+  ->groupBy('oe.peid')->groupBy('oc.nid')->range(0, 1000);
+  $nodes = $nodes->execute()->fetchAll();
+  $toDel = array();
+  foreach($nodes as $node){
+    if($node->count === '0'){
+      $toDel[] = $node->nid;
+    }
+  }
+  node_delete_multiple($toDel);
+}
+
+function offers_show_europeview(){
+  global $user;
+  $show_europeview = false; 
+  if(user_is_anonymous() 
+  	|| (isset($_COOKIE['europeview']) && (bool)$_COOKIE['europeview']) 
+  	|| (isset($user->data['europeview']) && (bool)$user->data['europeview']) 
+  	|| (!isset($user->data['europeview']))){
+      $show_europeview = true;
+  }
+  return $show_europeview;
+}
+
+/**
+ * Implements hook_cron().
+ */
+function offers_cron(){
+	$cid_offers_updater_page = 'offers_updater_page_locked';
+	cache_set($cid_offers_updater_page, true, 'cache', strtotime('+10 min'));
+	
+  set_time_limit(12000);
+  ini_set('memory_limit', '512M');
+  $hour = date('G');
+  if($hour > 3 &&  $hour < 7) {
+  	offers_update_groups();
+  	offers_update_gametype_patterns();
+  }    
+  if($hour > 3 &&  $hour < 7) {
+    offers_update_offers_data();
+    set_time_limit(12000);
+    offers_update_results_data();
+    offers_remove_old_pages();
+    set_time_limit(12000);
+    //offers_regenerate_menu_links();
+  }
+  
+  cache_set($cid_offers_updater_page, false, 'cache', strtotime('now'));
+}
+
+/**
+ * Menu callback to generate offers' pages
+ */
+function offers_creator_admin_page(){
+  drupal_set_message('Done');
+  offers_update_offers_data();
+  return ' ';
+}
+
+function offers_betradar_feed($reset = false){
+  $maches = &drupal_static(__FUNCTION__);
+  if(!isset($data) AND $reset == FALSE){
+    if($cache = cache_get(__FUNCTION__, 'cache')){
+      if($cache->expire > REQUEST_TIME){
+        $maches = $cache->data;
+      }
+    }
+  }
+  if(!isset($maches)){
+    $maches = array();
+    $url = 'https://www.betradar.com/betradar/getXmlFeed.php?bookmakerName=TopSport&key=ddaff5e2533c&xmlFeedName=StatisticsMatchSourceJoin&deleteAfterTransfer=no';
+    $data = drupal_http_request($url);
+    if(isset($data->data)){
+      $result = sx_array(simplexml_load_string($data->data));
+      if(isset($result['Matches']['Match']['0'])){
+        foreach($result['Matches']['Match'] as $match){
+          $maches[$match['@attributes']['idOfSource']] = $match['@attributes']['statisticsMatchId'];
+        }
+        cache_set(__FUNCTION__, $maches, 'cache', strtotime('+15 min'));
+      }
+    }
+  }
+  return $maches;
+}
+
+function offers_betradar_icon($matchId){
+  global $language;
+  list($lang_code) = explode('-', $language->language);
+  $maches = offers_betradar_feed();
+  if(isset($maches[$matchId]) OR false /*disable calls of direct URLS*/){
+    return l(
+      ' ',
+      'http://www.stats.betradar.com/s4/?clientid=110&clientmatchid='.$matchId.'&language='.$lang_code,
+    array(
+        'html' => true,
+        'attributes' => array(
+          'class' => array('event-stats'),
+          'target' => '_blank',
+          'title' => t('Peržiūrėti statistiką'),
+          'onclick' => 'window.open(this.href, \'\', \'resizable=yes,status=yes,location=no,toolbar=no,menubar=no,fullscreen=no,scrollbars=yes,dependent=no,width=1000,height=650\'); return false;',
+    ),
+    )
+    );
+  }
+}
+
+function offers_stats_icon($eid, $title = false){
+    //return ''; // @todo: temporary disable
+    $_stat_data = db_query('SELECT "stats_uri" FROM ts_stats WHERE eid = :eid', array(':eid' => $eid));
+    $_data = $_stat_data->fetchField();
+	if(substr($_data,0,2) == '#!' ) $_data = '';
+	//error_log("icon $nid :" . $_data);
+    if($_data && strlen($_data)) { 
+		$r = '<a class="event-stats" href="javascript:;" stat:uri="'.$_data.'"'.($title?' stat:evtitle="'.$title.'"':'').' title="'.t('Peržiūrėti statistiką').'"> </a>';
+       /* $r =  l(
+              ' ',
+              $_data,             
+            array(
+               'query' => array('full' => '1'),
+               'fragment' => 'event-stats',
+                'html' => true,
+                'attributes' => array(
+                  'class' => array('event-stats'),
+                  'title' => t('Peržiūrėti statistiką'),
+            ),
+            )
+            );*/
+			//error_log($r);
+		return $r;
+    }
+	return '';
+}
+
+function offers_updater_page($type = 'all', $menu = true){
+    $cid = __FUNCTION__ .'_locked';
+    $last_request = cache_get($cid, 'cache');
+    if(!$last_request){
+        cache_set($cid, true, 'cache', strtotime('+5 min'));
+        //   watchdog('offers_updater_page', 'Pradedam '.date('Y-m-d H:i:s'), array(), WATCHDOG_NOTICE);
+        set_time_limit(12000);
+        ini_set('memory_limit', '256M');
+        $all = ($type == 'all');
+        offers_update_offers_data($all);
+        //offers_remove_dublicate_nodes();
+        //   watchdog('offers_updater_page', 'Atnaujinta pasiūla '.date('Y-m-d H:i:s'), array(), WATCHDOG_NOTICE);
+       // if($menu){
+        //    offers_regenerate_menu_links();
+          //     watchdog('offers_updater_page', 'Atnaujintas menu '.date('Y-m-d H:i:s'), array(), WATCHDOG_NOTICE);
+      //  }
+        //   watchdog('offers_updater_page', 'Baigiam '.date('Y-m-d H:i:s'), array(), WATCHDOG_NOTICE);
+        echo '<h1 style="color:green">Pasiūla atnaujinta</h1>';
+        cache_set($cid, false, 'cache', strtotime('now'));
+    }else {
+        echo '<p>Atsiprašome, tačiau Jūsų operacija šiuo metu negalima, nes prieš tai inicijuotas pasiūlos atnaujinimas dar neužbaigtas, prašome pabandyti vėliau...</p>';
+        echo '<p><b>Kita pasiūlos atnaujinimo operacija bus prieinama po: '.($last_request->created - strtotime('-5 min')).' sekundžių</b></p>';
+    }
+}
+function offers_can_get_xml(){
+  global $user;
+  $allowed = array(/*'89.202.213.194', '89.202.213.196', '92.62.38.2', '217.243.249.234',*/ '88.119.21.64');
+  if(in_array($_SERVER['REMOTE_ADDR'], $allowed) OR $user->uid == 1){
+    return true;
+  }
+  return false;
+}
+
+function offers_get_offers_xml(){
+  if (ob_get_level()) {
+    ob_end_clean();
+  }
+  drupal_add_http_header('Content-Type', 'text/xml; charset=utf-8');
+  drupal_send_headers();
+  print topsport_getOffers(true, true, false);
+  drupal_exit();
+}
+
+function offers_results_updater_page($type = 'all'){
+	$cid = __FUNCTION__ .'_locked';
+	$last_request = cache_get($cid, 'cache');
+	if(!$last_request){
+		cache_set($cid, true, 'cache', strtotime('+5 min'));
+		set_time_limit(1200);
+		ini_set('memory_limit', '256M');
+		$all = ($type == 'all');
+		offers_update_results_data($all);
+		echo '<h1 style="color:green">Rezultatai atnaujinti</h1>';
+		cache_set($cid, false, 'cache', strtotime('now'));
+	} else {
+        echo '<p>Atsiprašome, tačiau Jūsų operacija šiuo metu negalima, nes prieš tai inicijuotas atnaujinimas dar neužbaigtas, prašome pabandyti vėliau...</p>';
+        echo '<p><b>Kita atnaujinimo operacija bus prieinama po: '.($last_request->created - strtotime('-5 min')).' sekundžių</b></p>';
+    }
+}
+function offers_groups_updater_page(){
+
+  set_time_limit(1200);
+  ini_set('memory_limit', '256M');
+  offers_update_groups();
+  return 'Grupes atnaujintos';
+}
+
+function offers_patterns_updater_page(){
+  set_time_limit(1200);
+  ini_set('memory_limit', '256M');
+  //$all = ($type == 'all');
+  offers_update_gametype_patterns();
+  return 'Šablonai atnaujinti';
+}
+
+function offers_update_groups(){
+
+  $groups = topsport_groups();
+  if(!empty($groups)){
+    db_delete('offers_groups')->execute();
+    foreach($groups->group as $group){
+      db_insert('offers_groups')
+      ->fields(array(
+        'a' => (int)$group->group_id,
+        'b' => (int)$group->group_id2,
+      ))
+      ->execute();
+    }
+  }
+}
+
+function offers_update_gametype_patterns(){
+  $patterns = topsport_getGameTypePatterns();
+  $languages = language_list();
+  if(is_array($patterns)){
+    foreach($patterns as $pattern){
+      foreach($languages as $lang => $language){
+        if(!$language->enabled){ continue; }
+        db_merge('offers_gametypes_patterns')
+        ->key(array(
+          'gtpid' => $pattern['GameTypePatternId'],
+          'language' => $lang,
+        ))
+        ->fields(array(
+          'cn1' => (isset($pattern['CoefName1'][offers_formatLang($lang)]) ? (string)$pattern['CoefName1'][offers_formatLang($lang)] : null),
+          'cn2' => (isset($pattern['CoefName2'][offers_formatLang($lang)]) ? (string)$pattern['CoefName2'][offers_formatLang($lang)] : null),
+          'cn3' => (isset($pattern['CoefName3'][offers_formatLang($lang)]) ? (string)$pattern['CoefName3'][offers_formatLang($lang)] : null),
+          'cn4' => (isset($pattern['CoefName4'][offers_formatLang($lang)]) ? (string)$pattern['CoefName4'][offers_formatLang($lang)] : null),
+          'cn5' => (isset($pattern['CoefName5'][offers_formatLang($lang)]) ? (string)$pattern['CoefName5'][offers_formatLang($lang)] : null),
+          'cn6' => (isset($pattern['CoefName6'][offers_formatLang($lang)]) ? (string)$pattern['CoefName6'][offers_formatLang($lang)] : null),
+        ))
+        ->execute();
+      }
+    }
+  }
+}
+
+function offers_menu_offers_subtree($type){
+  global $language;
+  switch($type){
+    case 'superbet': case 'last-minute': case 'today':
+    case 'tomorrow': case 'long': case 'weekend':
+      break;
+    default:
+      return;
+  }
+  $data = &drupal_static(__FUNCTION__);
+  $cid = 'offers-menu-subtree-content:'.$language->language.':';
+  if(strpos($_GET['q'], 'offers/') === 0){
+    $cid .= $_GET['q'];
+  }
+  if(!isset($data)){
+    if($cache = cache_get($cid, 'cache')){
+      if($cache->expire > REQUEST_TIME){
+        $data = $cache->data;
+      }
+    }
+  }
+  if(!isset($data[$type])){
+    $html = '';
+    $areas = offers_getAvailableCategories('area', $type);
+    if(empty($areas)){ return ''; }
+    $html = '<ul class="menu">';
+    $html .= '<li>'.l(t('Visa pasiūla').'<em>'.offers_getOffersCount($type, null).'</em>', 'offers/'.$type, array('html' => true)).'</li>';
+    foreach($areas as $area){
+      $html .= '<li>'.l($area->title.'<em>'.offers_getOffersCount($type, null, array('aid' => $area->offers_area_id, 'cid' => null, 'mid' => null, 'eid' => null)).'</em>', 'offers/'.$type.'/'.$area->offers_area_id, array('html' => true)).'</li>';
+    }
+    $html .= '</ul>';
+    $data[$type] = $html;
+    cache_set($cid, $data, 'cache', offers_getOffersCacheLifeTime());
+  }
+  return $data[$type];
+}
+
+function offers_display_offers($type = 'all', $aid = null){
+    drupal_goto('odds-overview');
+  global $language;
+  $arg = null;
+  if($type == 'search'){  	
+    $arg_list = func_get_args();
+    unset($arg_list[0]);
+    $arg = implode('/', $arg_list);
+    if(strlen($arg) <= 2){
+    	drupal_set_message(t('Įveskite bent 3 simbolius'), 'warning');
+    	drupal_goto();
+    }
+    offers_searchform_value($arg);
+    drupal_set_title(offers_search_page_title($arg), PASS_THROUGH);
+  } else if($type == 'all') {
+      drupal_goto();
+  }else {      
+    if(is_numeric($aid)){
+      $areaData = offers_getCatData($aid);
+      if(isset($areaData) && isset($areaData[key($areaData)]->title)){
+        drupal_set_title($areaData[key($areaData)]->title);
+      }
+    }
+  }
+  $html = '';
+
+  $gameTypes = offers_getAvailableEvents($type, $arg, array('aid' => (is_numeric($aid) ? intval($aid) : null), 'cid' => null, 'mid' => null, 'cid' => null, 'eid' => null), true);
+  if($gameTypes){
+    // $html .= offers_draw_areaSelect($type, $arg);
+    if($type == 'superbet'){
+      $_GET['full'] = 0;
+    }else{
+      $html .= offers_draw_filters($gameTypes);
+    }
+    $data = offers_get_offers_data($type, $arg, (is_numeric($aid) ? intval($aid) : null));
+    $html .= offers_display_offers_html($data);
+  }else{
+    if($type == 'search'){
+      $html .= '<strong>'.t('Rezultatų nėra, pabandykite įvesti kitą frazę').'</strong>';
+    }else{
+      $html .= '<strong>'.t('Šiuo metu pasiūlymų neturime, aplankykite šį puslapį vėliau').'</strong>';
+    }
+  }
+  return $html;
+}
+
+function offers_search_page_title($string = null){
+  $offers_search_page_title = $string;
+  return (t('Pasiūlos paieška').": ".$offers_search_page_title);
+}
+
+function offers_getCatData($areaId = null, $countryId = null, $moduleId = null, $eventId = null){
+  global $language;
+  if($areaId){
+    $nids = db_select('offers_cat', 'oc')
+    ->fields('oc',  array('nid', 'nid'));
+    //     $nids->addJoin('LEFT', 'node', 'n', 'n.nid = oc.nid');
+    $nids = $nids->condition('oc.language', $language->language)
+    ->condition('area_id', $areaId)
+    ->condition('country_id', $countryId)
+    ->condition('module_id', $moduleId)
+    ->condition('event_id', $eventId)
+    //     ->orderBy('n.title', 'ASC')
+    ->execute()
+    ->fetchAllKeyed();
+  }else{
+    $nids = db_select('offers_cat', 'oc')
+    ->fields('oc',  array('nid', 'nid'));
+    //     $nids->addJoin('LEFT', 'node', 'n', 'n.nid = oc.nid');
+    $nids = $nids->condition('oc.language', $language->language)
+    ->isNotNull('area_id')
+    ->condition('country_id', $countryId)
+    ->condition('module_id', $moduleId)
+    ->condition('event_id', $eventId)
+    //     ->orderBy('n.title', 'ASC')
+    ->execute()
+    ->fetchAllKeyed();
+  }
+  $nodes = node_load_multiple($nids);
+  return $nodes;
+}
+
+function offers_loadOffersCats($ids, $type, $cat){
+  global $language;
+  $nids = db_select('offers_cat', 'oc')->fields('oc',  array('nid', 'nid'))->condition('oc.language', $language->language);
+  switch($type){
+    case 'area':
+      $nids->addJoin('LEFT', 'offers_events', 'oe', 'oe.aid = oc.area_id AND oe.peid IS NULL');
+      $nids->condition('area_id', $ids, 'IN')->isNull('country_id')->isNull('module_id')->isNull('event_id');
+      break;
+    case 'country':
+      $nids->addJoin('LEFT', 'offers_events', 'oe', 'oe.aid = oc.area_id AND oe.cid = oc.country_id AND oe.peid IS NULL');
+      $nids->condition('area_id', $cat['aid'])->condition('country_id', $ids, 'IN')->isNull('module_id')->isNull('event_id');
+      break;
+    case 'module':
+      $nids->addJoin('LEFT', 'offers_events', 'oe', 'oe.aid = oc.area_id AND oe.cid = oc.country_id AND oe.mid = oc.module_id AND oe.peid IS NULL');
+      $nids->condition('area_id', $cat['aid'])->condition('country_id', $cat['cid'])->condition('module_id', $ids, 'IN')->isNull('event_id');
+      break;
+    case 'event':
+      $nids->addJoin('LEFT', 'offers_events', 'oe', 'oe.aid = oc.area_id AND oe.cid = oc.country_id AND oe.mid = oc.module_id AND oe.eid = oc.event_id AND oe.peid IS NULL');
+      $nids->condition('area_id', $cat['aid'])->condition('country_id', $cat['cid'])->condition('module_id', $cat['mid'])->condition('event_id', $ids, 'IN');
+      break;
+  }
+  $nids->addExpression('min(oe.name)', 'weight');
+  $nids->groupBy('oc.nid');
+  $nids->orderBy('weight');
+  $nids = $nids->execute()->fetchAllKeyed();
+  $nodes =  node_load_multiple($nids);
+  return $nodes;
+}
+
+function offers_getChildCats($areaId = TRUE, $countryId = null, $moduleId = null, $eventId = null){
+  global $language;
+
+  $a_func = ($areaId === TRUE ? 'isNotNull' : 'condition');
+  $c_func = ($countryId === TRUE ? 'isNotNull' : ($countryId === null ? 'isNull': 'condition'));
+  $m_func = ($moduleId === TRUE ? 'isNotNull' : ($moduleId === null ? 'isNull': 'condition'));
+  $e_func = ($eventId === TRUE ? 'isNotNull' : ($eventId === null ? 'isNull': 'condition'));
+
+  $nids = db_select('offers_cat', 'oc')->fields('oc',  array('nid', 'nid'));
+  $nids->addJoin('LEFT', 'node', 'n', 'n.nid = oc.nid');
+  $nids = $nids->condition('oc.language', $language->language)
+  ->$a_func('area_id', $areaId)
+  ->$c_func('country_id', $countryId)
+  ->$m_func('module_id', $moduleId)
+  ->$e_func('event_id', $eventId);
+  switch($a_func.'.'.$c_func.'.'.$m_func.'.'.$e_func){
+    case 'isNotNull.isNull.isNull.isNull':
+    case 'condition.isNull.isNull.isNull':
+      $nids->addJoin('INNER', 'offers_results', 'o_r', 'o_r.aid = oc.area_id AND o_r.peid IS NULL');
+      break;
+    case 'condition.isNotNull.isNull.isNull':
+      $nids->addJoin('INNER', 'offers_results', 'o_r', 'o_r.aid = oc.area_id AND o_r.cid = oc.country_id AND o_r.peid IS NULL');
+      break;
+    case 'condition.condition.isNotNull.isNull':
+      $nids->addJoin('INNER', 'offers_results', 'o_r', 'o_r.aid = oc.area_id AND o_r.cid = oc.country_id AND o_r.mid = oc.module_id AND o_r.peid IS NULL');
+      break;
+    case 'condition.condition.condition.isNull':
+      $nids->addJoin('INNER', 'offers_results', 'o_r', 'o_r.aid = oc.area_id AND o_r.cid = oc.country_id AND o_r.mid = oc.module_id AND o_r.peid IS NULL');
+      break;
+    case 'condition.condition.condition.condition':
+      $nids->addJoin('INNER', 'offers_results', 'o_r', 'o_r.aid = oc.area_id AND o_r.cid = oc.country_id AND o_r.mid = oc.module_id AND o_r.eid = oc.event_id AND o_r.peid IS NULL');
+      break;
+    default:
+      $nids->addJoin('INNER', 'offers_results', 'o_r', 'o_r.aid = oc.area_id AND o_r.cid = oc.country_id AND o_r.peid IS NULL');
+      break;
+  }
+  $nids->addExpression('min(o_r.name::int4)', 'weight');
+  $nids->groupBy('oc.nid');
+  $nids->orderBy('weight');
+  $nids = $nids->execute()->fetchAllKeyed();
+  $node = node_load_multiple($nids);
+  return $node;
+}
+
+function offers_searchform($form, &$form_state){
+
+  if(isset($form_state['values']['string'])){
+    //drupal_goto('offers/search/'.$form_state['values']['string']);
+	  drupal_goto('odds/search/'.$form_state['values']['string']);
+  }
+  $form = array();
+  $value = offers_searchform_value();
+  $form['string'] = array(
+    '#type' => 'textfield',
+    '#title' => '',
+    '#size' => 30,
+    '#maxlength' => 64,
+    '#description' => '',
+    '#default_value' => strlen($value) ? $value : '',
+    '#attributes' => array(
+      'placeholder' => t('Lažybų paieška'),
+      'class' => array('search'),
+      'onkeyup' => 'autoComplete.init(this)',
+      'autocomplete' => 'off'
+  ),
+  );
+  drupal_add_js('front/modules/Odds/files/js/Odds.js');
+
+  $form['submit_action'] = array(
+    '#type' => 'submit',
+    '#value' => t('Ieškoti'),
+    '#attributes' => array(
+      'class' => array('btn'),
+  ),
+  );
+
+  return $form;
+}
+
+function offers_searchform_submit($form, &$form_state){
+  if(!empty($form_state['values']['string']) AND (t('Lažybų paieška') != $form_state['values']['string'])){
+    offers_searchform_value($form_state['values']['string']);
+    //drupal_goto('offers/search/'.$form_state['values']['string']);
+	drupal_goto('odds/search/'.$form_state['values']['string']);
+  }else{
+    drupal_set_message(t('Įveskite paieškos raktažodį'), 'warning');
+  }
+}
+
+function offers_searchform_value($newValue = null){
+  $value = &drupal_static(__FUNCTION__);
+  if (!isset($value)) {
+    $value = '';
+  }
+  if($newValue){
+    $value = $newValue;
+  }
+
+  return $value;
+}
+
+function offers_additionalConditions($query, $type = 'all', $arg = null, $cat = null, $limit = 0){
+  global $language;
+
+  $query->condition('oe.language', $language->language)->condition('oe.enabled', 1);
+
+  if($type == 'superbet'){
+    $query->condition('oe.name', 20, '<=');
+  }elseif($type == 'search' && $arg != null){
+    //     // Sporto saka
+    //     $query->addJoin('LEFT', 'offers_cat', 'a_oc', 'a_oc.area_id = oe.aid AND a_oc.country_id IS NULL AND a_oc.module_id IS NULL AND a_oc.event_id IS NULL'); // AND a_oc.language = oe.language
+    //     $query->addJoin('LEFT', 'node', 'a_n', 'a_n.nid = a_oc.nid');
+    //     // Valstybe
+    //     $query->addJoin('LEFT', 'offers_cat', 'c_oc', 'c_oc.area_id = oe.aid AND c_oc.country_id = oe.cid AND c_oc.module_id IS NULL AND c_oc.event_id IS NULL');// AND c_oc.language = oe.language
+    //     $query->addJoin('LEFT', 'node', 'c_n', 'c_n.nid = c_oc.nid');
+    //     // Lyga
+    //     $query->addJoin('LEFT', 'offers_cat', 'm_oc', 'm_oc.area_id = oe.aid AND m_oc.country_id = oe.cid AND m_oc.module_id = oe.mid AND m_oc.event_id IS NULL');// AND m_oc.language = oe.language
+    //     $query->addJoin('LEFT', 'node', 'm_n', 'm_n.nid = m_oc.nid');
+    //
+    //     // Statymo tipas
+    //     $query->addJoin('LEFT', 'offers_gametypes', 'gt_n', 'gt_n.gtid = oe.gtid');
+    //
+    //     $query->condition(db_or()
+    //       ->condition('oe.title', '%'.$arg.'%', 'LIKE')
+    //       ->condition('a_n.title', '%'.$arg.'%', 'LIKE')
+    //       ->condition('c_n.title', '%'.$arg.'%', 'LIKE')
+    //       ->condition('m_n.title', '%'.$arg.'%', 'LIKE')
+    //       ->condition('gt_n.title', '%'.$arg.'%', 'LIKE')
+    //     );
+    $query->condition('oe.search_data', '%'.db_like(transliteration_get($arg)).'%', 'LIKE');
+  }elseif($type == 'septynetas'){
+    $query->condition('oe.aid', 16, '=');
+  }
+
+  switch ($type){
+    case 'today':
+      // $query->condition('name', 19600, '<');
+      $query->condition('oe.aid', 16, '<>'); //ismetas septynetas
+      $date_from = REQUEST_TIME;
+      $date_till = strtotime('tomorrow +8 hours', REQUEST_TIME);
+      break;
+    case 'tomorrow':
+      $query->condition('name', 60000, '<');
+      $query->condition('oe.aid', 16, '<>'); //ismetas septynetas
+      $date_from = strtotime('tomorrow -1 sec', REQUEST_TIME);
+      $date_till = strtotime('tomorrow +32 hours', REQUEST_TIME);
+      break;
+    case 'weekend':
+      $query->condition('name', 60000, '<');
+      $query->condition('oe.aid', 16, '<>'); //ismetas septynetas
+      if(in_array(date('N'), array(5, 6, 7))){
+        $date_from = REQUEST_TIME;
+      }else{
+        $date_from = strtotime('next friday +17 hours', REQUEST_TIME);
+      }
+      if(date('N') == 7){
+        $date_till = strtotime('tomorrow', REQUEST_TIME);
+      }else{
+        $date_till = strtotime('next monday', REQUEST_TIME);
+      }
+      break;
+    case 'last-minute':
+      $query->condition('name', 60000, '<'); //ilgalaikė pasiūla
+      $query->condition('oe.aid', 16, '<>'); //ismetas septynetas
+      $date_from = REQUEST_TIME;
+      $date_till = strtotime('+4 hour', REQUEST_TIME);      
+      break;
+    case 'calendar':
+      $date_from = REQUEST_TIME;
+      $date_till = strtotime('+30 days', REQUEST_TIME);
+      break;
+    case 'day':
+      $date_from = ($arg['day'] > REQUEST_TIME ? $arg['day'] : REQUEST_TIME);
+      $date_till = strtotime('+32 hours', $arg['day']);
+      break;
+    case 'long':
+      $query->condition('name', 60000, '>=');
+      $query->condition('name', 89999, '<=');
+    default:
+      $date_from = REQUEST_TIME;
+      $date_till = strtotime('+5 years', REQUEST_TIME);
+      break;
+  }
+
+  $query->condition('oe.date', $date_from, '>')->condition('oe.date', $date_till, '<');
+  if($cat['aid'] !== NULL){ $query->condition('oe.aid', $cat['aid']); }
+  if($cat['cid'] !== NULL){ $query->condition('oe.cid', $cat['cid']); }
+  if($cat['mid'] !== NULL){ $query->condition('oe.mid', $cat['mid']); }
+  /*
+   $filters_gtid = offers_filter_form_result();
+   if(!empty($filters_gtid)){
+   $query->condition('oe.gtid', $filters_gtid, 'IN');
+   }
+   */
+  if($type == 'last-minute' && $arg === TRUE){
+    $query->condition('oe.aid', 103, '<>')->isNull('oe.peid');
+  }
+
+  if($limit){ $query->range(0, $limit); }
+
+  return $query;
+}
+
+function offers_getAvailableCategories($catType, $type = 'all', $arg = null, $cat = null, $limit = 0){
+  global $language;
+  $cid = (__FUNCTION__).';lang:'.$language->language.';catType:'.$catType;
+  $categoriesData = &drupal_static($cid);
+
+  if(!isset($areasData)){
+    if($cache = cache_get($cid, 'cache')){
+      $categoriesData = $cache->data;
+    }else{
+      $categoriesData = array();
+    }
+  }
+  $arg_list = func_get_args();
+  $hash = hash('sha256', serialize($arg_list));
+  if (!isset($categoriesData[$hash])){
+    switch($catType){
+      case 'area':
+        $field = 'aid';
+        break;
+      case 'country':
+        $field = 'cid';
+        break;
+      case 'module':
+        $field = 'mid';
+        break;
+      case 'event':
+        $field = 'eid';
+        break;
+    }
+    $ids = db_select('offers_events', 'oe');
+    $ids->fields('oe', array($field, $field));
+    $ids = offers_additionalConditions($ids, $type, $arg, $cat, $limit);
+    $ids->groupBy('oe.'.$field);
+    $ids = $ids->execute()->fetchAllKeyed();
+    if($ids){
+      $areas = offers_loadOffersCats($ids, $catType, $cat);
+      $categoriesData[$hash] = $areas;
+    }else{
+      $categoriesData[$hash] = array();
+    }
+    cache_set($cid, $categoriesData, 'cache', offers_getOffersCacheLifeTime());
+  }
+  return $categoriesData[$hash];
+}
+
+function offers_getAvailableEvents($type = 'all', $arg = null, $cat = null, $gameTypes = false, $limit = 0){
+  global $language;  
+  $cid = (__FUNCTION__).':lang:'.$language->language.':'.$type;
+  $arg_list = func_get_args();
+  $hash = hash('sha256', serialize($arg_list));
+  $cid .= ':hash:'.$hash;
+
+  //  dpm($cid);
+  //   $eventsData = &drupal_static($cid);
+
+  if(!isset($eventsData)){
+    if($cache = cache_get($cid, 'cache')){
+      if($cache->expire > REQUEST_TIME){
+        $eventsData = $cache->data;
+      }
+    }else{
+      $eventsData = array();
+    }
+  }
+  if(!isset($eventsData[$hash])){
+    $fields = ($gameTypes ? array('gtid') : array());
+    $events = db_select('offers_events', 'oe');
+    $events->join('offers_gametypes', 'gt', 'gt.gtid = oe.gtid');
+    $events->condition('gt.language', $language->language);
+
+    $events = offers_additionalConditions($events, $type, $arg, $cat, $limit);
+
+    if(!$gameTypes){
+      $innerSelect = clone $events;
+      $innerSelect->fields('oe', array('peid'));
+      $innerSelect->addExpression('count(peid)', 'child_cnt');
+      $innerSelect->groupBy('peid');
+      $events->addJoin('LEFT', $innerSelect, 'cnt', 'cnt.peid = oe.eid');
+      $events->addField('cnt', 'child_cnt');
+
+
+      if($type == 'last-minute')
+      {
+         
+        $events->orderBy('oe.date', 'ASC');
+      }
+      else
+      {
+        $events->/*orderBy('oe.date', 'ASC')->*/orderBy('oe.name', 'ASC');
+      }
+
+    }else{
+      if($type == 'last-minute')
+      {
+
+        $events->groupBy('oe.gtid')->groupBy('oe.date');
+      }
+      else
+      {
+        $events->groupBy('oe.gtid')->groupBy('gt.weight');
+      }
+    }
+    $events->fields('oe', $fields);
+
+    if($type == 'last-minute')
+    {
+
+      $events->orderBy('oe.date', 'ASC');
+    }
+    else
+    {
+      $events->orderBy('gt.weight', 'ASC');
+    }
+
+    $eventsData[$hash] = $events->execute()->fetchAll();
+    if($type != 'all'){
+      cache_set($cid, $eventsData, 'cache', offers_getOffersCacheLifeTime());
+    }
+  }
+  return $eventsData[$hash];
+}
+function offers_getEventChildCount($eid){
+  global $language;
+  $countData = &drupal_static(__FUNCTION__);
+  if(!isset($countData[$eid])){
+    $count = db_select('offers_events', 'oe');
+    $count->addExpression('count(peid)', 'child_cnt');
+    $count->condition('oe.enabled', 1);
+    $count->condition('oe.peid', $eid);
+    $count->condition('language', $language->language);
+    $countData[$eid] = $count->execute()->fetchField();
+    //     cache_set(__FUNCTION__, $countData, 'cache', offers_getOffersCacheLifeTime());
+  }
+  return $countData[$eid];
+}
+
+
+function offers_getEventNodeId($eid, $country_id = false){
+  global $language;
+  $cid = 'offers_getEventNodeId:'.$language->language;
+  $nodes = &drupal_static($cid);
+  if(!isset($nodes)){
+    if($cache = cache_get($cid, 'cache')){
+      if($cache->expire > REQUEST_TIME){
+        $nodes = $cache->data;
+      }
+    }
+  }
+  if(!isset($nodes[$eid])){
+    $nid = db_select('offers_cat', 'oc')
+    ->fields('oc', array('nid','stats_uri'))
+    ->condition('event_id', $eid)
+    ->condition('language', $language->language);
+    if($country_id){
+      $nid->condition('country_id', $country_id);
+    }
+    $nid = $nid->execute()
+    ->fetchAssoc();
+
+    if(!$nid){
+      if($event = offers_getEventById($eid)){
+        $db_module = db_select('offers_cat', 'oc')
+        ->fields('oc', array('nid','stats_uri'))
+        ->condition('area_id', $event->aid)
+        ->condition('country_id', $event->cid)
+        ->condition('module_id', $event->mid)
+        ->condition('event_id', null)
+        ->condition('language', $language->language)
+        ->execute()
+        ->fetchField();
+        $db_module = node_load($db_module);
+        node_object_prepare($db_module);
+
+        $event_node = new StdClass();
+        $event_node->type = 'offers';
+        node_object_prepare($event_node);
+
+        $event_node->revision = 0;
+        $event_node->promote = 0;
+        $event_node->language = $language->language;
+        $event_node->created = REQUEST_TIME;
+        $event_node->updated = REQUEST_TIME;
+
+        $event_node->offers_area_id = $event->aid;
+        $event_node->offers_country_id = $event->cid;
+        $event_node->offers_module_id = $event->mid;
+        $event_node->offers_event_id = $event->eid;
+
+        $event_node->title = $event->title;
+        $event_node->page_title = $event->title.' » '.$db_module->page_title;
+
+        $event_node->menu['enabled'] = '1';
+        $event_node->menu['language'] = $language->language;
+        $event_node->menu['plid'] = $db_module->menu['mlid'];
+        $event_node->menu['link_title'] = $event_node->title;
+        $event_node->menu['menu_name'] = 'offers';
+        $event_node->menu['parent'] = 'offers:'.$db_module->menu['mlid'];
+        $event_node->menu['description'] = $event->category.' » '.$event->title;
+        $event_node->menu['expanded'] = 1;
+        $event_node->menu['hidden'] = 1;
+        $event_node->menu['options']['offer']['areaid'] = $event->aid;
+        $event_node->menu['options']['offer']['aid'] = $event->aid;
+        $event_node->menu['options']['offer']['cid'] = $event->cid;
+        $event_node->menu['options']['offer']['mid'] = $event->mid;
+        $event_node->menu['options']['offer']['eid'] = $event->eid;
+
+        $event_node = node_submit($event_node);
+        $event_node->page_title = $event->title.' » '.$db_module->page_title;
+        node_save($event_node);
+        $nid = array('nid' => $event_node->nid);
+      }
+    }
+
+    $nodes[$eid] = $nid;
+    cache_set($cid, $nodes, 'cache', offers_getOffersCacheLifeTime());
+  }
+  return $nodes[$eid];
+}
+
+
+
+function offers_getOffersCacheLifeTime(){
+  $cacheLifeTime = &drupal_static(__FUNCTION__);
+
+  if(!isset($cacheLifeTime)){
+    $times = array();
+    $times[] = strtotime(date('Y-m-d H:02:00', strtotime('+1hour')));
+    $times[] = strtotime('+15 min');
+
+    $event_time = db_select('offers_events', 'oe')
+    ->fields('oe', array('date'))
+    ->condition('oe.date', REQUEST_TIME, '>=')
+    ->orderBy('oe.date', 'ASC')
+    ->range(0, 1)
+    ->execute()
+    ->fetchField();
+
+    if($event_time){
+      $times[] = $event_time;
+    }
+    //     if(!$event_time || $next_hour < $event_time){
+    //       $cacheLifeTime = $next_hour;
+    //     }else{
+    //       $cacheLifeTime = $event_time;
+    //     }
+    $cacheLifeTime = min($times);
+  }
+  return $cacheLifeTime;
+}
+
+function offers_getGameType($gtid){
+  global $language;
+  $cid = __FUNCTION__ .'-'.$language->language.'-'.$gtid;
+  $gameTypes = &drupal_static($cid);
+
+  if(!isset($gameTypes)){
+    if($cache = cache_get($cid, 'cache')){
+      $gameTypes = $cache->data;
+    }else{
+      $gameTypes = array();
+    }
+  }
+
+  if(!isset($gameTypes[$gtid])){
+    $gameTypes[$gtid] = db_select('offers_gametypes', 'ogt')
+    ->fields('ogt')
+    ->condition('language', $language->language)
+    ->condition('gtid', $gtid)
+    ->execute()
+    ->fetchObject();
+    cache_set($cid, $gameTypes, 'cache', offers_getOffersCacheLifeTime());
+  }
+  return $gameTypes[$gtid];
+}
+
+function offers_getEventById($eid){
+  global $language;
+  $events = &drupal_static(__FUNCTION__);
+
+  if($eid != (string)(int)($eid)){
+    return array();
+  }
+
+  if(!isset($events[$eid])){
+    $events[$eid] = db_select('offers_events', 'events')->fields('events')->condition('eid', $eid)->condition('language', $language->language)->execute()->fetchObject();
+  }
+  return $events[$eid];
+}
+
+function offers_getEventByEventName($eventName, $lang = null){
+  $events = &drupal_static(__FUNCTION__);
+  if(empty($lang)){
+    global $language;
+    $lang = $language->language;
+  }
+  if(!isset($events[$lang][$eventName])){
+    $events[$lang][$eventName] = db_select('offers_events', 'oe')->fields('oe')->condition('language', $lang)->condition('date', REQUEST_TIME, '>')->condition('name', $eventName)->execute()->fetchObject();
+  }
+  return $events[$lang][$eventName];
+}
+
+function offers_getEventRatesById($eid){
+  if($eid != (string)(int)$eid) return array();
+  global $language;
+  $event_rates = &drupal_static(__FUNCTION__);
+  if(!isset($event_rates[$eid])){
+    $rates = db_select('offers_events', 'events')
+    ->fields('events', array('c1', 'c2', 'c3', 'c4', 'c5', 'c6'))
+    ->condition('eid', $eid)
+    ->execute()
+    ->fetchObject();
+    $event_rates[$eid] = $rates;
+  }
+  return $event_rates[$eid];
+}
+
+function offers_getPatterns(){
+  global $language;
+  $patterns = &drupal_static(__FUNCTION__);
+
+  if(!isset($patterns[$language->language])){
+    $patterns[$language->language] = db_select('offers_gametypes_patterns', 'ogp')
+    ->fields('ogp')
+    ->condition('language', $language->language)
+    ->execute()->fetchAllAssoc('gtpid');
+  }
+
+  return $patterns[$language->language];
+}
+
+function offers_event_pattern_data($event){
+
+  $pattern = array(
+    '<P1>' => $event->item1name,
+    '<P2>' => $event->item2name,
+    '<F1>' => round($event->totalforaresult1, 2),
+    '<F2>' => round($event->totalforaresult2, 2),
+    '<E1>' => $event->title,
+  //     '<E1>' => '<font color="red">[Exception E1]</font>'.' <b>'.$event->title.'</b> Fora1-'.$event->totalforaresult1.' Fora2-'.$event->totalforaresult2,
+  );
+
+  /* Exception E1 */
+  if (($pattern['<F1>'] == 1) and ($pattern['<F2>'] == 1)){ $pattern['<E1>'] = t("<P1> - <P2>: Ir pirmą kėlinį, ir rungtynes laimės <P1>"); }
+  if (($pattern['<F1>'] == 1) and ($pattern['<F2>'] == 0)){ $pattern['<E1>'] = t("<P1> - <P2>: Pirmą kėlinį laimės <P1>, o rungtynės baigsis lygiosiomis"); }
+  if (($pattern['<F1>'] == 1) and ($pattern['<F2>'] == 2)){ $pattern['<E1>'] = t("<P1> - <P2>: Pirmą kėlinį laimės <P1>, o rungtynės laimės <P2>"); }
+  if (($pattern['<F1>'] == 0) and ($pattern['<F2>'] == 1)){ $pattern['<E1>'] = t("<P1> - <P2>: Pirmas kėlinys baigsis lygiosiomis, o rungtynes laimės <P1>"); }
+  if (($pattern['<F1>'] == 0) and ($pattern['<F2>'] == 0)){ $pattern['<E1>'] = t("<P1> - <P2>: Ir pirmas kėlinys, ir visos rungtynės baigsis lygiosiomis"); }
+  if (($pattern['<F1>'] == 0) and ($pattern['<F2>'] == 2)){ $pattern['<E1>'] = t("<P1> - <P2>: Pirmas kėlinys baigsis lygiosiomis, o rungtynes laimės <P2>"); }
+  if (($pattern['<F1>'] == 2) and ($pattern['<F2>'] == 1)){ $pattern['<E1>'] = t("<P1> - <P2>: Pirmą kėlinį laimės <P2>, o rungtynes laimės <P1>"); }
+  if (($pattern['<F1>'] == 2) and ($pattern['<F2>'] == 0)){ $pattern['<E1>'] = t("<P1> - <P2>: Pirmą kėlinį laimės <P2>, o rungtynės baigsis lygiosiomis"); }
+  if (($pattern['<F1>'] == 2) and ($pattern['<F2>'] == 2)){ $pattern['<E1>'] = t("<P1> - <P2>: Ir pirmą kėlinį, ir rungtynes laimės <P2>"); }
+
+  $pattern['<E1>'] = strtr($pattern['<E1>'], $pattern);
+  if ($pattern['<F1>'] == 999 && $pattern['<F2>'] == 0) 
+	{
+	  unset($pattern['<F1>']);
+	  unset($pattern['<F2>']);
+	  $pattern['<F1>:<F2>'] = t('kitas');
+	}
+
+  return $pattern;
+
+}
+
+function offers_odd_codes(){
+  return array('1' => '1', '0' => '2', '2' => '3', '10' => '4', '02' => '5');
+}
+
+function offers_format_event_row($event, $type = null, &$ColumnsEmpty = array()){
+  $row = array(
+    'id' => 'e_'.$event->eid.($type ? '_'.$type : ''),
+    'class' => array('aid_'.$event->aid.($type ? '_'.$type : ''),),
+    'title' => $event->category.t(', įvykio nr. @number', array('@number' => $event->name)),
+    'data' => array(
+      'icon' => array('data' => '<img width="18px" src="/sites/all/img/icons/area/'.$event->aid.'.png" alt="" />', 'class' => array('icon showalt')),
+      'date' => array('data' => offers_dateTimeFormat($event->startdate, false), 'class' => array('date')),
+      'name' => array('data' => $event->name, 'class' => array('number showalt')),
+      'title' => array('data' => $event->title, 'class' => array('odd_title')),
+  ),
+  );
+
+  if(offers_show_europeview()){
+    $altRow = array(
+      'style' => array('display: none;'),
+      'data' => array(
+        'empty' => array('data' => '', 'colspan' => 2, 'style' => array('background: none; border-color: white;')),
+    ),
+    );
+    $path = drupal_get_path('module', 'offers').'/img/';
+    $showAltRow = false;
+    unset($row['data']['title']);
+    $patterns = offers_getPatterns();
+    $gameType = offers_getGameType($event->gtid);
+    $pattern = isset($patterns[$gameType->patternid]) ? $patterns[$gameType->patternid] : null;
+    if($pattern){
+      $offerPattern = offers_event_pattern_data($event);
+      $oddTotal = 0;
+      $i = 1;
+      while($i <= 6){ if($gameType->{'cn'.$i++} !== null){ $oddTotal++; } }
+      $rowspan = ($oddTotal > 3) ? 2 : 1;$rowspan = 1;
+      $colspan = ($oddTotal > 3) ? 2 : (6 / $oddTotal);
+      if($rowspan > 1){
+        foreach($row['data'] as $key => $elem){
+          $row['data'][$key]['rowspan'] = $rowspan;
+        }
+      }
+      $k = 0;
+      $i = 1;
+      while($i <= 6){
+        if($gameType->{'cn'.$i} !== null){
+          $code = $i;
+          $rate_status = ($event->{'_c'.$code} ? ($event->{'_c'.$code} == 1 ? ' up' : ' down') : '');
+          $offerElem = array(
+            'data' => '<div class="right rate'.$rate_status.'" style="width: 40px;text-align: right;">'.($event->{'c'.$code} > 1 ? $event->{'c'.$code} : '<img src="'.$path.'spynele.png" style="vertical-align: text-bottom;" />').'</div>'
+            .'<div style="margin-right: 40px;text-align: left;font-weight: normal;">'.(strtr($pattern->{'cn'.$code}, $offerPattern)).'</div>',
+            'class' => array('betaction', ($event->{'c'.$code} > 1 ? '' : 'disabled')),
+            'colspan' => $colspan,
+            'style' => array('width: auto;'),
+            'id' => 'e_'.$event->eid.'_'.$code.($type ? '_'.$type : ''),
+            'onclick' => array(($event->{'c'.$code} > 1 ? 'Drupal.betAction(this, '.$event->eid.', '.$code.');' : '')),
+            );
+            $k++;
+            if($k == 3){
+              $oddTotalLeft = $oddTotal - 3;
+              if($oddTotalLeft){
+              $colspan = (6 / $oddTotalLeft);
+              }
+            }
+            if($k > 3){
+              $altRow['data'][$gameType->{'cn'.$i}] = $offerElem;$showAltRow = true;
+            }else{
+              $row['data'][$gameType->{'cn'.$i}] = $offerElem;
+            }
+        }
+        $i++;
+      }
+    }else{
+      return array();
+    }
+  }else{
+    $odd_codes = offers_odd_codes();
+    foreach($odd_codes as $name => $code){
+      $row['data'][$code] = array('data' => '', 'class' => array());
+      $ColumnsEmpty[$code] = TRUE;
+    }
+    $gameType = offers_getGameType($event->gtid);
+    foreach($odd_codes as $name => $code){
+      $gtname = $gameType->{'cn'.$code};
+      if(isset($odd_codes[$gtname]) AND ($gtname OR $gtname === '0')){
+        $row['data'][$odd_codes[$gtname]] = array(
+          'data' => ($event->{'c'.$code} > 1 ? $event->{'c'.$code} : ''),
+          'class' => array(($event->{'c'.$code} > 1 ? 'betaction' : '')),
+          'id' => 'e_'.$event->eid.'_'.$code.($type ? '_'.$type : ''),
+          'onclick' => array(($event->{'c'.$code} > 1 ? 'Drupal.betAction(this, '.$event->eid.', '.$code.');' : '')),
+        );
+        $ColumnsEmpty[$odd_codes[$gtname]] = FALSE;
+      }
+    }
+  }
+  $eventIdForStats = $event->name < 20 ? $event->peid : $event->eid;
+  $child_cnt = offers_getEventChildCount($eventIdForStats); $eventPage = 0;
+  if($child_cnt){  $eventPage = offers_getEventNodeId($eventIdForStats); $eventPage = $eventPage['nid'];}
+  if(offers_show_europeview()){
+    $icon = $row['data']['icon'];unset($row['data']['icon']);
+    $row['data']['icon'] = $icon;
+    $row['data']['icon']['data'] = $showAltRow ? '<img class="more-icon" width="18px" src="/sites/all/themes/topsport/files/img/offers-row-more.png" alt="" />' : '';
+  }
+  $row['data']['more'] = array('data' => ($eventPage ? l('+'.$child_cnt, 'node/'.$eventPage, array('query' => array('full' => 1))) : ''), 'class' => array('more'));
+  if(offers_show_europeview()){
+    if($showAltRow){
+      $altRow['class'] = $row['class'];$altRow['class'][] = 'altrow';
+      $altRow['no_striping'] = true;
+      if(isset($rowspan)){
+        $row['data']['more']['rowspan'] = $rowspan;
+      }
+      $altRow['data']['empty2'] = array('data' => '', 'colspan' => 2, 'class' => array('more'), 'style' => array('background: none;border-color: white;'));
+      return array($row, $altRow);
+    }
+  }
+  return array($row);
+}
+
+function offers_get_offers_data($type = 'all', $arg = null, $aid = null, $cid = null, $mid = null, $eid = null){
+  global $language, $user;
+  $arg_list = func_get_args();
+  $user_loged =($user->uid ? 1 : 0);
+  $hash = 'offers_get_offers_data:lang:'.$language->language.';'.hash('sha256', serialize($arg_list)) .':'.$user_loged;
+  $data = array();
+  if($cache = cache_get($hash, 'cache')){
+    if($cache->expire > REQUEST_TIME){
+      $data = $cache->data;
+    }
+  }
+
+  if(empty($data)){
+    $cat = array('aid' => $aid, 'cid' => $cid, 'mid' => $mid, 'eid' => $eid);
+    $areas = offers_getAvailableCategories('area', $type, $arg, $cat);
+    foreach($areas as $area){
+      $data['#area'][(int)$area->offers_area_id] = array(
+        '#id' => $area->offers_area_id,
+        '#title' => $area->title,
+        '#country' => array(),
+      );
+
+      $cat_tmp = $cat;$cat_tmp['aid'] = $area->offers_area_id;
+      $countries = offers_getAvailableCategories('country', $type, $arg, $cat_tmp);
+      foreach($countries as $country){
+        if(!isset($data['#area'][$area->offers_area_id]['#country'][$country->offers_country_id])){
+          $data['#area'][$area->offers_area_id]['#country'][$country->offers_country_id] = array(
+            '#id' => $country->offers_country_id,
+            '#title' => $country->title,
+            '#module' => array(),
+          );
+        }
+
+        $cat_tmp = $cat;
+        $cat_tmp['aid'] = $area->offers_area_id;
+        $cat_tmp['cid'] = $country->offers_country_id;
+        $modules = offers_getAvailableCategories('module', $type, $arg, $cat_tmp);
+        foreach($modules as $module){
+          $cat_tmp = $cat;
+          $cat_tmp['aid'] = $area->offers_area_id;
+          $cat_tmp['cid'] = $country->offers_country_id;
+          $cat_tmp['mid'] = $module->offers_module_id;
+          $events = offers_getAvailableEvents($type, $arg, $cat_tmp);
+
+          if(!isset($data['#area'][$area->offers_area_id]['#country'][$country->offers_country_id]['#module'][$module->offers_module_id])){
+            $data['#area'][$area->offers_area_id]['#country'][$country->offers_country_id]['#module'][$module->offers_module_id] = array(
+              '#id' => $module->offers_module_id,
+              '#title' => $module->title,
+              '#gameTypes' => array(),
+              '#event' => array(),
+            );
+          }
+
+          foreach($events as $event){
+            $data_module = &$data['#area'][$area->offers_area_id]['#country'][$country->offers_country_id]['#module'][$module->offers_module_id];
+            $data_gameTypes = &$data_module['#gameTypes'];
+            $data_events = &$data_module['#event'];
+            if(!isset($data_gameTypes[$event->gtid])){
+              $gameType = offers_getGameType($event->gtid);
+              $data_gameTypes[$event->gtid] = array(
+                '#id' => $event->gtid,
+                '#title' => $gameType->title,
+                '#patternId' => $gameType->patternid,
+                '#lotteries' => ($area->offers_area_id == 103 ? TRUE : FALSE),
+                '#child' => FALSE,
+				'#loged' => $user_loged,
+                '#combtosamearea' => FALSE,
+                '#combtosamemodule' => FALSE,
+                '#collapsed' => $gameType->collapsed,
+                '#offer_list' => array(),                
+              );
+              $i = 1;
+              while($i <= 6){
+                if($gameType->{'cn'.$i} !== null){
+                  $data_gameTypes[$event->gtid]['#coefNames'][$i] = $gameType->{'cn'.$i};
+                }
+                $i++;
+              }
+            }
+
+            if($data_gameTypes[$event->gtid]['#lotteries'] !== FALSE){
+              $string = substr($event->title, 0, strpos($event->title, '.'));
+              $string = substr($string, 0, strrpos($string, ' '));
+              if(empty($string)) { $data_gameTypes[$event->gtid]['#lotteries'] = FALSE; }
+              $string = $event->date.' - '.$string;
+              if($data_gameTypes[$event->gtid]['#lotteries'] !== $string){
+                if($data_gameTypes[$event->gtid]['#lotteries'] === TRUE){
+                  $data_gameTypes[$event->gtid]['#lotteries'] = $string;
+                }else{
+                  $data_gameTypes[$event->gtid]['#lotteries'] = FALSE;
+                }
+              }
+            }
+            if(!isset($data_events[$event->eid]['#child_cnt'])){  $data_events[$event->eid]['#child_cnt'] = 0; }
+            if($event->peid){
+              //               if(!$eid){ $data_gameTypes[$event->gtid]['#child'] = TRUE; }
+              $data_gameTypes[$event->gtid]['#child'] = TRUE;
+              if(!isset($data_events[$event->peid]['#child_cnt'])){ $data_events[$event->peid]['#child_cnt'] = 0; }
+              $data_events[$event->peid]['#child_cnt']++;
+            }
+            if($eid){
+              if($event->peid != $eid AND $event->eid != $eid) continue;
+            }
+            if($event->combtosamearea){ $data_gameTypes[$event->gtid]['#combtosamearea'] = TRUE; }
+            if($event->combtosamemodule AND !$event->combtosamearea){ $data_gameTypes[$event->gtid]['#combtosamemodule'] = TRUE; }
+            $odds = array();
+            $i = 1;
+            while($i <= 6){
+              if($event->{'c'.$i} !== null){
+                $odds[$i] = array(
+                  '#code' => $i,
+                  '#title' => $data_gameTypes[$event->gtid]['#coefNames'][$i],
+                  '#rate' => $event->{'c'.$i},
+                  '#rate_status' => $event->modified > strtotime('- 500 min') ? (isset($event->{'_c'.$i}) ? $event->{'_c'.$i} : 0) : 0,        
+                );
+              }
+              $i++;
+              if($i > 6) break;
+            }
+
+            $data_gameTypes[$event->gtid]['#offer_list'][$event->eid] = array(
+              '#date' => $event->startdate,              
+              '#category' => $event->category,
+              '#title' => $event->title,
+			  '#name' => $event->name,
+              '#id' => $event->eid,
+              '#peid' => $event->peid,
+              '#child_count' => FALSE,
+              '#nid' => FALSE,			  
+              '#odds' => $odds,
+              '#pattern' => offers_event_pattern_data($event),
+              '#combtosamearea' => $event->combtosamearea,
+              '#combtosamemodule' => ($event->combtosamemodule AND !$event->combtosamearea),
+            );
+			
+			$data_gameTypes[$event->gtid]['#offer_list'][$event->eid]['#hidename'] = $user_loged ? 1: 0;
+			
+            if(!$eid AND $event->name <= 20){
+              $child_cnt = offers_getEventChildCount($event->peid); $eventPage = 0;
+              if($child_cnt){  $eventPage = offers_getEventNodeId($event->peid); $eventPage = $eventPage['nid'];}
+              $data_gameTypes[$event->gtid]['#offer_list'][$event->eid]['#child_count'] = $child_cnt;
+              $data_gameTypes[$event->gtid]['#offer_list'][$event->eid]['#nid'] = $eventPage;
+            }
+          }
+
+          foreach($data_gameTypes as $key => $d_gameType){
+            if(sizeof($d_gameType['#offer_list']) == 0){unset($data_gameTypes[$key]);}
+          }
+        }
+
+        if(sizeof($data['#area'][$area->offers_area_id]['#country'][$country->offers_country_id]['#module']) == 0){
+          unset($data['#area'][$area->offers_area_id]['#country'][$country->offers_country_id]);
+        }
+      }
+
+      if(sizeof($data['#area'][(int)$area->offers_area_id]['#country']) == 0){
+        unset($data['#area'][(int)$area->offers_area_id]);
+      }
+    }
+    cache_set($hash, $data, 'cache', offers_getOffersCacheLifeTime());
+  }
+  if(!empty($data)){
+    offers_applyGameTypeFilters($data);
+  }
+  return $data;
+}
+
+function offers_applyGameTypeFilters(&$data){
+  $filters_gtid = offers_filter_form_result();  
+  if(isset($_GET['full']) AND empty($filters_gtid)){ return; }
+  foreach($data['#area'] as $areaKey => &$area){
+    foreach($area['#country'] as $countryKey => &$country){
+      foreach($country['#module'] as $moduleKey => &$module){
+        foreach($module['#gameTypes'] as $gameTypeKey => &$gameType){
+          if(empty($filters_gtid)){
+            if($gameType['#child'] === TRUE){
+              unset($module['#gameTypes'][$gameTypeKey]);
+            }
+          }elseif(!in_array($gameTypeKey, $filters_gtid)){
+            unset($module['#gameTypes'][$gameTypeKey]);
+          }
+        }
+        if(empty($module['#gameTypes'])){
+          unset($country['#module'][$moduleKey]);
+        }
+      }
+      if(empty($country['#module'])){
+        unset($area['#country'][$countryKey]);
+      }
+    }
+    if(empty($area['#country'])){
+      unset($data['#area'][$areaKey]);
+    }
+  }
+}
+
+function offers_draw_areaSelect($type, $arg){
+
+  $areasoptions = array('0' => t('Visos sporto šakos'));
+  $areas = offers_getAvailableCategories('area', $type, $arg);
+  foreach($areas as $area){
+    $areasoptions[$area->offers_area_id] = $area->title;
+  }
+
+  $variables['element'] = array(
+    '#title' => '',
+    '#options' => $areasoptions,
+  );
+  return '<div id="offers-area-select">'.theme('select', $variables).'</div>';
+}
+
+function offers_draw_filters($gameTypes){
+  global $user;
+  $form = drupal_get_form('offers_filter_form', $gameTypes);
+  $filters = offers_filter_form_result();
+  drupal_add_js(drupal_get_path('module', 'offers') . '/offers-filter.js');
+  $ga_event1['attributes']['onclick'] = '_gaq.push([\'_trackEvent\', \'Odds\', \'Click\', \'Pagrindinė pasiūla\']);';
+  $html = '
+  <div id="offers_filter">
+    <ul class="filter-selection">
+      <li '.((empty($filters) AND !isset($_GET['full'])) ? 'class="active"' : '').'>'.l(t('Pagrindinė pasiūla'), $_GET["q"], $ga_event1).'</li>
+      <li '.((isset($_GET['full']) AND empty($filters)) ? 'class="active"' : '').'>'.l(t('Visa pasiūla'), $_GET["q"], array('query' => array('full' => 1), 'attributes' => array('onclick' => '_gaq.push([\'_trackEvent\', \'Odds\', \'Click\', \'Visa pasiūla\']);'))) .'</li>
+      <li id="filter-toggle" '.(!empty($filters) ? 'class="active"' : '').' onclick="_gaq.push([\'_trackEvent\', \'Odds\', \'Click\', \'Filtruoti\']);">'.t('Filtruoti').'</li>
+    </ul>
+    <div id="offers-mark-selection"><label for="offers-markup">'.t("Žymėjimas: ").'</label><select id="offers-markup" name="offers-markup" ><option>'.t('-- Pasirinkite --').'</option><option value="min">'.t('Mažiausias koef.').'</option><option value="max">'.t('Didžiausias koef.').'</option></select></div>
+    <div class="filters-list" style="display: '.(!empty($filters) ? 'block' : 'none').';">'.drupal_render($form).'<div class="clear"></div></div>
+  </div>';
+
+  return $html;
+}
+
+function offers_view_offers($node) {
+  global $language;
+  $html = '';
+  $type = 'all';
+  $arg = null;
+  if(isset($_GET['full']) && $node->offers_area_id > 0 && $node->offers_country_id == null){
+      unset($_GET['full']);
+  }  
+  if(isset($_GET['day'])){
+    $day_value = strtotime($_GET['day']);
+    if(offers_calendar_check_day($day_value)){
+      $type = 'day';
+      $arg['day'] = $day_value;
+    }
+  }
+  $gameTypes = offers_getAvailableEvents($type, $arg, array('aid' => $node->offers_area_id, 'cid' => $node->offers_country_id, 'mid' => $node->offers_module_id, 'cid' => $node->offers_country_id, 'eid' => $node->offers_event_id), true);
+  if($gameTypes){
+    $html .= offers_draw_filters($gameTypes);
+    $data = offers_get_offers_data($type, $arg, $node->offers_area_id, $node->offers_country_id, $node->offers_module_id, $node->offers_event_id);
+    $html .= offers_display_offers_html($data, $node->offers_area_id, $node->offers_country_id, $node->offers_module_id, $node->offers_event_id);
+    $nid = db_select('offers_rules', 'r')->fields('r', array('nid'))->condition('language', $language->language)->condition('area_id', $node->offers_area_id)->execute()->fetchObject();
+    if(!empty($nid)){
+      $rules = node_load($nid->nid);
+      if($rules AND node_access('view', $rules)){
+        $html .= theme('offers_rules', array('content' => $rules->body[$language->language]['0']['safe_value'], 'title' => $rules->title));
+      }
+    }
+  }else{
+    $html .= '<strong>'.t('Šiuo metu pasiūlymų neturime, aplankykite šį puslapį vėliau').'</strong>';
+  }
+  return $html;
+}
+
+function offers_update_offers_data($all = false) {
+    db_delete('offers_events')
+            ->condition('date', time(), '<')
+            ->execute();
+    $XMLData = topsport_getOffers($all);
+    if (!isset($XMLData->Areas)) {
+        watchdog('offers', 'Negavom pasiūlos informacijos', array(), WATCHDOG_WARNING);
+        return false;
+    } elseif (isset($XMLData->Areas->Area)) {
+        
+        try {
+            $languages = language_list();
+            $offer_pages = array();
+
+            foreach ($XMLData->Areas->Area as $Area) {
+
+                /* Create Area pages and Menu Items */
+                foreach ($languages as $lang => $language) {
+                    if (!$language->enabled) {
+                        continue;
+                    }
+                    $AreaID = (int) $Area->AreaId;
+                    $offer_pages[$lang][$AreaID]['#title'] = (string) (isset($Area->AreaName->{offers_formatLang($lang)}) ? $Area->AreaName->{offers_formatLang($lang)} : $Area->AreaName->Default);
+                }
+
+                /* Create Country pages and Menu Items */
+                foreach ($Area->Modules->Module as $Module) {
+                    set_time_limit(12000);
+                    $ModuleID = (int) $Module->ModuleId;
+
+                    $Country = $Module->Country;
+                    if (!isset($Country) || empty($Country)) {
+                        $Country = new StdClass();
+                        $Country->CountryId = 0;
+                        $Country->CountryName = new StdClass();
+                        $Country->CountryName->Default = 'Pasaulis';
+                        $Country->CountryName->LT = 'Pasaulis';
+                        $Country->CountryName->EN = 'World';
+                        $Country->CountryName->RU = 'Мир';
+                        $Country->CountryName->LV = 'Pasaule';
+                    }
+                    $CountryID = (int) $Country->CountryId;
+                    foreach ($languages as $lang => $language) {
+                        if (!$language->enabled) {
+                            continue;
+                        }
+
+                        try {
+                            $offer_pages[$lang][$AreaID][$CountryID]['#title'] = (string) (isset($Country->CountryName->{offers_formatLang($lang)}) ? $Country->CountryName->{offers_formatLang($lang)} : $Country->CountryName->Default);
+                        } catch (Exception $e) {
+                            var_dump(array($lang, $AreaID, $CountryID, (isset($Country->CountryName->{offers_formatLang($lang)}) ? $Country->CountryName->{offers_formatLang($lang)} : $Country->CountryName->Default)));
+                        }
+
+
+                        $offer_pages[$lang][$AreaID][$CountryID][$ModuleID]['#title'] = (string) (isset($Module->ModuleName->{offers_formatLang($lang)}) ? $Module->ModuleName->{offers_formatLang($lang)} : $Module->ModuleName->Default);
+
+
+                        /* Create GameType or Update */
+                        foreach ($Module->GameTypes->GameType as $GameType) {
+                            $GameTypeId = (int) $GameType->GameTypeId;
+
+                            $result = db_merge('offers_gametypes')
+                                    ->key(array(
+                                      'gtid' => $GameTypeId,
+                                      'language' => $lang,
+                                    ))
+                                    ->fields(array(
+                                      'title' => (string) (isset($GameType->GameTypeName->{offers_formatLang($lang)}) ? $GameType->GameTypeName->{offers_formatLang($lang)} : $GameType->GameTypeName->Default),
+                                      'weight' => (int) $GameType->GameTypeOrder,
+                                      'fieldTypeId' => (int) $GameType->FieldTypeId,
+                                      'patternid' => (int) $GameType->GameTypePatternId,
+                                      'cn1' => (isset($GameType->CoefNames->CoefName1) ? (string) $GameType->CoefNames->CoefName1 : null),
+                                      'cn2' => (isset($GameType->CoefNames->CoefName2) ? (string) $GameType->CoefNames->CoefName2 : null),
+                                      'cn3' => (isset($GameType->CoefNames->CoefName3) ? (string) $GameType->CoefNames->CoefName3 : null),
+                                      'cn4' => (isset($GameType->CoefNames->CoefName4) ? (string) $GameType->CoefNames->CoefName4 : null),
+                                      'cn5' => (isset($GameType->CoefNames->CoefName5) ? (string) $GameType->CoefNames->CoefName5 : null),
+                                      'cn6' => (isset($GameType->CoefNames->CoefName6) ? (string) $GameType->CoefNames->CoefName6 : null),
+                                      'g_ext' => (isset($GameType->GameTypeExt) ? (string) $GameType->GameTypeExt : null),
+                                    ))
+                                    ->execute();
+
+                            /* Create Events or Update */
+                            foreach ($GameType->Events->Event as $Event) {
+                                // prepare search_data field
+                                $search_data = array();
+                                $strings_arrays = array(
+                                  $Area->AreaName,
+                                  $Country->CountryName,
+                                  $Module->ModuleName,
+                                  $GameType->GameTypeName,
+                                  $Event->EventString,
+                                  $Event->Item1->ItemName1,
+                                  $Event->Item2->ItemName2,
+                                );
+                                foreach ($strings_arrays as $strings_array) {
+                                    if (is_object($strings_array)) {
+                                        foreach ($strings_array as $strings) {
+                                            if (is_object($strings)) {
+                                                foreach ($strings as $key => $str) {
+                                                    $str = drupal_strtolower(transliteration_get((string) $str));
+                                                    if (!in_array($str, $search_data)) {
+                                                        $search_data[] = $str;
+                                                    }
+                                                }
+                                            } elseif (is_string($strings)) {
+                                                $str = drupal_strtolower(transliteration_get((string) $strings));
+                                                if (!in_array($str, $search_data)) {
+                                                    $search_data[] = $str;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                $EventId = (int) $Event->EventId;
+                                $eventFields = array(
+                                  'eid' => (int) $EventId,
+                                  'language' => $lang,
+                                  'peid' => (isset($Event->ParentId) ? (int) $Event->ParentId : null),
+                                  'aid' => $AreaID,
+                                  'cid' => $CountryID,
+                                  'mid' => $ModuleID,
+                                  'gtid' => $GameTypeId,
+                                  'title' => (string) (isset($Event->EventString->{offers_formatLang($lang)}) ? $Event->EventString->{offers_formatLang($lang)} : $Event->EventString->Default),
+                                  'category' => (string) $offer_pages[$lang][$AreaID]['#title'] . ' » ' . $offer_pages[$lang][$AreaID][$CountryID]['#title'] . ' » ' . $offer_pages[$lang][$AreaID][$CountryID][$ModuleID]['#title'],
+                                  'name' => (int) $Event->EventName,
+                                  'item1' => (isset($Event->Item1) ? (int) $Event->Item1->ItemId1 : null),
+                                  'item1Name' => (isset($Event->Item1) ? (string) (isset($Event->Item1->ItemName1->{offers_formatLang($lang)}) ? $Event->Item1->ItemName1->{offers_formatLang($lang)} : $Event->Item1->ItemName1->Default) : null),
+                                  'item2' => (isset($Event->Item2) ? (int) $Event->Item2->ItemId2 : null),
+                                  'item2Name' => (isset($Event->Item2) ? (string) (isset($Event->Item2->ItemName2->{offers_formatLang($lang)}) ? $Event->Item2->ItemName2->{offers_formatLang($lang)} : $Event->Item2->ItemName2->Default) : null),
+                                  'date' => strtotime((string) ($Event->EventDate) . ' ' . (string) $Event->EventTime),
+                                  'startdate' => strtotime((string) $Event->EventBeginTimestamp),
+                                  'c1' => (isset($Event->Coefs->Coef1) ? (string) $Event->Coefs->Coef1 : null),
+                                  'c2' => (isset($Event->Coefs->Coef2) ? (string) $Event->Coefs->Coef2 : null),
+                                  'c3' => (isset($Event->Coefs->Coef3) ? (string) $Event->Coefs->Coef3 : null),
+                                  'c4' => (isset($Event->Coefs->Coef4) ? (string) $Event->Coefs->Coef4 : null),
+                                  'c5' => (isset($Event->Coefs->Coef5) ? (string) $Event->Coefs->Coef5 : null),
+                                  'c6' => (isset($Event->Coefs->Coef6) ? (string) $Event->Coefs->Coef6 : null),
+                                  'enabled' => ($Event->Enabled == 'true' ? 1 : 0),
+                                  'totalforaresult1' => (isset($Event->TotalForaResult1) ? (float) $Event->TotalForaResult1 : null),
+                                  'totalforaresult2' => (isset($Event->TotalForaResult2) ? (float) $Event->TotalForaResult2 : null),
+                                  'combcount' => (isset($Event->CombCount) ? (int) $Event->CombCount : null),
+                                  'combtosamearea' => (isset($Event->CombToSameArea) ? 1 : null),
+                                  'combtosamemodule' => (isset($Event->CombToSameModule) ? 1 : null),
+                                  'modified' => REQUEST_TIME,
+                                  'search_data' => implode('|', $search_data),
+                                  'e_ext' => (isset($Event->EventExt) ? (string) $Event->EventExt : null),
+                                );
+                                $rez = db_select('offers_events', 'oe')
+                                        ->fields('oe', array('eid'))
+                                        ->condition('eid', $EventId)
+                                        ->condition('language', $lang)
+                                        ->execute()
+                                        ->fetchCol();
+                                if (isset($rez['0'])) {
+                                    db_update('offers_events')
+                                            ->fields($eventFields)
+                                            ->condition('eid', $EventId)
+                                            ->condition('language', $lang)
+                                            ->execute();
+                                } else {
+                                    db_insert('offers_events')
+                                            ->fields($eventFields)
+                                            ->execute();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            variable_set('topsport_last_getOffers', (string) $XMLData->DBTimestamp);
+            if ($all) {
+                db_delete('offers_events')->condition('modified', REQUEST_TIME, '<')->execute();
+            }
+        } catch (Exception $e) {
+            watchdog('offers', $e->getMessage(), NULL, WATCHDOG_ERROR);
+        }
+
+
+        // calculating event counts
+        //db_query('UPDATE ts_offers_events e SET event_count = (SELECT count(*) FROM ts_offers_events WHERE peid = e.eid AND "language" = e."language") WHERE peid is null;');
+
+        cache_clear_all('offers', 'cache', TRUE);
+        cache_clear_all('offers', 'cache_block', TRUE);
+        cache_clear_all('ODDSM_', 'cache', TRUE);
+    }
+}
+
+/**
+ * @deprecated since version when started use only the offers_event table
+ */
+function _offers_update_offers_order(){
+    // make World leagues ordered by  event name id that wil make leagueas important
+    db_query("UPDATE ts_menu_links tml SET weight = COALESCE(-foo.new_weight, -50)\n".
+            "FROM\n".
+            "	(\n".
+            "SELECT  50+row_number()OVER(ORDER BY order_idx DESC) as new_weight, *  \n".
+            "FROM (SELECT \n".
+            "	(SELECT \"min\"(\"_oe\".\"name\") FROM ts_offers_events _oe WHERE _oe.mid = oc.module_id) as order_idx,	\n".
+            "	ml.mlid	\n".
+            "FROM\n".
+            "	ts_offers_cat oc\n".
+            "LEFT JOIN ts_menu_links ml ON ml.link_path = 'node/'||oc.nid\n".
+            "WHERE\n".
+            "  oc.module_id IS NOT NULL\n".
+            "  AND oc.event_id IS NULL	\n".
+            "	AND ml.hidden = 0\n".
+            ") foo\n".
+            "WHERE order_idx IS NOT NULL\n".
+            ") foo\n".
+            "WHERE\n".
+            "	tml.mlid = foo.mlid;"
+    )->execute();
+    
+    /*db_query("UPDATE ts_menu_links tml SET weight = COALESCE(-foo.new_weight, 0)\n".
+            "FROM\n".
+            "	(\n".
+            "SELECT \n".
+            "	row_number()OVER(ORDER BY oc.area_id DESC) as new_weight,\n".
+            "	ml.mlid\n".
+            "FROM\n".
+            "	ts_offers_cat oc\n".
+            "LEFT JOIN ts_menu_links ml ON ml.link_path = 'node/'||oc.nid\n".
+            "WHERE\n".
+            "	oc.area_id IS NOT NULL\n".
+            "  AND oc.country_id IS NULL	\n".
+            "	AND ml.hidden = 0\n".
+            "	AND ml.\"language\" = 'en-gb'\n".
+            ") foo\n".
+            "WHERE	\n".
+            "	tml.mlid = foo.mlid;"
+    )->execute();*/
+}
+
+
+/* filter filter form */
+function offers_filter_form($form, &$form_state, $gameTypes){
+  $options = array();
+  $gameTypeOptions = array();
+  foreach($gameTypes as $gameType){
+    $gt = offers_getGameType($gameType->gtid);
+    //     $options[$gt->gtid] = $gt->title;
+    $gameTypeOptions[$gt->title][] = $gt->gtid;
+  }
+  foreach($gameTypeOptions as $title => $keys){
+    $key = implode(',', $keys);
+    $title = preg_replace('|{(?:[^}]*)}|', '', $title);
+    $options[$key] = $title;
+  }
+
+  $form['offers']['gametypes'] = array(
+    '#type' => 'checkboxes',
+    '#options' => $options,
+  );
+
+  $form['offers']['submit_action'] = array(
+    '#type' => 'submit',
+    '#value' => t('Filtruoti'),
+    '#attributes' => array('class' => array('filter-submit-button')),
+  );
+  $form['#redirect'] = FALSE;
+
+  return $form;
+}
+
+function offers_filter_form_submit($form, &$form_state){
+  $values = array();
+  foreach($form_state['values']['gametypes'] as $key => $gt){
+    if($gt){
+      $vals = explode(',', $gt);
+      $values = array_merge($values, $vals);
+    }
+  }
+  offers_filter_form_result($values);
+  $form_state['rebuild'] = TRUE;
+}
+
+function offers_filter_form_result($values = null){
+  static $offers_filter_form_result;
+
+  if($values){
+    $offers_filter_form_result = $values;
+  }
+  return $offers_filter_form_result;
+}
+
+/**
+ * Generates a graphical representation of the results of a offers.
+ */
+function offers_display_offers_html($data, $aid = null, $cid = null, $mid = null, $eid = null){  
+  global $language;
+  $offersHtml = '';
+  if(!empty($data)){
+    $args = func_get_args();
+    $hash = hash('sha256', serialize($args));
+    $cid = __FUNCTION__.':lang:'.$language->language.':hash:'.$hash.':europeview:'.intval(offers_show_europeview());
+    // if($cache = cache_get($cid, 'cache')){
+    //   return $cache->data;
+    // }
+
+    foreach($data['#area'] as &$area){
+      $areaHtml = '';
+      foreach($area['#country'] as &$country){
+        $countryHtml = '';
+        foreach($country['#module'] as &$module){
+          $moduleHtml = '';
+
+          if($cache = cache_get($cid.':moduleHtml:id:'.$module['#id'], 'cache')){
+            $moduleHtml = $cache->data;
+          }else{
+            foreach($module['#gameTypes'] as &$gameType){
+              $gameTypeHtml = '';
+              foreach($gameType['#offer_list'] as &$offer_list){
+                //               $offer_list['#nid'] = null;
+                $offer_list['#child_cnt'] = $module['#event'][$offer_list['#id']]['#child_cnt'];
+                if(($offer_list['#child_cnt']) > 0 AND $eid == null) {
+					$stats =offers_getEventNodeId($offer_list['#id']); 							
+                  $offer_list['#nid'] = $stats['nid'];                 
+                }				 
+                if($offer_list['#child_count']){ $offer_list['#child_cnt'] = $offer_list['#child_count']; }
+                if($gameType['#lotteries'] !== FALSE){					
+                  $offer_list['#number'] = substr($offer_list['#title'], strpos($offer_list['#title'], '.')+1);
+				  $strpos =  strpos($offer_list['#number'], ' ');
+                  if($strpos > 0) $offer_list['#number'] = (int)substr($offer_list['#number'], 0, $strpos);
+				  $gameTypeTitle = strtr($gameType['#title'], array('{'=>'(', '}'=>')'));
+                  $betNames = substr($gameType['#title'],  strpos($gameTypeTitle, '(')+1,  strpos($gameTypeTitle, ')')-strpos($gameTypeTitle, '(')-1);				 
+                  $betNames = explode(',', $betNames);
+				  $betNames = explode(';', array_shift($betNames));
+                  foreach($betNames as $betName){
+                    list($key, $title) = explode('-', trim($betName));
+                    $coefNames[$key] = $title;
+                  }
+                  $offer_list['#coefNames'] = $coefNames;
+				 
+                }else{
+                  if(offers_show_europeview()){
+                    $patterns = offers_getPatterns();
+                    $pattern = isset($patterns[$gameType['#patternId']]) ? $patterns[$gameType['#patternId']] : null;
+                    if($pattern){
+                      $gameTypeHtml .= theme('offers_list_offer_europeview', array('offerData' => $offer_list, 'pattern' => $pattern, 'eid' => $eid));
+                    }
+                  }else{
+                    $gameTypeHtml .= theme('offers_list_offer', array('offerData' => $offer_list, 'eid' => $eid));
+                  }
+                }
+              }
+              if($gameType['#lotteries'] !== FALSE){
+                $moduleHtml .= theme('offers_list_lottery', array('gameType_id' => $gameType['#id'], 'title' => $gameType['#title'], 'offerData' => offers_ball_reorder($gameType['#offer_list'])));
+              }else{
+                if(offers_show_europeview()){
+                  $moduleHtml .= theme('offers_list_gametype_europeview', array('gameType_id' => $gameType['#id'],'gameTypeCollapsed' => $gameType['#collapsed'], 'loged'=> $gameType['#loged'], 'title' => $gameType['#title'], 'coefNames' => $gameType['#coefNames'], 'content' => $gameTypeHtml, 'combtosamearea' => $gameType['#combtosamearea'], 'combtosamemodule' => $gameType['#combtosamemodule'], 'eid' => $eid));
+                }else{
+                  $moduleHtml .= theme('offers_list_gametype', array('gameType_id' => $gameType['#id'],'gameTypeCollapsed' => $gameType['#collapsed'], 'loged'=> $gameType['#loged'], 'title' => $gameType['#title'], 'coefNames' => $gameType['#coefNames'], 'content' => $gameTypeHtml, 'combtosamearea' => $gameType['#combtosamearea'], 'combtosamemodule' => $gameType['#combtosamemodule'], 'eid' => $eid));
+                }
+              }
+            }
+
+            cache_set($cid.':moduleHtml:id:'.$module['#id'], $moduleHtml, 'cache', offers_getOffersCacheLifeTime());
+          }
+
+          $module['#title'] = offers_getModuleIcon($module['#id'], $module['#title']).$module['#title'];
+          $class = '';
+         /* if($eid){        
+              $_stat_data = db_query('SELECT "enetPulse_id", "enetPulseTournament_id" FROM api.offers_stats_mapper WHERE event_id = :eid', array(':eid' => $eid));
+              $_data = $_stat_data->fetch();
+              if($_data) {
+                $class = 'stats';//@todo: turn download from static cdn and compres resources 
+                $module['#title'] .= '<a id="event-stats" title="'.t('Peržiūrėti statistiką').'" href="javascript:void(0);" onclick="Odds.statsEvent('.$_data->enetPulseTournament_id.', '.$_data->enetPulse_id.');" class="EnetPulseTrigger Title">&nbsp;</a><div class="clearfix"></div>';
+               
+                drupal_add_js('front/modules/Odds/files/js/enet.snippet.js');
+                drupal_add_js('front/modules/Odds/files/js/enetpulse.js');
+                drupal_add_css('front/modules/Odds/files/css/enetpulse.css');
+                $stats_widget = '<div id="EnetPulse" class="ContentBox LiveBox EnetPluse" style="display:none;">                                  
+                                  <div class="CBContent minisitex ajax-content loading" id="EnetpulseWidgetContent"><div class="preloader">'.t('prašome palaukti...').'</div></div>
+                              </div>';               
+                $moduleHtml = $stats_widget . $moduleHtml;
+              }
+          }*/
+          $countryHtml .= theme('offers_list_module', array('module_id' => $module['#id'], 'title' => $module['#title'], 'content' => $moduleHtml, 'class' => $class));          
+        }
+        $areaHtml .= theme('offers_list_country', array('area_id' => $area['#id'], 'country_id' => $country['#id'], 'title' => $country['#title'], 'content' => $countryHtml));
+      }
+      if($eid){
+          $area['#title'] .= /*'<a onclick="return Odds.europeview();" href="#" style="color:white; float: right;" title="Rekomenduojame naudoti">'.t('Greitas').'</a> <span style="float:right; margin: 0 3px">|</span> ' .*/
+              '<a id="toogle-bet-types" href="#" style="color:white; float: right; font-weight:normal;" title="Suskleisti/išskleisti statymo tipus" onclick="_gaq.push([\'_trackEvent\', \'Odds\', \'Click\', \'hide-show-gt\']);">'.t('Slėpti/rodyti statymo tipus').'</a>';
+      }
+      $offersHtml .= theme('offers_list_area', array('area_id' => $area['#id'], 'title' => $area['#title'], 'content' => $areaHtml));
+       if($eid){
+           $offersHtml.= '<div id="async-lastminute-blk" data-async-load="/front/Odds/json/lastminute/'.$aid.'"></div>';
+           $offersHtml.= '<div id="async-popular-blk" data-async-load="/front/Odds/json/popular/'.$aid.'"></div>';
+       }
+    }
+    $finalHtml = theme('offers_list', array('content' => $offersHtml));
+    // cache_set($cid, $finalHtml, 'cache', offers_getOffersCacheLifeTime());
+    return $finalHtml;
+  }else{
+    return theme('offers_list', array('content' => '<strong><br/>'.t('Šiuo metu pasiūlymų neturime, aplankykite šį puslapį vėliau').'</strong>'));
+  }
+}
+function template_preprocess_offers_list_area(&$variables){
+  $variables['classes_array'][] = 'block';
+  $variables['classes_array'][] = 'offers_area';
+  $variables['block_html_id'] = drupal_html_id('block--offers--area-'.$variables['area_id']);
+}
+function template_preprocess_offers_list_country(&$variables){
+  $variables['classes_array'][] = 'block';
+  $variables['classes_array'][] = 'offers_country';
+  $variables['block_html_id'] = drupal_html_id('block--offers--area-'.$variables['area_id'].'--country-'.$variables['country_id']);
+  $variables['icon'] = '';
+  if(file_exists(DRUPAL_ROOT.'/sites/all/img/icons/flags/'.$variables['country_id'].'.png')){
+    $icon = array(
+      'path' => '/sites/all/img/icons/flags/'.$variables['country_id'].'.png',
+      'alt' => '',
+      'title' => $variables['title'],
+      'width' => null,
+      'height' => null,
+      'attributes' => array('class' => 'country-icon'),
+    );
+    $variables['icon'] = theme_image($icon);
+  }
+}
+function offers_ball_reorder($ballList){
+  $offerListTmp = array();
+  foreach($ballList as $ball){
+    $offerListTmp[] = $ball;
+  }
+  $ordered = true;
+  $cnt = count($offerListTmp);
+  while($ordered){
+    $ordered = false;
+    for($i = 0; $i < $cnt-1; $i++){
+      if($offerListTmp[$i]['#number'] > $offerListTmp[$i+1]['#number']){
+        $tmp = $offerListTmp[$i];
+        $offerListTmp[$i] = $offerListTmp[$i+1];
+        $offerListTmp[$i+1] = $tmp;
+        $ordered = true;
+      }
+    }
+  }
+  return $offerListTmp;
+}
+
+
+/**
+ * Generates a graphical representation of the results of a offers.
+ */
+function offers_display_offers_table_html($data, $aid = null, $cid = null, $mid = null, $eid = null){
+
+  //return '<strong><br/>'.'Function <em>offers_display_offers_table_html<em> is no longer available'.'</strong>';
+  global $language;
+  $html = '';
+
+  if(!empty($data)){
+    $betslip_data = betslip_getUsersBetSlip();
+    $bets_active = array();
+    foreach($betslip_data as $bet){
+      $bets_active[] = $bet->event_id.'_'.$bet->choise;
+    }
+    $html .= '
+    <div id="offers_list">';
+    foreach($data['#area'] as $area){
+      foreach($area['#country'] as $country){
+        foreach($country['#module'] as $module){
+          foreach($module['#gameTypes'] as $gameType){
+            $html .= '<div class="offer">
+              <h5>'.$gameType['#title'].'</h5>
+              <div class="offers_list-odds">
+              <table class="odds">';
+            if(sizeof($gameType['#coefNames']) > 0){
+              $html .= '
+                <tr>
+                  <th colspan = "2"></th>';
+              foreach($gameType['#coefNames'] as $title){
+                $html .= '<th class="odd_title">'.$title.'</th>';
+              }
+              $html .= '
+
+                </tr>';
+            }
+            foreach($gameType['#offer_list'] as $offer_list){
+              $html .= '<tr id="e_'.$offer_list['#id'].'" title="'.$offer_list['#category'].t(', įvykio nr. @number', array('@number' => $offer_list['#name'])).'">'.
+              /*<td class="icon"><img width="75%" src="/themes/topsport/files/img/icons/area/'.$area['#id'].'.png"/></td>*/
+                '<td class="date">'.date('m-d H:i', $offer_list['#date']).'</td>';
+              if(sizeof($offer_list['#odds']) == 0){
+                foreach($offer_list['#odds'] as $odds){
+                  $html .= '<td id="e_'.$offer_list['#id'].'_'.$odds['#code'].'" '.($odds['#rate'] > 1 ? 'onclick="Drupal.betAction(this, '.$offer_list['#id'].', '.$odds['#code'].');"' : '').' class="'.($odds['#rate'] > 1 ? 'betaction' : 'nobetaction').'"><span class="team">'.$offer_list['#title'].'</span><span class="rate">'.$odds['#rate'].'</span></td>';
+                }
+              }else{
+                $html .= '<td class="odd_title" > '.$offer_list['#title'].' </td>';
+                foreach($offer_list['#odds'] as $odds){
+                  $html .= '<td id="e_'.$offer_list['#id'].'_'.$odds['#code'].'" '.($odds['#rate'] > 1 ? 'onclick="Drupal.betAction(this, '.$offer_list['#id'].', '.$odds['#code'].');"' : '').' class="'.($odds['#rate'] > 1 ? 'betaction' : 'nobetaction').(in_array($offer_list['#id'].'_'.$odds['#code'], $bets_active) ? ' active': '').'">'.$odds['#rate'].'</td>';
+                }
+              }
+              $html .= '</tr>';
+            }
+            $html .= '</table></div>
+              </div>';
+          }
+        }
+      }
+    }
+
+    $html .= '</div>';
+
+  }else{
+    $html .= '<strong><br/>'.t('Šiuo metu pasiūlymų neturime, aplankykite šį puslapį vėliau').'</strong>';
+  }
+
+  return $html;
+}
+
+function offers_page_creator($lang, $title, $tnid = null, $mlid = 0, $menu_desc, $area_id = null, $country_id = null, $module_id = null, $event_id = null){
+  global $user;
+
+  if(!$user->uid){ $user = user_load(1); }
+
+  $node = new StdClass();
+  $node->type = 'offers';
+  node_object_prepare($node);
+  $node->uid = $user->uid;
+  $node->name = $user->name;
+  $node->revision = 0;
+  $node->promote = 0;
+  $node->language = $lang;
+  $node->created = REQUEST_TIME;
+  $node->updated = REQUEST_TIME;
+
+  $node->title = $title;
+
+  $arr = explode(' » ', $menu_desc);
+  $arr = array_reverse($arr);
+  $node->page_title = implode(' » ', $arr);
+
+
+  $node->offers_area_id = $area_id;
+  $node->offers_country_id = $country_id;
+  $node->offers_module_id = $module_id;
+  $node->offers_event_id = $event_id;
+
+  $node->tnid = $tnid;
+
+  $node->menu['enabled'] = '1';
+  $node->menu['language'] = $lang;
+  $node->menu['link_title'] = $node->title;
+  $node->menu['menu_name'] = 'offers';
+  $node->menu['parent'] = 'offers:'.$mlid;
+  $node->menu['plid'] = $mlid;
+  $node->menu['description'] = $menu_desc;
+  $node->menu['expanded'] = 0;
+  $node->menu['options']['offer']['areaid'] = $area_id;
+  $node->menu['options']['offer']['aid'] = $area_id;
+  $node->menu['options']['offer']['cid'] = $country_id;
+  $node->menu['options']['offer']['mid'] = $module_id;
+  $node->menu['options']['offer']['eid'] = $event_id;
+  $node->menu['localized_options']['offer']['areaid'] = $area_id;
+  $node->menu['localized_options']['offer']['aid'] = $area_id;
+  $node->menu['localized_options']['offer']['cid'] = $country_id;
+  $node->menu['localized_options']['offer']['mid'] = $module_id;
+  $node->menu['localized_options']['offer']['eid'] = $event_id;
+
+  if(isset($country_id) AND $country_id == 0){
+    $node->menu['weight'] = -50;
+  }
+
+  $node = node_submit($node);
+  $node->page_title = implode(' » ', $arr);
+  node_save($node);
+  if(!$tnid){
+    $tnid = $node->nid;
+    $node->tnid = $tnid;
+    node_save($node);
+  }
+  return $node;
+}
+
+function offers_update_results_data($all = false){
+  //global $language;
+  db_delete('offers_results')
+  ->condition('date', strtotime('-31 days'), '<')
+  ->execute();
+  $resultsXML = topsport_getResults($all);
+
+  if(isset($resultsXML->ResultDates)){
+    $languages = language_list();
+    foreach($resultsXML->ResultDates->ResultDate as $ResultDate){
+      $date = (string)$ResultDate->Date;
+      foreach($ResultDate->Areas->Area as $Area){
+        $aid = (int)$Area->AreaId;
+        foreach($Area->Modules->Module as $Module){
+          $mid = (int)$Module->ModuleId;
+          $cid = (int)$Module->Country->CountryId;
+          $Country = $Module->Country;
+          if(!isset($Country) || empty($Country)){
+            $Country = new StdClass();
+            $Country->CountryId = 0;
+            $Country->CountryName = new StdClass();
+            $Country->CountryName->Default = 'Pasaulis';
+            $Country->CountryName->LT = 'Pasaulis';
+            $Country->CountryName->EN = 'World';
+            $Country->CountryName->RU = 'Мир';
+			$Country->CountryName->LV = 'Pasaule';
+          }
+
+          foreach($Module->GameTypes->GameType as $GameType){
+            $gtid = (int)$GameType->GameTypeId;
+            foreach($GameType->Events->Event as $Event){
+              $selections = array();
+              if(isset($Event->ValidSelections)){
+                foreach($Event->ValidSelections->ValidSelection as $ValidSelection){
+                  $selections[] = (string)$ValidSelection;
+                }
+              }
+              foreach($languages as $lang => $language){
+                if(!$language->enabled){ continue; }
+                $rez = db_select('offers_results', 'o_r')
+                ->fields('o_r', array('rid'))
+                ->condition('rid', (int)$Event->ResultId)
+                ->condition('language', $lang)
+                ->execute()
+                ->fetchCol();
+
+                $fields = array(
+                  'rid' => (int)$Event->ResultId,
+                  'language' => $lang,
+                  'eid' => (int)$Event->EventId,
+                  'peid' => (isset($Event->ParentId) ? (int)$Event->ParentId : null),
+                  'aid' => $aid,
+                  'cid' => $cid,
+                  'mid' => $mid,
+                  'gtid' => $gtid,
+                  'title' => (string)(isset($Event->EventString->{offers_formatLang($lang)}) ? $Event->EventString->{offers_formatLang($lang)} : $Event->EventString->Default),
+                  'name' => (string)$Event->EventName,
+				  'item1name' => (string)(isset($Event->ItemName1->{offers_formatLang($lang)}) ? $Event->ItemName1->{offers_formatLang($lang)} : $Event->ItemName1->Default),
+				  'item2name' => (string)(isset($Event->ItemName2->{offers_formatLang($lang)}) ? $Event->ItemName2->{offers_formatLang($lang)} : $Event->ItemName2->Default),
+                  'item1' => (int)$Event->ItemId1,
+                  'item2' => (int)$Event->ItemId2,
+                  'date' => strtotime($date),
+                  'r1' => (isset($Event->Result1) ? (string)$Event->Result1 : null),
+                  'r2' => (isset($Event->Result2) ? (string)$Event->Result2 : null),
+				  'totalforaresult1' => (int)$Event->TotalForaResult1,
+				  'totalforaresult2' => (int)$Event->TotalForaResult2,
+                  'selections' => implode(', ', $selections),
+                  'area' => (string)(isset($Area->AreaName->{offers_formatLang($lang)})? $Area->AreaName->{offers_formatLang($lang)} : $Area->AreaName->Default),
+                  'country' => (string)(isset($Country->CountryName->{offers_formatLang($lang)})? $Country->CountryName->{offers_formatLang($lang)} : $Country->CountryName->Default),
+                  'module' => (string)(isset($Module->module_name->{offers_formatLang($lang)})? $Module->module_name->{offers_formatLang($lang)} : $Module->module_name->Default),
+                );                             
+                if(!count($rez)){
+                  db_insert('offers_results')->fields($fields)->execute();
+                }else{
+                  db_update('offers_results')->fields($fields)
+                  ->condition('rid', (int)$Event->ResultId)
+                  ->condition('language', $lang)
+                  ->execute();
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    variable_set('topsport_last_getResults', (string)$resultsXML->DBTimestamp);
+    //watchdog('offers', 'Atnaujinti rezultatai', array(), WATCHDOG_NOTICE);
+  }else{
+    watchdog('offers', 'Negavom jokių naujų rezultatų', array(), WATCHDOG_WARNING);
+  }
+
+  return;
+}
+
+function offers_display_results($eid = null){
+  drupal_set_message(t('<strong>Atsirašome šiuo metu lažybų rezultatų skiltis laikinai neveikia.</strong>'
+            . '<br>Lažybų kortelę galite pasitikrinti žemiau esančioje formoje.'
+            . '<br>Taip pat galite pasinaudoti: <a href="@LivescoreUrl">Rezultatai gyvai</a> ir <a href="@StatisticUrl">Statistika</a>', array('@LivescoreUrl' => 'http://live.topsport.lt/', '@StatisticUrl' => 'http://stats.topsport.lt/')),'warning');
+  drupal_goto('offers/results/check-card');
+    
+  $html = '';
+  $results_filter_form = drupal_get_form('offers_results_filter_form');
+  $html .= render($results_filter_form);
+  //   $html .= render(drupal_get_form('offers_results_search_form'));
+  //   $html = '<div class="offer_filters_pane">'.$html.'<div class="clear"></div>'.'</div>';
+  $filter = offers_results_filter_form_result();
+  if(!empty($filter) OR $eid){
+    $data = offers_get_offers_result_data($eid);
+    $html .= offers_draw_result_html($data);
+  }
+  return $html;
+}
+
+
+function offers_results_getAvailableCategories($catType, $arg = null, $cat = null, $limit = 0){
+  global $language;
+  $cid = (__FUNCTION__).';lang:'.$language->language.';catType:'.$catType;
+  $categoriesData = &drupal_static($cid);
+
+  if(!isset($categoriesData)){
+    if($cache = cache_get($cid, 'cache')){
+      // $categoriesData = $cache->data;
+    }else{
+      $categoriesData = array();
+    }
+  }
+  $arg_list = func_get_args();
+  $hash = hash('sha256', serialize($arg_list));
+  if (!isset($categoriesData[$hash])){
+    switch($catType){
+      case 'area':
+        $field = 'aid';
+        break;
+      case 'country':
+        $field = 'cid';
+        break;
+      case 'module':
+        $field = 'mid';
+        break;
+      case 'event':
+        $field = 'eid';
+        break;
+    }
+    $query = db_select('offers_results', 'o_r');
+    $query->fields('o_r', array($field, $field));
+    $query = offers_results_additionalConditions($query, $arg, $cat, $limit);
+    $query->groupBy('o_r.'.$field);
+    $ids = $query->execute()->fetchAllKeyed();
+    if($ids){
+      $areas = offers_results_loadOffersCats($ids, $catType, $arg, $cat);
+      $categoriesData[$hash] = $areas;
+    }else{
+      $categoriesData[$hash] = array();
+    }
+    cache_set($cid, $categoriesData, 'cache', offers_getOffersCacheLifeTime());
+  }
+  return $categoriesData[$hash];
+}
+
+function offers_results_loadOffersCats($ids, $type, $arg, $cat){
+  global $language;
+  $query = db_select('offers_cat', 'oc')->fields('oc',  array('nid', 'nid'))->condition('oc.language', $language->language);
+
+  switch($type){
+    case 'area':
+      $query->addJoin('LEFT', 'offers_results', 'o_r', 'o_r.aid = oc.area_id AND o_r.peid IS NULL');
+      $query->condition('area_id', $ids, 'IN')->isNull('country_id')->isNull('module_id')->isNull('event_id');
+      break;
+    case 'country':
+      $query->addJoin('LEFT', 'offers_results', 'o_r', 'o_r.aid = oc.area_id AND o_r.cid = oc.country_id AND o_r.peid IS NULL');
+      $query->condition('area_id', $cat['aid'])->condition('country_id', $ids, 'IN')->isNull('module_id')->isNull('event_id');
+      break;
+    case 'module':
+      $query->addJoin('LEFT', 'offers_results', 'o_r', 'o_r.aid = oc.area_id AND o_r.cid = oc.country_id AND o_r.mid = oc.module_id AND o_r.peid IS NULL');
+      $query->condition('area_id', $cat['aid'])->condition('country_id', $cat['cid'])->condition('module_id', $ids, 'IN')->isNull('event_id');
+      break;
+    case 'event':
+      $query->addJoin('LEFT', 'offers_results', 'o_r', 'o_r.aid = oc.area_id AND o_r.cid = oc.country_id AND o_r.mid = oc.module_id AND o_r.eid = oc.event_id AND o_r.peid IS NULL');
+      $query->condition('area_id', $cat['aid'])->condition('country_id', $cat['cid'])->condition('module_id', $cat['mid'])->condition('event_id', $ids, 'IN');
+      break;
+  }
+
+  $query = offers_results_additionalConditions($query, $arg, $cat);
+  $query->groupBy('oc.nid');
+
+  $nids = $query->execute()->fetchAllKeyed();
+  $nodes =  node_load_multiple($nids);
+  return $nodes;
+}
+
+function offers_results_additionalConditions($query, $arg = null,  $cat = null){
+  global $language;
+
+  $query->condition('o_r.language', $language->language);
+  if(isset($arg['date'])){
+    $query->condition('o_r.date', strtotime($arg['date']['from']), '>=');
+    $query->condition('o_r.date', strtotime($arg['date']['to']), '<=');
+  }
+  if(isset($arg['event_name']) AND $arg['event_name']){
+    if(is_numeric($arg['event_name'])){
+      $query->condition('o_r.name', $arg['event_name']);
+    }else{
+      $query->condition('o_r.title', '%'.$arg['event_name'].'%', 'LIKE');
+    }
+  }
+
+  if(isset($arg['area']) AND $arg['area'] != 'all'){
+    $query->condition('aid', $arg['area']);
+  }
+  if(isset($arg['country']) AND $arg['country'] != 'all'){
+    $query->condition('cid', $arg['country']);
+  }
+
+  if(isset($arg['module']) AND $arg['module'] != 'all'){
+    $query->condition('mid', $arg['module']);
+  }
+
+  if(isset($cat['aid']) AND $cat['aid'] !== NULL){ $query->condition('aid', $cat['aid']); }
+  if(isset($cat['cid']) AND $cat['cid'] !== NULL){ $query->condition('cid', $cat['cid']); }
+  if(isset($cat['mid']) AND $cat['mid'] !== NULL){ $query->condition('mid', $cat['mid']); }
+  if(isset($cat['eid']) AND $cat['eid'] !== NULL){ $query->condition('eid', $cat['eid']); }
+
+  $query->addExpression('min(o_r.name::int4)', 'weight');
+  $query->orderBy('weight');
+
+  return $query;
+}
+
+function offers_getAvailableResults($arg = null, $cat = null){
+  global $language;
+  $results = db_select('offers_results', 'oe')->condition('language', $language->language);
+  if(isset($arg['date'])){
+    $results->condition('date', strtotime($arg['date']['from']), '>=');
+    $results->condition('date', strtotime($arg['date']['to']), '<=');
+  }
+  if(isset($arg['event_name']) AND $arg['event_name']){
+    if(is_numeric($arg['event_name'])){
+      $results->condition('name', $arg['event_name']);
+    }else{
+      $results->condition('title', '%'.$arg['event_name'].'%', 'LIKE');
+    }
+  }
+  if(isset($cat['aid']) AND $cat['aid'] !== NULL){ $results->condition('aid', $cat['aid']); }
+  if(isset($cat['cid']) AND $cat['cid'] !== NULL){ $results->condition('cid', $cat['cid']); }
+  if(isset($cat['mid']) AND $cat['mid'] !== NULL){ $results->condition('mid', $cat['mid']); }
+  if(isset($cat['eid']) AND $cat['eid'] !== NULL){ $results->condition('eid', $cat['eid']); }
+
+  $innerSelect = clone $results;
+  $innerSelect->fields('oe', array('peid'));
+  $innerSelect->addExpression('count(peid)', 'child_cnt');
+  $innerSelect->groupBy('peid');
+
+  if(isset($arg['only_main']) AND $arg['only_main'] == 1){ $results->isNull('oe.peid'); }
+  $results->fields('oe', array())->orderBy('name::int4');
+  $results->addJoin('LEFT', $innerSelect, 'cnt', 'cnt.peid = oe.eid');
+  $results->addField('cnt', 'child_cnt');
+  $results = $results->execute()->fetchAll();
+  return $results;
+}
+
+function offers_get_offers_result_data($eid = null){
+  global $language;
+
+  $data = array();
+  $arg = offers_results_filter_form_result();
+  if($eid){
+    $event = offers_getAvailableResults(null, array('eid' => $eid));
+    if(empty($event)){
+      drupal_goto('offers/results');
+    }else{
+      $event = reset($event);
+    }
+    $arg['area'] = $event->aid;
+    $arg['country'] = $event->cid;
+    $arg['module'] = $event->mid;
+  }
+  $areas = offers_results_getAvailableCategories('area', $arg);
+  foreach($areas as $area){
+    $data['#area'][(int)$area->offers_area_id] = array(
+      '#id' => $area->offers_area_id,
+      '#title' => $area->title,
+      '#country' => array(),
+    );
+    $cat = array('aid' => $area->offers_area_id);
+    $countries = offers_results_getAvailableCategories('country', $arg, $cat);
+    foreach($countries as $country){
+      if(!isset($data['#area'][$area->offers_area_id]['#country'][$country->offers_country_id])){
+        $data['#area'][$area->offers_area_id]['#country'][$country->offers_country_id] = array(
+          '#id' => $country->offers_country_id,
+          '#title' => $country->title,
+          '#module' => array(),
+        );
+      }
+      // $modules = offers_getChildCats($area->offers_area_id, $country->offers_country_id, (isset($filter['module']) ? $filter['module'] : true));
+      $cat = array(
+        'aid' => $area->offers_area_id,
+        'cid' => $country->offers_country_id,
+      );
+      $modules = offers_results_getAvailableCategories('module', $arg, $cat);
+      foreach($modules as $module){
+        $results = offers_getAvailableResults($arg, array('aid' => $module->offers_area_id, 'cid' => $module->offers_country_id, 'mid' => $module->offers_module_id));
+        if(sizeof($results) == 0){ continue; }
+
+        if(!isset($data['#area'][$area->offers_area_id]['#country'][$country->offers_country_id]['#module'][$module->offers_module_id])){
+          $data['#area'][$area->offers_area_id]['#country'][$country->offers_country_id]['#module'][$module->offers_module_id] = array(
+            '#id' => $module->offers_module_id,
+            '#title' => $module->title,
+            '#gameTypes' => array(),
+            '#result' => array(),
+          );
+        }
+
+        $data_module = &$data['#area'][$area->offers_area_id]['#country'][$country->offers_country_id]['#module'][$module->offers_module_id];
+        $data_gameTypes = &$data_module['#gameTypes'];
+        $data_events = &$data_module['#result'];
+		
+		$patterns = offers_getPatterns();
+		$pattern = null;
+        foreach($results as $result){
+          if($eid){
+            if($result->eid != $eid AND $result->peid != $eid){
+              continue;
+            }
+          }
+		  
+		  
+		  
+          if(!isset($data_gameTypes[$result->gtid])){
+            $gameType = offers_getGameType($result->gtid);
+			if(isset($gameType->title))
+			{
+				$gameTypeTitle = $gameType->title;
+				$gameTypeTitle = preg_replace('|{(?:[^}]*)}|', '', $gameTypeTitle);
+			}
+			$pattern = isset($patterns[$gameType->patternid]) ? $patterns[$gameType->patternid] : null;
+            $data_gameTypes[$result->gtid] = array(
+              '#id' => $result->gtid,
+              '#title' => (isset($gameType->title) ? $gameTypeTitle : 'Nerastas GameType'),
+              '#results_list' => array(),
+            );
+          }
+		  
+		  
+		  $selections = $result->selections;
+		  if($result->selections != '')
+			{
+			
+			$pdata = offers_event_pattern_data($result);
+			$sels = array();		  
+			foreach(explode(',', $result->selections) as $s) $sels[trim($s)] = trim($s);
+			
+		/*	if(isset($sels['1']) && isset($sels['10'])) $sels['1'] = null;
+			if(isset($sels['2']) && isset($sels['02'])) $sels['2'] = null;
+			if(isset($sels['0']) && (isset($sels['10']) || isset($sels['02']))) $sels['0'] = null;
+		*/	
+			$selections = array();
+			for($i=1;$i<7;$i++)
+					if(isset($sels[$gameType->{'cn'.$i}])) 
+					{
+						$cor_pattern = array_pop(explode('|', $pattern->{'cn' . $i}));
+						$selections[] = trim(strtr($cor_pattern, $pdata));
+					}
+			
+				$selections = implode(',<br />', $selections) . '.';
+			}
+			
+		  
+          $data_gameTypes[$result->gtid]['#results_list'][$result->rid] = array(
+            '#date' => $result->date,
+            '#name' => $result->name,
+            '#title' => $result->title,
+            '#id' => $result->rid,
+            '#eid' => $result->eid,
+            '#r1' => $result->r1,
+            '#r2' => $result->r2,
+            '#selections' => $result->selections != '' ? (isset($selections) ? $selections : $result->selections) : '<font color="red">x</font>',
+            '#child_cnt' => ($eid ? false : $result->child_cnt),
+          );
+        }
+
+        foreach($data_gameTypes as $key => $d_gameType){
+          if(sizeof($d_gameType['#results_list']) == 0){unset($data_gameTypes[$key]);}
+        }
+
+      }
+
+      if(sizeof($data['#area'][$area->offers_area_id]['#country'][$country->offers_country_id]['#module']) == 0){
+        unset($data['#area'][$area->offers_area_id]['#country'][$country->offers_country_id]);
+      }
+    }
+
+    if(sizeof($data['#area'][(int)$area->offers_area_id]['#country']) == 0){
+      unset($data['#area'][(int)$area->offers_area_id]);
+    }
+  }
+  return $data;
+}
+
+/* filter results filter form */
+function offers_results_filter_form($form, &$form_state){
+  offers_results_filter_form_result(array());
+  //   $areasoptions = array('all' => t('Visos'));
+  //   $areasoptions = array();
+  //   $countryoptions = array('all' => t('Visos'));
+
+  $areas = offers_getChildCats(TRUE);
+
+  $optionsTmp[0] = array('all' => t('Visos'));
+  $optionsTmp[1] = array();
+  $optionsTmp[2] = array();
+  $optionsTotal = count($areas) + 1;
+  $perColumn = ceil($optionsTotal / 3);
+  $k = 0;$i = 1;
+  foreach($areas as $area){
+    $optionsTmp[$k][$area->offers_area_id] = $area->title;
+    $i++;
+    if($i >= $perColumn){$k++; $i = 0; }
+  }
+  $i = 0;$k = 0;
+  while($i < $optionsTotal){
+    $key = key($optionsTmp[$k]);
+    if(isset($key)){ $i++; }
+    $areasoptions[$key] = isset($optionsTmp[$k][$key]) ? $optionsTmp[$k][$key] : null;
+    if(isset($optionsTmp[$k][$key])){ unset($optionsTmp[$k][$key]); }
+    $k++;
+    if($k > 2){ $k = 0; }
+  }
+
+  $form['offer_results'] = array(
+    '#prefix' => '<div id="offers_result_filter">',
+    '#suffix' => '</div><div class="clear"></div></div>',
+  );
+  $form['offer_results']['area'] = array(
+    '#type' => 'select',
+    '#title' => t('Sporto šaka'),
+    '#options' => $areasoptions,
+  //     '#empty_value' => '',
+    '#default_value' => 'all',
+    '#ajax' => array('wrapper' => 'offer_results_country', 'callback' => 'offers_results_filter_countries', 'progress' => array('type' => null)),
+  //     '#required' => TRUE,
+    '#prefix' => '<div class="filter-line">',
+  );
+
+  $areaValue = null;
+  if(isset($form_state['values']['area']) && $form_state['values']['area'] && intval($form_state['values']['area'])){
+    $areaValue = intval($form_state['values']['area']);
+  }
+  $countriesTmp = offers_getChildCats($areaValue, true);
+  $countries = array();
+  foreach($countriesTmp as $cntr){
+    $key = ($cntr->offers_country_id == 0 ? '0' : '1').' '.$cntr->title.' '.$cntr->offers_country_id;
+    $countries[$key] = $cntr;
+  }
+  $xlanguage = language_default();
+  setlocale(LC_ALL, $xlanguage->language .'_'. strtoupper($xlanguage->language) .'.UTF8');
+  ksort($countries, SORT_LOCALE_STRING);
+  setlocale(LC_ALL, NULL);
+
+  //   foreach($countries as $country){
+  //     $countryoptions[$country->offers_country_id] = $country->title;
+  //   }
+  $optionsTotal = count($countries);
+  $optionsTmp[0] = array();
+  $optionsTmp[1] = array();
+  $optionsTmp[2] = array();
+  $k = 0;$i = 0;
+  if($optionsTotal != 1){
+    $i++;
+    $optionsTotal++;
+    $optionsTmp[0] = array('all' => t('Visos'));
+  }
+  $perColumn = ceil($optionsTotal / 3);
+
+  foreach($countries as $country){
+    if($i >= $perColumn){ $k++; $i = 0; }
+    $optionsTmp[$k][$country->offers_country_id] = $country->title;
+    $i++;
+  }
+  $i = 0;$k = 0;
+  while($i < $optionsTotal){
+    $key = key($optionsTmp[$k]);
+    if(isset($key)){ $i++; }
+    $countryoptions[$key] = isset($optionsTmp[$k][$key]) ? $optionsTmp[$k][$key] : null;
+    if(isset($optionsTmp[$k][$key])){ unset($optionsTmp[$k][$key]); }
+    $k++;
+    if($k > 2){ $k = 0; }
+  }
+
+  $form['offer_results']['country'] = array(
+    '#type' => 'select',
+    '#title' => t('Šalis'),
+    '#default_value' => 'all',
+    '#options' => $countryoptions,
+  //'#attributes' => array('id' => array('offer_results_country')),
+    '#prefix' => '<div id="offer_results_country">',
+    '#suffix' => '</div>',
+  );
+  $periodoptions = array(
+    'today' => t('Šiandien'),
+    'day' => t('Vakar'),
+    'week' => t('Paskutinės 7 dienos'),
+    'period' => t('Pasirinkti'),
+  );
+  $form['offer_results']['period'] = array(
+    '#type' => 'select',
+    '#title' => t('Laiko intervalas'),
+    '#default_value' => 'today',
+    '#options' => $periodoptions,
+  //'#attributes' => array('id' => array('offer_results_country')),
+    '#prefix' => '</div><div class="filter-line"><div id="offer_results_period">',
+  );
+  $sav_dienos = array(
+    '0' => t('Sek'),
+    '1' => t('Pir'),
+    '2' => t('Ant'),
+    '3' => t('Tre'),
+    '4' => t('Ket'),
+    '5' => t('Pen'),
+    '6' => t('Šeš'),
+  );
+  $dates = array();
+  for($ii=0; $ii < 30; $ii++){
+    $testdate = mktime(0, 0, 0, date("m"), date("d") - $ii, date("Y"));
+    $key = date("Y-m-d", $testdate);
+    $day_title = date("m.d", $testdate).', '.$sav_dienos[date("w",$testdate)];
+    //if (in_array(date("w", $testdate), array(0,6))) {$day_title = $day_title;}
+    $dates[$key] = $day_title;
+  }
+  $form['offer_results']['date'] = array(
+    '#tree' => TRUE,
+  );
+  $form['offer_results']['date']['from'] = array(
+    '#type' => 'select',
+  //     '#title' => t('Nuo'),
+    '#default_value' => '',/*date('Y-m-d', strtotime('yesterday')),*/
+    '#options' => $dates,
+    '#prefix' => '<div class="inline-form-items">',
+    '#empty_option' => t('Nuo'),
+  //     '#empty_value' => '',
+    '#states' => array(
+      'visible' => array(
+        'select[name="period"]' => array('value' => 'period'),
+  ),
+  ),
+  );
+  $form['offer_results']['date']['to'] = array(
+    '#type' => 'select',
+  //     '#title' => t('iki'),
+    '#default_value' => '',/*date('Y-m-d', strtotime('today')),*/
+    '#options' => $dates,
+    '#suffix' => '</div></div>',
+    '#empty_option' => t('iki'),
+    '#states' => array(
+      'visible' => array(
+      'select[name="period"]' => array('value' => 'period'),
+  ),
+  ),
+  );
+  $form['offer_results']['event_name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Įvykio numeris/dalyvis'),
+    '#default_value' => '',
+    '#size' => 20,
+  );
+  //   $form['offer_results']['only_main'] = array(
+  //     '#type' => 'checkboxes',
+  //     '#title' => t('Rodyti tik pagrindinius įvykius'),
+  //     '#type' => 'checkboxes',
+  //     '#options' => array('only_main' => ' '),
+  //     '#default_value' => array('only_main'),
+  //     '#prefix' => '</div><div class="filter-line">',
+  //   );
+  $form['offer_results']['only_main'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Rodyti tik pagrindinius įvykius'),
+    '#default_value' => 1,
+    '#prefix' => '</div><div class="filter-line"><div class="form-checkbox">',
+    '#suffix' => '</div>',
+  );
+  //   $form['hr'] = array('#markup' => '<hr />');
+  $form['offer_results']['submit_action'] = array(
+    '#type' => 'submit',
+    '#value' => t('Filtruoti'),
+    '#attributes' => array('class' => array('filter-submit-button')),
+  );
+  $form['#redirect'] = FALSE;
+
+  $form['#action'] = url('offers/results');
+  return $form;
+}
+
+function offers_results_filter_countries($form, &$form_state){
+  return $form['offer_results']['country'];
+}
+
+function offers_results_filter_form_submit($form, &$form_state){
+  form_state_values_clean($form_state);
+  switch ($form_state['values']['period']){
+    case 'today':
+      $form_state['values']['date']['from'] = date('Y-m-d', strtotime('-24 hours'));
+      $form_state['values']['date']['to'] = date('Y-m-d', strtotime('tomorrow'));
+      break;
+    case 'day':
+      $form_state['values']['date']['from'] = date('Y-m-d', strtotime('-48 hours'));
+      $form_state['values']['date']['to'] = date('Y-m-d', strtotime('today'));
+      break;
+    case 'week':
+      $form_state['values']['date']['from'] = date('Y-m-d', strtotime('-7 days'));
+      $form_state['values']['date']['to'] = date('Y-m-d', strtotime('tomorrow'));
+      break;
+  }
+  //   if($form_state['values']['only_main']['only_main'] === 'only_main'){
+  //     $form_state['values']['only_main'] = 1;
+  //   }else{
+  //     $form_state['values']['only_main'] = 0;
+  //   }
+  offers_results_filter_form_result($form_state['values']);
+  $form_state['rebuild'] = TRUE;
+}
+
+/* filter results filter form */
+function offers_results_search_form($form, &$form_state){
+  $form['offer_results'] = array(
+    '#prefix' => '<div id="offers_result_search">',
+    '#suffix' => '<div class="clear"></div></div>',
+  );
+  $form['offer_results']['event_name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Įvykio numeris/dalyvis'),
+    '#default_value' => '',
+    '#size' => 20,
+  );
+  $form['hr'] = array('#markup' => '<hr />');
+  $form['submit_action'] = array(
+    '#type' => 'submit',
+    '#value' => t('Filtruoti'),
+    '#attributes' => array('class' => array('filter-submit-button')),
+  );
+  $form['#redirect'] = FALSE;
+
+  $form['#action'] = url('offers/results');
+  return $form;
+}
+
+function offers_results_search_form_submit($form, &$form_state){
+
+  form_state_values_clean($form_state);
+
+  offers_results_filter_form_result($form_state['values']);
+  $form_state['rebuild'] = TRUE;
+}
+
+function offers_results_filter_form_result($values = null){
+  static $offers_results_filter_form_result;
+  if($values){
+    $offers_results_filter_form_result = $values;
+  }
+  return $offers_results_filter_form_result;
+}
+
+
+function offers_draw_result_html($data, $aid = null, $cid = null, $mid = null, $eid = null){
+  global $language;
+  $resultsHtml = '';
+  if(!empty($data)){
+    foreach($data['#area'] as $area){
+      $areaHtml = '';
+      foreach($area['#country'] as $country){
+        $countryHtml = '';
+        foreach($country['#module'] as $module){
+          $moduleHtml = '';
+          foreach($module['#gameTypes'] as $gameType){
+            $gameTypeHtml = '<div class="offer">
+              <h5>'.$gameType['#title'].'</h5>
+              <div class="offers_list-odds">
+              <table class="odds">
+              <tr>
+                <th class="" colspan="3"></th>
+                <th class="odd_title" colspan="1">'.t('Rezultatas').'</th>
+                <th class="odd_title" colspan="1" style="width:170px">'.t('Variantai').'</th>
+              </tr>';
+            foreach($gameType['#results_list'] as $results_list){
+              $gameTypeHtml .= '
+              <tr id="'.$results_list['#id'].'">
+                <td class="date">'.date('m-d', $results_list['#date']).'</td>
+                <td class="date">'.$results_list['#name'].'</td>
+                <td class="odd_title" > '.$results_list['#title'].' </td>
+                <td class="odd_result" > '.($results_list['#r1'] === 'Canceled' ? t('Koeficientas prilygintas vienetui') : $results_list['#r1'].($results_list['#r2'] != null ? ':'.$results_list['#r2'] : '')).'</td>
+                <td class="odd_selection" > '.$results_list['#selections'].' </td>
+                <td class="more" align="center"> '.($results_list['#child_cnt'] ? l('+'.$results_list['#child_cnt'], 'offers/results/'.$results_list['#eid']) : '').'</td>
+              </tr>';
+            }
+            $gameTypeHtml .= '</table></div>
+              </div>';
+            $moduleHtml .= $gameTypeHtml;
+          }
+          $module['#title'] = offers_getModuleIcon($module['#id'], $module['#title']).$module['#title'];
+          $countryHtml .= theme('offers_list_module', array('module_id' => $module['#id'], 'title' => $module['#title'], 'content' => $moduleHtml, 'class' => ''));
+        }
+        $areaHtml .= theme('offers_list_country', array('area_id' => $area['#id'], 'country_id' => $country['#id'], 'title' => $country['#title'], 'content' => $countryHtml));
+      }
+      $resultsHtml .= theme('offers_list_area', array('area_id' => $area['#id'], 'title' => $area['#title'], 'content' => $areaHtml));
+    }
+    return theme('offers_list', array('content' => $resultsHtml));
+  }else{
+    $resultsHtml .= '<strong><br/>'.t('Rezultatų nėra').'</strong>';
+  }
+  return $resultsHtml;
+}
+
+function offers_display_calendar($day_value = null, $area = null){
+  drupal_goto('odds-overview');
+  $html = '';
+  offers_calendar_check_day($day_value);
+  $html .= render(drupal_get_form('offers_calendar_filter_form'));
+  $html .= offers_generate_calendar();
+  return $html;
+}
+
+function offers_calendar_check_day($day_value = null){
+  if(isset($day_value)){
+    if(!is_int($day_value)){
+      $day_value = strtotime($day_value);
+    }
+    if($day_value < strtotime('today')){
+      drupal_set_message(t('Pasirinkta diena (:day_value) jau praėjo, pasirinkite kitą datą.', array(':day_value' => date('Y-m-d', $day_value))), 'info');
+      drupal_goto('offers/calendar');
+    }else{
+      return true;
+    }
+  }
+  return false;
+}
+
+function offers_getAvailableCalendarAreas($day){
+  global $language;
+  $areasData = &drupal_static(__FUNCTION__);
+  $cid = __FUNCTION__.';lang:'.$language->language;
+  if(!isset($areasData)){
+    if($cache = cache_get($cid, 'cache')){
+      $areasData = $cache->data;
+    }else{
+      $areasData = array();
+    }
+  }
+  if(!isset($areasData[$day])){
+    $aids = db_select('offers_events', 'oe');
+    $aids->fields('oe', array('aid', 'aid'))
+    ->condition('oe.language', $language->language)
+    ->condition('oe.enabled', 1);
+
+    $date_from = ($day > REQUEST_TIME ? $day : REQUEST_TIME);
+    $date_till = strtotime('+1 day', $day);
+
+    $aids->condition('oe.date', $date_from, '>')->condition('oe.date', $date_till, '<');
+
+    $aids->groupBy('oe.aid');
+
+    $aids = $aids->execute()->fetchAllKeyed();
+    if($aids){
+      $nids = db_select('offers_cat', 'oc')
+      ->fields('oc',  array('nid', 'nid'))
+      ->condition('language', $language->language)
+      ->condition('area_id', $aids, 'IN')
+      ->isNull('country_id')
+      ->isNull('module_id')
+      ->isNull('event_id')
+      ->execute()
+      ->fetchAllKeyed();
+      $areas = node_load_multiple($nids);
+      $areasData[$day] = $areas;
+    }else{
+      $areasData[$day] = array();
+    }
+    cache_set($cid, $areasData, 'cache', offers_getOffersCacheLifeTime());
+  }
+  return $areasData[$day];
+}
+
+function offers_getAvailableCalendarModules($day, $aid){
+  global $language;
+  $areasData = &drupal_static(__FUNCTION__);
+
+  $cid = __FUNCTION__.';lang:'.$language->language;
+  if(!isset($areasData)){
+    if($cache = cache_get($cid, 'cache')){
+      $areasData = $cache->data;
+    }else{
+      $areasData = array();
+    }
+  }
+  if(!isset($areasData[$day])){
+    $mids = db_select('offers_events', 'oe');
+    $mids->fields('oe', array('mid', 'mid'))
+    ->condition('oe.aid', $aid)
+    ->condition('oe.language', $language->language)
+    ->condition('oe.enabled', 1);
+
+    $date_from = ($day > REQUEST_TIME ? $day : REQUEST_TIME);
+    $date_till = strtotime('+1 day', $day);
+
+    $mids->condition('oe.date', $date_from, '>')->condition('oe.date', $date_till, '<');
+
+    $mids->groupBy('oe.mid');
+
+    $mids = $mids->execute()->fetchAllKeyed();
+    if($mids){
+      $nids = db_select('offers_cat', 'oc')
+      ->fields('oc',  array('nid', 'nid'))
+      ->condition('language', $language->language)
+      ->condition('area_id', array($aid), 'IN')
+      //->isNotNull('country_id')
+      ->condition('module_id', $mids, 'IN')
+      ->isNull('event_id')
+      ->execute()
+      ->fetchAllKeyed();
+      $areas = node_load_multiple($nids);
+      $areasData[$day] = $areas;
+    }else{
+      $areasData[$day] = array();
+    }
+    cache_set($cid, $areasData, 'cache', offers_getOffersCacheLifeTime());
+  }
+  return $areasData[$day];
+}
+
+function offers_generate_calendar(){
+  global $language;
+  $html = '';
+  $rows = array();
+  $row = array();
+  $row_date = array('class' => array('calendar-days'), 'data' => array());
+  $today = strtotime('today');
+  $weekday = strftime('%w', $today);
+  $weekday = ($weekday + 7 - 1) % 7;
+  if($weekday > 0){
+    for($k = 0; $k < $weekday; $k++){
+      $row['data'][] = array('data' => '', 'colspan' => 1, 'class' => array('calendar-disabled-field'));
+      $row_date['data'][] = array('data' => '', 'colspan' => 1, 'class' => array('calendar-disabled-field'));
+    }
+  }
+  $filter = offers_calendar_filter_form_result();
+  if($filter && $filter['area'] != 'all'){
+    $areas = offers_getCatData($filter['area']);
+  }
+  for($ii=0; $ii < 30; $ii++){
+    if($weekday == 7){
+      $weekday = 0;
+      $max = 0;
+      foreach($row['data'] as $events){ if(count($events['data']) > $max){ $max = count($events['data']); } }
+      $rows[] = $row_date;
+      for($k = 0; $k < $max; $k++){
+        $row_events = array();
+        foreach($row['data'] as $events){
+          if(is_array($events['data'])){
+            $events['data'] = (isset($events['data'][$k]) ? $events['data'][$k] : '');
+          }
+          $row_events[] = $events['data'];
+        }
+        $rows[] = $row_events;
+      }
+      $row = array();
+      $row_date = array('class' => array('calendar-days'), 'data' => array());
+    }
+    $day = $today + $ii * 24 * 60 * 60;
+    list($day_number, $month_name) = explode(',',strftime('%e,%B', $day));
+    $row_date_data = ($ii ? t($month_name).' '.$day_number : t('Šiandien'));
+    $class = array('calendar-day-field');
+    if($ii == 0){ $class[] = "today"; }
+    $row_date['data'][] = array('data' => $row_date_data, 'class' => $class);
+    $row_data = array();
+    $type = 'day';
+    $arg = array('day' => $day);
+    if(!$filter OR $filter['area'] == 'all'){
+      $areas = offers_getAvailableCalendarAreas($day);
+    }
+    foreach($areas as $area){
+      //$cat = array('aid' => $area->offers_area_id, 'cid' => null, 'mid' => null);
+      // $events = offers_getOffersCount($type, $arg, $cat);
+      //if($events == 0){ continue; }
+      if(isset($filter['area']) AND $filter['area'] !== 'all'){
+        $modules = offers_getAvailableCalendarModules($day, $area->offers_area_id);//offers_getChildCats($area->offers_area_id, true, true);
+        foreach($modules as $module){
+          //$events = offers_getOffersCount($type, $arg, array('aid' => $module->offers_area_id, 'cid' => $module->offers_country_id, 'mid' => $module->offers_module_id));
+          //if($events == 0){ continue; }
+          $row_data[] = l('<img width="22px" class="left" src="/sites/all/img/icons/area/'.$module->offers_area_id.'.png">'.$module->title, 'node/'.$module->nid, array('html' => TRUE, 'query' => array('day' => date('Y-m-d', $day))));
+        }
+      }else{
+        $row_data[] = l('<img width="22px" class="left" src="/sites/all/img/icons/area/'.$area->offers_area_id.'.png">'.$area->title, 'node/'.$area->nid, array('html' => TRUE, 'query' => array('day' => date('Y-m-d', $day))));
+      }
+    }
+    $row['data'][] = array('data' => $row_data);
+    $weekday++;
+  }
+  $variables = array(
+    'header' => array(
+  array('data' => t('Pirmadienis'),),
+  array('data' => t('Antradienis'),),
+  array('data' => t('Trečiadienis'),),
+  array('data' => t('Ketvirtadienis'),),
+  array('data' => t('Penktadienis'),),
+  array('data' => t('Šeštadienis'),),
+  array('data' => t('Sekmadienis'),),
+  ),
+    'rows' => $rows,
+    'attributes' => array('id' => 'offers-calendar'),
+    'caption' => NULL,
+    'colgroups' => array(),
+    'sticky' => FALSE,
+    'empty' => t('Statymų nėra'),
+  );
+  $html .= theme_table($variables);
+  return $html;
+}
+
+
+/* filter calendar filter form */
+function offers_calendar_filter_form($form, &$form_state){
+  offers_calendar_filter_form_result(array());
+  $areasoptions = array('all' => t('Visos sporto šakos'));
+
+  $areas = offers_getCatData(null);
+  $cat = array('aid' => null, 'cid' => null, 'mid' => null);
+  foreach($areas as $area){
+    $cat['aid'] = $area->offers_area_id;
+    $events = offers_getOffersCount('calendar', null, $cat);
+    if($events == 0){ continue; }
+    $areasoptions[$area->offers_area_id] = $area->title;
+  }
+
+  $form['offer_calendar'] = array(
+    '#prefix' => '<div id="offers_calendar_filter">',
+    '#suffix' => '<div class="clear"></div></div>',
+  );
+
+  $form['offer_calendar']['submit_action'] = array(
+    '#type' => 'submit',
+    '#value' => t('Filtruoti'),
+    '#attributes' => array('class' => array('filter-submit-button', 'right')),
+  );
+  $form['offer_calendar']['area'] = array(
+      '#type' => 'select',
+      '#title' => '',
+      '#options' => $areasoptions,
+      '#default_value' => 'all',
+    '#attributes' => array('class' => array('right')),
+  );
+  $form['#redirect'] = FALSE;
+
+  return $form;
+}
+
+function offers_calendar_filter_form_submit($form, &$form_state){
+  offers_calendar_filter_form_result($form_state['values']);
+  $form_state['rebuild'] = TRUE;
+}
+
+function offers_calendar_filter_form_result($values = null){
+  static $offers_calendar_filter_form_result;
+  if($values){
+    $offers_calendar_filter_form_result = $values;
+  }
+  return $offers_calendar_filter_form_result;
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function offers_block_info() {
+  $blocks['offers_categories'] = array(
+    'info' => t('Lažybų pasiūlos meniu'),
+    'cache' => DRUPAL_CACHE_CUSTOM,
+    'properties' => array(
+      'administrative' => FALSE,
+  ),
+    'status' => 1,
+    'region' => 'left',
+  );
+  return $blocks;
+}
+function offers_init() {
+}
+function offers_block_view($delta = '') {
+  global $language;
+  $block = array();
+  $cid_parts[] = 'offers';
+  $cid_parts[] = $delta;  
+  $partsType = DRUPAL_CACHE_GLOBAL;
+  if($delta == 'offers_categories'){
+    $active_trail = menu_get_active_trail();
+    foreach($active_trail as $active){
+      if(isset($active['menu_name']) AND $active['menu_name'] == 'offers'){
+        //         $cid .= '-'.$active['mlid'];
+        $partsType = DRUPAL_CACHE_PER_PAGE;
+      }
+    }
+  }
+  $cid_parts = array_merge($cid_parts, drupal_render_cid_parts($partsType));
+  $cid = implode(':', $cid_parts);
+  if($cache = cache_get($cid, 'cache_block')){
+    return $cache->data;
+  }
+  switch ($delta) {
+    case 'offers_categories':
+      $count = offers_getOffersCount('all', null);
+      $block['subject'] = t('Lažybų pasiūla').' <em>'.$count.'</em>';//l(t('Lažybų pasiūla'), 'offers').' <em>'.$count.'</em>';
+      $menu_tree = menu_tree('offers');
+      $block['content'] = render($menu_tree);
+      break;
+  }
+  cache_set($cid, $block, 'cache_block', offers_getOffersCacheLifeTime());
+  return $block;
+}
+
+
+function offers_block_view_alter(&$data, $block){
+  global $language;
+  if($block->module == 'menu' && $block->delta == 'offers'){
+    $cid = 'block-offers-offers-categories-content:'.$language->language.':';
+    //    dpm(menu_get_active_trail());
+    if($cached = cache_get($cid, 'cache')){
+      $data['content'] = $cached->data;
+    }else{
+      $data['content'] = render($data['content']);
+      cache_set($cid, $data['content'], 'cache', offers_getOffersCacheLifeTime());
+    }
+  }
+
+}
+
+
+function offers_formatLang($lang){
+
+  if(strpos($lang, 'en') !== FALSE){
+    $lang = 'en';
+  }
+  return strtoupper($lang);
+}
+
+function offers_results_check_card($form, &$form_state){  
+  drupal_set_title(t('Tikrinti lažybų kortelę'));
+  $form['offer_results']['card_number'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Lažybų kortelės numeris'),
+    '#default_value' => '',
+    '#size' => 20,
+    '#required' => TRUE,
+  );
+  $form['offer_results']['submit_action'] = array(
+    '#type' => 'submit',
+    '#value' => t('Tikrinti'),
+    '#attributes' => array('class' => array('filter-submit-button', 'btn-primary')),
+  );
+  if(isset($form_state['form_result'])){
+    $form['offer_results']['result'] = array(
+        '#markup' => '<div class="alert alert-'.$form_state['form_result_status'].'">'.$form_state['form_result'].'</div>',
+        '#weight' => -100 
+    );
+  }
+  return $form;
+}
+
+function offers_results_check_card_submit($form, &$form_state){
+  global $language;
+  list($lang_code) = explode('-', $language->language);
+  $rez = topsport_searchCardStatus($form_state['values']['card_number']);
+  if(isset($rez['Result'])){
+    $form_state['form_result'] = isset($rez['Result'][strtoupper($lang_code)]) ? $rez['Result'][strtoupper($lang_code)] : $rez['Result']['Default'] ;
+    $form_state['form_result_status'] = 'warning';
+    if($rez['Result']['Default'] == 'Laimėta'){
+      $form_state['form_result_status'] = 'status';
+    }
+    $form_state['rebuild'] = TRUE;
+  }
+}

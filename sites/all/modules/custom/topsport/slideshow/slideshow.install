@@ -1,0 +1,59 @@
+<?php
+// $Id: slideshow.install $
+
+/**
+ * @file
+ * Install, update and uninstall functions for the offers module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+
+function slideshow_schema() {
+	$schema['slideshow'] = array(
+    	'description' => 'Stores slideshow-specific information for slideshow nodes.',
+    	'fields' => array(
+      		'nid' => array(
+        		'type' => 'int',
+        		'unsigned' => TRUE,
+        		'not null' => TRUE,
+        		'default' => 0,
+        		'description' => "The slideshow's {node}.nid.",
+	),
+          'slide_title' => array(
+            'type' => 'varchar',
+            'length' => 255,
+            'not null' => FALSE,
+            'default' => '',
+            'description' => "The slideshow's Name.",
+	),
+          'url' => array(
+            'type' => 'varchar',
+            'length' => 255,
+            'not null' => FALSE,
+            'default' => '',
+            'description' => "The slideshow's URL.",
+	),
+      		'eid' => array(
+        		'type' => 'int',
+        		'unsigned' => TRUE,
+        		'not null' => FALSE,
+        		'default' => null,
+        		'description' => "The slideshows's event ID.",
+	),
+	),
+    	'indexes' => array(
+      		'nid' => array('nid'),
+	),
+    	'primary key' => array('nid'),
+    	'foreign keys' => array(
+	      	'slideshow_node' => array(
+	        	'table' => 'node',
+	        	'columns' => array('nid' => 'nid'),
+	),
+	),
+	);
+
+	return $schema;
+}

@@ -1,0 +1,103 @@
+<?php
+
+
+/**
+ * Implements hook_menu().
+ */
+function betconstruct_menu() {
+	$items = array();
+
+	$items['betconstruct'] = array(
+    'title' 		   => 'Betconstruct',
+    'description' 	   => 'Live betting',
+    'page callback'    => 'betconstruct_page',
+    'access arguments' => array('access content'),  // every user can look at generated page
+	'type' 			   => MENU_CALLBACK 			// define type of menu item as callback
+	);
+
+	
+
+	return $items;
+}
+
+function betconstruct_init() {
+    // @todo:remove this function then issues will be solved in SO side
+
+		
+	
+}
+
+
+
+
+function betconstruct_page($id = null)
+{
+	drupal_set_message(t('Krepšinio statymai priimami ir rezultatai fiksuojami įskaitant pratesimą(-us), jeigu nenurodyta kitaip. Išimtį sudaro įvykiai, kuriuose galima spėti baigtį "0" t.y. priimami statymai už lygiąsias.'), 'warning');
+	
+    $timezone = 'Europe/Vilnius';
+	$iframe_params = '&callbackName=bettingCB&skinName=topsport.lt';
+	global $user, $language;
+    setcookie("Odds.liveSetDefault", 2, strtotime('+1 year'), '/');
+    if ( user_is_logged_in() AND isset($user->data['tsuid']) AND $user->data['tsuid'] > 0 ){      
+
+        $token = db_query('SELECT api."f_oauth_initToken"(:uid, 2, :expire) as token', array('uid'=>(int)$user->uid, ':expire' => (int)(time() + 2600)))
+            ->fetchField();
+        if(isset($user->timezone) && strlen($user->timezone) > 0){
+            $timezone = $user->timezone;            
+        }                 
+    } else {
+        $token = '-';
+    }     
+    $date = new DateTime(date('Y-m-d'), new DateTimeZone($timezone));
+    $tz = $date->getOffset() / 60 / 60;
+    $iframe_params .= '&gmt='.($tz > 0 ? '+' : '').$tz;
+    drupal_add_js('function bettingCB(mod,am,cur){if(mod=="balance"){ account_balance_update(); }}
+        
+       function account_balance_update(){    		
+    		var url = "/front/User/balance";
+    		jQuery.ajax({
+			 	dataType: "json",
+			  	url: url,
+				success: function(data){
+    				if(data.BalanceString){
+    					jQuery(".my-balance a").html(data.BalanceString);
+    				}
+				}
+			});
+        }     
+','inline');
+    $domain_iframe = 'livemodule.topsport.lt';    
+    if ( strpos( $language->language, 'en') !== false ){
+		$domain_iframe = 'livemodule.bettopsport.com';
+	}elseif ( strpos( $language->language, 'ru') !== false ){
+		$domain_iframe = 'livemodule.bettopsport.ru';
+	}elseif ( strpos( $language->language, 'lv') !== false ){
+		$domain_iframe = 'livemodule.bettopsport.com';
+	}   
+    if(isset($_GET['id']) && strlen($_GET['id']) > 0){
+        $iframe_params .= '&deeplink='.$_GET['id'];
+    }
+	drupal_add_js('//'.$domain_iframe.'/partner_api/initHtml.js.php?containerID=live2-frame&AuthToken='.$token.'&lang='.substr($language->language, 0, 2).$iframe_params, 'external');
+
+	drupal_set_title(t('Lažybos gyvai'));
+        return '<div id="live2-frame"></div>';
+}
+
+/*
+ * 
+ */
+
+
+/**
+ * Implements hook_theme().
+ */
+function betconstruct_theme() {
+	return array(
+      'betconstruct_page' => array(
+        'template'  => 'betconstruct',
+        'variables' => array('layout' => NULL),
+      )
+	);
+}
+
+

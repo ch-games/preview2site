@@ -1,0 +1,9 @@
+; $Id$
+name = Lažybos gyvai
+description = "Lažybų gyvai modulis"
+dependencies[] = topsport
+core = 7.x
+version = 7.x-0.x-dev
+package = TopSport
+files[] = live.install
+files[] = live.module

@@ -1,0 +1,92 @@
+
+<?php
+// $Id: ac_moneybookers.module Exp $
+
+
+function ac_foxbox_menu(){
+
+	return array();
+}
+
+function ac_foxbox_account_payment_method(){
+	global $base_url;
+	$icons = $base_url.'/'.drupal_get_path('module', 'ac_foxbox').'/icons/';
+
+	$defaults = array(
+    'komisiniai' => '0%',
+    'update' => t('Iš karto'),
+    'limit' => t('Min. 10 Lt').'<br/>'.t('Max.&nbsp;50&nbsp;000&nbsp;Lt'),
+    'limit_min' => 10,
+    'limit_max' => 50000,
+    'callback' => 'ac_foxbox_payment_start',
+    'weight' => 2,
+	);
+
+	//.' <sup class="red">'.t('naujiena!').'</sup>'
+
+	$methods['foxbox'] = array(
+    'id' => 'foxbox',
+    'name' => t('Foxbox'),
+    'title' => '<img src="'.$icons.'foxbox.png" title="'.t('Foxbox').'" />',
+	'viewonly' => t('Norint papildyti savo sąskaitą, jums reikės nueiti iki artimiausio Foxbox terminalo. Pildant sąskaitą terminale bus reikalingas kliento kortelės numeris.'),
+    'category' => 'cash',
+    'countries' => array(),
+	);
+
+	
+
+	foreach($methods as $key => $method){
+		$methods[$key] = array_merge($defaults, $method);
+	}
+
+	return $methods;
+}
+
+function ac_foxbox_payment_start($form, &$form_state){
+
+	return ac_foxbox_payment_form($form, $form_state);
+
+}
+
+function ac_foxbox_payment_form($form, &$form_state){
+	global $language;
+	$account = $form['#user'];
+
+	$payment_form = array();
+	$payment_form['#user'] = $account;
+	
+	list($lang_code) = explode('-', $language->language);
+
+
+	$payment_form[] = array(
+    'payment_method_icon' => array(
+		'#markup' => _account_payment_method_data($form_state['values']['payment_method'], 'title'),
+		'#prefix' => '<div>',
+		'#suffix' => '</div>',
+		),
+		
+    'payment_method' => array(
+      '#markup' =>  '<strong>'.t('Įmokos būdas:').'</strong> '._account_payment_method_data($form_state['values']['payment_method'], 'name'),
+      '#prefix' => '<div class="form-item">',
+      '#suffix' => '</div>',
+	),
+    'payment_update' => array(
+      '#markup' => t('Įmokos įskaitymo trukmė').': '._account_payment_method_data($form_state['values']['payment_method'], 'update'),
+	),
+    'amount' => array(
+      '#markup' =>  '<strong>'.t('Suma:').'</strong> '.account_currency_string($form_state['values']['amount'], $form_state['values']['currency']),
+      '#prefix' => '<div class="form-item">',
+      '#suffix' => '</div>',
+	),
+	);
+
+	$payment_form['back'] = array(
+    '#markup' => l(t('Atgal'), 'account/deposits', array('attributes' => array('class' => array('form-submit', 'reset')))),
+    '#weight' => '20',
+	);
+
+	
+
+	return $payment_form;
+}
+

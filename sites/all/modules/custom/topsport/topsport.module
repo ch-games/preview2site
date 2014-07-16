@@ -1,0 +1,579 @@
+<?php
+// $Id:
+
+// define('TOP_SPORT_SERVER', 'http://82.135.147.201:8067/topsport/');
+// define('TOP_SPORT_SERVER', 'http://213.190.50.130:8067/webservices/');
+// define('TOP_SPORT_SERVER', 'https://82.135.147.201:8443/topsport/');
+//production back-ed: define('TOP_SPORT_SERVER', 	'https://213.190.50.130:8443/webservices/');
+define('TOP_SPORT_SERVER', 	'https://topsport-proxy.data.lt/webservices/');
+define('TOPSPORT_WEBSERVICES_KEY', '256805B5-E7A2-41AA-B73A-EC6BEEBE533B');
+//Live: 213.190.50.130
+//Test: 82.135.147.201
+
+function topsport_LangCodes($lang_code){
+    switch($lang_code){
+        case 'en':
+        case 'en-gb':
+            return '2';
+            break;
+        case 'ru':
+            return '3';
+            break;
+        case 'lv':
+            return '4';
+            break;
+        default:
+            return '1';
+            break;
+    }
+}
+
+function topsport_getOffers($all = false, $xml = false, $log = true){
+  $last_update = (($all OR !variable_get('topsport_last_getOffers', false)) ? '' : '?luts=' . str_replace(" ", "%20", variable_get('topsport_last_getOffers')));
+  $response = topsport_http_request("getOffers.jsp".$last_update, null, 'GET', $log);
+  if($xml){ return $response; }
+  $result = simplexml_load_string($response);
+  return (empty($result) ? array() : $result);
+}
+
+function topsport_getResults($all = false){
+  $last_update = (($all OR !variable_get('topsport_last_getResults', false)) ? '' : '?luts=' . str_replace(" ", "%20", variable_get('topsport_last_getResults')));
+  $response = topsport_http_request("getResults.jsp".$last_update);
+  $result = simplexml_load_string($response);
+  return (empty($result) ? array() : $result);
+}
+
+function topsport_searchClientUser($tsuid, $log = FALSE){
+  $response = topsport_http_request("searchClientUser.jsp?user_id=".$tsuid, null, 'POST', $log);
+  $result = sx_array(simplexml_load_string($response));
+  return (empty($result) ? array() : $result);
+}
+
+function topsport_searchDepositOperationsAreAllowed(){
+  $response = topsport_http_request("searchDepositOperationsAreAllowed.jsp", null, 'POST', FALSE);
+  $result = sx_array(simplexml_load_string($response));
+  return (isset($result['Answer']) AND $result['Answer'] === 'True');
+}
+
+function topsport_saveDepositIn($params, $account){
+  $response = topsport_http_request("saveDepositInXML.jsp", $params);
+  $result = sx_array(simplexml_load_string($response));
+  if(empty($result) OR !isset($result['Code']) OR $result['Code'] != 0){
+    if(!isset($result['ErrorMessage']) OR strpos($result['ErrorMessage'], 'DAF2E4A7-28E7-44EA-A280-D3795D1B7872') === FALSE){
+      $accountData = array(
+        'Kliento kortelės Nr.:' => $account->data['UserCardNumber'],
+        'Vardas, pavardė:'  => $account->data['firstname'].' '.$account->data['middlename'].' '.$account->data['surname'],
+        'Topsport Id:'  => $account->data['tsuid'],
+        'Topsport.lt ID:' => $account->uid,
+        'Nikas:'   => $account->name,
+        'El. pašto adresas:'  => $account->mail,
+      );
+      $message = $result['Description']['Default']."<br/>".(isset($result['ErrorMessage']) ? $result['ErrorMessage'] : '')."<br/>CLIENT<br/><pre>".print_r($accountData, true).'</pre>'."<br/>POST<br/><pre>".print_r($params, true).'</pre>'."<br/>ANSWER<br/><pre>".print_r($result, true).'</pre>';
+      topsport_sendMail('depositin', $message);
+      watchdog('saveDepositIn', '!message', array('!message' => $message), WATCHDOG_ERROR);
+    }
+  }
+  return $result;
+}
+
+function topsport_saveDepositOut($params, $account){
+  $response = topsport_http_request("saveDepositOutXML.jsp", $params);
+  $result = sx_array(simplexml_load_string($response));
+  if($result['Code'] != 0 AND $result['Code'] != 30){
+    $accountData = array(
+      'Kliento kortelės Nr.:' => $account->data['UserCardNumber'],
+      'Vardas, pavardė:'  => $account->data['firstname'].' '.$account->data['middlename'].' '.$account->data['surname'],
+      'Topsport Id:'  => $account->data['tsuid'],
+      'Topsport.lt ID:' => $account->uid,
+      'Nikas:'   => $account->name,
+      'El. pašto adresas:'  => $account->mail,
+    );
+    $message = $result['Description']['Default']."<br/>".(isset($result['ErrorMessage']) ? $result['ErrorMessage'] : '')."<br/>CLIENT<br/><pre>".print_r($accountData, true).'</pre>'."<br/>POST<br/><pre>".print_r($params, true).'</pre>'."<br/>ANSWER<br/><pre>".print_r($result, true).'</pre>';
+    topsport_sendMail('depositout', $message);
+    watchdog('saveDepositOut', '!message', array('!message' => $message), WATCHDOG_ERROR);
+  }
+  return $result;
+}
+
+function topsport_saveMbDepositOut($params, $account){
+//   $response = topsport_http_request("saveMbDepositOutXML.jsp", $params);
+  $response = topsport_http_request("saveDepositOutXML.jsp", $params);
+  $result = sx_array(simplexml_load_string($response));
+  if($result['Code'] != 0 AND $result['Code'] != 30){
+    $accountData = array(
+      'Kliento kortelės Nr.:' => $account->data['UserCardNumber'],
+      'Vardas, pavardė:'  => $account->data['firstname'].' '.$account->data['middlename'].' '.$account->data['surname'],
+      'Topsport Id:'  => $account->data['tsuid'],
+      'Topsport.lt ID:' => $account->uid,
+      'Nikas:'   => $account->name,
+      'El. pašto adresas:'  => $account->mail,
+    );
+    $message = $result['Description']['Default']."<br/>".(isset($result['ErrorMessage']) ? $result['ErrorMessage'] : '')."<br/>CLIENT<br/><pre>".print_r($accountData, true).'</pre>'."<br/>POST<br/><pre>".print_r($params, true).'</pre>'."<br/>ANSWER<br/><pre>".print_r($result, true).'</pre>';
+    topsport_sendMail('depositout', $message);
+    watchdog('saveMbDepositOut', '!message', array('!message' => $message), WATCHDOG_ERROR);
+  }
+  return $result;
+}
+
+function topsport_cancelDepositOutTopSport($params){
+  $response = topsport_http_request("cancelDepositOut.jsp", $params);
+  $result = simplexml_load_string($response);
+  if($result->Code != 0){
+    watchdog('cancelDepositOut', '!message', array('!message' => $result->Description->Default."<br/>".$result->ErrorMessage."<br/><pre>".print_r($params, true)), WATCHDOG_ERROR);
+  }
+  $result = sx_array($result);
+  return (empty($result) ? array() : $result);
+}
+
+function topsport_searchDepositsReport($tsuid){
+  $response = topsport_http_request("searchDepositsReportXML.jsp?user_id=".$tsuid, null, 'POST', FALSE);
+  $result = simplexml_load_string($response);
+  $result = sx_array($result);
+  return (empty($result) ? array() : $result);
+}
+/**
+ * @deprecated: remove this
+ * @param unknown $user_id
+ * @param unknown $card_id
+ * @param unknown $lang
+ * @return Ambigous <multitype:, unknown>
+ */
+function topsport_searchCardHeadersForUser($tsuid){
+  $response = topsport_http_request("searchCardHeadersForUserXML.jsp?lid=1&uid=".$tsuid, null, 'POST', FALSE);
+  $result = simplexml_load_string($response);
+  $result = sx_array($result);
+  return (empty($result) ? array() : $result);
+}
+
+function topsport_GetUserBets($tsuid, $lang_id, $limit = 500, $status = 'All', $from = false, $till = false){
+    $status_options = array(
+      2 => 'Incompleted'
+    );    
+	$timestamp = time();
+	$request = array(
+		'user_id' => $tsuid,
+		'timestamp' => $timestamp,
+		'pass_key' => md5($tsuid.TOPSPORT_WEBSERVICES_KEY.$timestamp),
+		'lang_id' => $lang_id,
+		'get_events' => 't',
+        'max_bet_count' => $limit,
+	);
+    if(isset($status_options[$status])){
+        $request['bet_status'] = $status_options[$status];
+    } 
+    if($from && $till){
+      $request['min_bet_date'] = date('Y-m-d',$from);
+      $request['max_bet_date'] = date('Y-m-d',$till); 
+    }
+	$response = topsport_http_request("getUserBetsXML.jsp", $request, 'POST', FALSE);
+	$result = simplexml_load_string($response);
+	$result = sx_array($result);
+	return (empty($result) ? array() : $result);
+}
+
+function topsport_getCardDetails($user_id, $card_id, $lang){
+  $response = topsport_http_request("getCardDetailsXML.jsp?".'card_id='.$card_id.'&user_id='.$user_id.'&language_id='.topsport_LangCodes($lang), null, 'POST', false);
+  $result = simplexml_load_string($response);
+  $result = sx_array($result);
+  return (empty($result) ? array() : $result);
+}
+
+function topsport_searchCardStatus($card_id){
+  $response = topsport_http_request("searchCardStatusXML.jsp", array('lid' => 1, 'cdi' => '2', 'cn' => $card_id), 'POST', FALSE);
+  $result =  simplexml_load_string($response);
+  $result = sx_array($result);
+  return (empty($result) ? array() : $result);
+}
+
+function topsport_saveCachedCards($xml){
+  $response = topsport_http_request("saveCachedCardXML.jsp", $xml);
+  $result = sx_array(simplexml_load_string($response));
+  return $result;
+}
+
+function topsport_searchReasons($reset = false){
+  $reasons = array();
+  if($reset){
+    cache_clear_all('topsport_searchReasons', 'cache');
+  }
+  if ($cached = cache_get('topsport_searchReasons', 'cache')) {
+    $reasons = $cached->data;
+  }else{
+    $response = topsport_http_request("searchReasons.jsp", null, 'POST', FALSE);
+    $result = sx_array(simplexml_load_string($response));
+    foreach($result['Reason'] as $res){
+      $reasons[$res['ReasonID']]['Name'] = $res['Name'];
+    }
+    if(!empty($reasons)){
+      cache_set('topsport_searchReasons', $reasons, 'cache', CACHE_PERMANENT);
+    }
+  }
+  return $reasons;
+}
+
+function topsport_groups($reset = false){
+  $response = topsport_http_request("groups.jsp", null, 'POST', FALSE);
+  $result = (simplexml_load_string($response));
+  return $result;
+}
+
+function topsport_getGameTypePatterns(){
+  $response = topsport_http_request("getGameTypePatternsXML.jsp", null, 'POST', FALSE);
+  $result = sx_array(@simplexml_load_string($response));
+  if(!empty($result['Pattern'])){ return $result['Pattern']; }
+  return null;
+}
+
+function topsport_searchCountries($country_id = null){
+    $response = topsport_http_request("searchCountriesXML.jsp", array('country_id' => $country_id), 'POST', FALSE);
+    $result = sx_array(simplexml_load_string($response));
+    return $result;
+}
+
+function topsport_checkClientUserUniqueness($personalId, $country_id, $lang){
+  $response = topsport_http_request("checkClientUserUniquenessXML.jsp", array('personal_code' => $personalId, 'country_id' => $country_id, 'language_id' => topsport_LangCodes($lang)));
+  $result = sx_array(simplexml_load_string($response));
+  return $result;
+}
+
+function topsport_validateNewContractData($xml){
+  $response = topsport_http_request("validateNewContractDataXML.jsp", $xml);
+  $result = sx_array(simplexml_load_string($response));
+  return $result;
+}
+
+function topsport_saveNewIBetContract($xml){
+  $response = topsport_http_request("saveNewIBetContractXML.jsp", $xml);
+  $result = sx_array(simplexml_load_string($response));
+  return $result;
+}
+
+function topsport_bindUserInfo($xml){
+  $response = topsport_http_request("bindUserInfo.jsp", $xml);
+  $result = sx_array(@simplexml_load_string($response));
+  return $result;
+}
+
+function topsport_getTopBetEvents($limit = 10){
+  $response = topsport_http_request("getTopBetEvents.jsp?limit=".$limit, null, 'POST', FALSE);
+  $result = simplexml_load_string($response);
+  $result = sx_array($result);
+  return (empty($result) ? array() : $result);
+}
+function topsport_updateClientUserInfo($xml){
+  $response = topsport_http_request("updateClientUserInfo.jsp", $xml);
+  $result = sx_array(@simplexml_load_string($response));
+  return $result;
+}
+function topsport_updateClientUserState($user_id, $operation){
+  $response = topsport_http_request("updateClientUserStateXML.jsp", array('user_id' => $user_id, 'operation' => $operation));
+  $result = sx_array(@simplexml_load_string($response));
+  return $result;
+}
+
+function topsport_getPins($pin_card_number, $pass_key){
+  $response = topsport_http_request("getPinsXML.jsp", array('pin_card_number' => $pin_card_number, 'pass_key' => $pass_key), 'POST', FALSE);
+/*
+  $response = '<?xml version="1.0" encoding="UTF-8" ?>
+  <Pins>
+    <Pin1>604233</Pin1>
+    <Pin2>211993</Pin2>
+    <Pin3>119009</Pin3>
+    <Pin4>589650</Pin4>
+    <Pin5>022135</Pin5>
+    <Pin6>033745</Pin6>
+    <Pin7>701155</Pin7>
+    <Pin8>473430</Pin8>
+    <Pin9>589355</Pin9>
+    <Pin10>949386</Pin10>
+    <Pin11>907657</Pin11>
+    <Pin12>832881</Pin12>
+    <Pin13>905360</Pin13>
+    <Pin14>169284</Pin14>
+    <Pin15>437257</Pin15>
+    <Pin16>620715</Pin16>
+    <Pin17>651507</Pin17>
+    <Pin18>865867</Pin18>
+    <Pin19>029330</Pin19>
+    <Pin20>126976</Pin20>
+    <Pin21>636289</Pin21>
+    <Pin22>925728</Pin22>
+    <Pin23>928763</Pin23>
+    <Pin24>569616</Pin24>
+  </Pins>';*/
+  $result = sx_array(simplexml_load_string($response));
+  $pins = array();
+  if(!empty($result) AND !isset($result['message']) AND isset($result['Pin1'])){
+    foreach($result as $key => $pinCode){
+      $pins[str_replace('Pin', '', $key)] = $pinCode;
+    }
+  }
+  return $pins;
+}
+function sx_array($obj){
+  if(empty($obj)){
+    return array();
+  }
+  $arr = (array)$obj;
+  if(empty($arr)){
+      $arr = "";
+  } else {
+    foreach($arr as $key => $value){
+      if(!is_scalar($value)){
+          $arr[$key] = sx_array($value);
+      }
+    }
+  }
+  return $arr;
+}
+
+
+function topsport_http_request($url, $data = null, $method = 'POST', $log = TRUE) {
+  if(is_array($data)){
+    $data = topsport_inlineArray($data);
+  }
+  $data = drupal_http_request(TOP_SPORT_SERVER.$url, array('headers' => array('Content-Type' => 'application/x-www-form-urlencoded'), 'timeout' => 30, 'data' => $data, 'method' => $method));
+  $returnData = false;
+  if(isset($data->data)){
+    $returnData = $data->data;
+  }
+  if($log OR (!isset($data->status_message) OR $data->status_message != 'OK')){
+    $file_url = null;
+    if(isset($data->data) AND drupal_strlen($data->data) > 500){
+      $directory = 'private://topsport_http_request/';
+      if (!file_prepare_directory($directory, FILE_MODIFY_PERMISSIONS | FILE_CREATE_DIRECTORY)) {
+        watchdog('file', t('Failed to create %directory.', array('%directory' => $directory)), WATCHDOG_ERROR);
+      }
+      $filename = file_unmanaged_save_data($data->data, $directory.REQUEST_TIME.'--'.urlencode($url).'.txt', FILE_EXISTS_RENAME);
+      if (!empty($filename)) {
+        $file_url = file_create_url($filename);
+        $data->data = t('Išsaugota faile: !url', array('!url' => $file_url));
+      }
+      $file_url = l(t('Atsakymas'), $file_url);
+    }
+    watchdog(drupal_substr($url, 0, strpos($url, '.jsp')).'-request', '!message', array('!message' => $url.' <br/> <pre>'.check_plain(print_r($data, true)).'</pre>'), ((isset($data->status_message) AND $data->status_message == 'OK') ? WATCHDOG_INFO : WATCHDOG_ERROR), $file_url);
+  }
+  return $returnData;
+}
+
+function topsport_inlineArray($data){
+  $str = '';
+  foreach ($data as $key => $value) {
+    $str .= $key . '=' . ($value) . '&';
+  }
+  return substr($str, 0,  -1);
+}
+
+function topsport_sendMail($key, $message){
+  $module = 'topsport';
+
+  $from = variable_get('site_mail', NULL);
+
+  $params['message'] = $message;
+
+  $language = language_default();
+  if($key == 'depositin'){
+      drupal_mail($module, $key, 'mokejimai@topsport.lt', $language, $params, $from);
+  } else {
+      drupal_mail($module, $key, 'darius@topsport.lt', $language, $params, $from);
+  }  
+}
+
+function topsport_mail($key, &$message, $params) {
+  $options = array(
+    'langcode' => $message['language']->language,
+  );
+  $message['subject'] = t('@site-name klaida', array('@site-name' => variable_get('site_name', '')), $options);
+  $message['body'][] = $params['message'];
+  switch ($key) {
+    case 'depositin':
+      $message['subject'] = t('@site-name įmokos klaida', array('@site-name' => variable_get('site_name', '')), $options);
+      break;
+    case 'depositout':
+      $message['subject'] = t('@site-name išmokos klaida', array('@site-name' => variable_get('site_name', '')), $options);
+      break;
+    case 'racingdogsend':
+      $message['subject'] = t('@site-name racingdogs sesijos pabaigos klaida', array('@site-name' => variable_get('site_name', '')), $options);
+      break;
+  }
+}
+/*substr(source, 1, 30), context*/
+
+function topsport_form_block_admin_display_form_alter(&$form, $form_state) {
+  global $user;
+
+  if($user->uid != 1){
+    $arrayToUnset = array(
+      'user_online', 'system_user-menu', 'devel_switch_user', 'system_powered-by', 'node_syndicate',
+      'search_form', 'pagelink_pagelink', 'user_new', 'node_recent', 'system_management',
+      'menu_devel', 'system_help', 'shortcut_shortcuts', 'user_login',
+    );
+    foreach($arrayToUnset as $key){
+      if(isset($form['blocks'][$key])){
+        unset($form['blocks'][$key]);
+      }
+    }
+  }
+}
+
+function topsport_form_block_add_block_form_alter(&$form, &$form_state) {
+  topsport_form_block_admin_configure_alter($form, $form_state);
+}
+
+function topsport_form_block_admin_configure_alter(&$form, &$form_state) {
+  $block = block_load($form['module']['#value'], $form['delta']['#value']);
+  $form['visibility']['date_restriction'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Laiko ribojimas'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#group' => 'visibility',
+    '#weight' => 10,
+    '#tree' => TRUE,
+    '#access' => TRUE,
+    '#attached' => array(
+      'js' => array(drupal_get_path('module', 'topsport') . '/topsport_block.js'),
+    ),
+  );
+  $date_restriction = array();
+  if(isset($block->date_restriction) AND $block->date_restriction !== '0'){
+    $date_restriction = unserialize($block->date_restriction);
+  }
+  $form['visibility']['date_restriction']['enable'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Rodyti bloką tik pasirinktu laiku'),
+    '#default_value' => (empty($date_restriction) ? 0 : 1),
+    '#access' => TRUE,
+  );
+  $form['visibility']['date_restriction']['from'] = array(
+    '#type' => 'date_popup',
+    '#title' => t('Nuo'),
+    '#default_value' => (isset($date_restriction['from']) ? $date_restriction['from'] : ''),
+    '#date_format' => 'Y-m-d H:i',
+    '#date_label_position' => 'within',
+    '#date_year_range' => '-0:+5',
+    '#date_increment' => 15,
+    '#access' => TRUE,
+    '#size' => 10,
+    '#states' => array(
+      'invisible' => array(
+        'input[name="date_restriction[enable]"]' => array(
+          'checked' => FALSE
+        ),
+      ),
+    ),
+  );
+  $form['visibility']['date_restriction']['to'] = array(
+    '#type' => 'date_popup',
+    '#title' => t('Iki'),
+    '#default_value' => (isset($date_restriction['to']) ? $date_restriction['to'] : ''),
+    '#date_format' => 'Y-m-d H:i',
+    '#date_label_position' => 'within',
+    '#date_year_range' => '-0:+5',
+    '#date_increment' => 15,
+    '#access' => TRUE,
+    '#size' => 10,
+    '#states' => array(
+      'invisible' => array(
+        'input[name="date_restriction[enable]"]' => array(
+          'checked' => FALSE
+        ),
+      ),
+    ),
+  );
+  $form['#submit'][] = 'topsport_form_block_admin_date_restriction_submit';
+}
+
+function topsport_form_block_admin_date_restriction_submit(&$form, &$form_state){
+  $module = $form_state['values']['module'];
+  $delta = $form_state['values']['delta'];
+
+  $date_restriction = '0';
+  if($form_state['values']['date_restriction']['enable']){
+    $date_restriction = serialize(array('from' => $form_state['values']['date_restriction']['from'], 'to' => $form_state['values']['date_restriction']['to']));
+  }
+
+  db_update('block')
+  ->fields(array('date_restriction' => $date_restriction))
+  ->condition('module', $module)
+  ->condition('delta', $delta)
+  ->execute();
+}
+
+
+function topsport_block_list_alter(&$blocks) {
+  global $theme_key, $language;
+  foreach ($blocks as $key => $block) {
+    if (!isset($block->theme) || !isset($block->status) || $block->theme != $theme_key || $block->status != 1) {
+      // This block was added by a contrib module, leave it in the list.
+      continue;
+    }
+    if(isset($block->date_restriction) AND $block->date_restriction !== '0'){
+      $date_restriction = unserialize($block->date_restriction);
+      if(!(strtotime($date_restriction['from']) < REQUEST_TIME AND REQUEST_TIME < strtotime($date_restriction['to']))){
+        unset($blocks[$key]);
+      }
+    }
+  }
+}
+
+
+function topsport_theme() {
+  $theme_hooks = array(
+    'new_block' => array(
+      'template' => 'newblock',
+      'variables' => array('content' => NULL),
+    ),
+  );
+  return $theme_hooks;
+}
+
+// variable_set('cache_default_class', 'DrupalDatabaseCache');
+//  variable_set('cache_default_class', 'TopsportDatabaseCache');
+class TopsportDatabaseCache extends DrupalDatabaseCache{
+
+  protected function prepareItem($cache) {
+    global $user;
+
+    if (!isset($cache->data)) {
+      return FALSE;
+    }
+    // If enforcing a minimum cache lifetime, validate that the data is
+    // currently valid for this user before we return it by making sure the cache
+    // entry was created before the timestamp in the current session's cache
+    // timer. The cache variable is loaded into the $user object by _drupal_session_read()
+    // in session.inc. If the data is permanent or we're not enforcing a minimum
+    // cache lifetime always return the cached data.
+    if ($cache->expire != CACHE_PERMANENT && ((!isset($user->cache) || $user->cache > $cache->created) || ($cache->expire != CACHE_TEMPORARY AND $cache->expire <= REQUEST_TIME))) {
+      // This cache data is too old and thus not valid for us, ignore it.
+      return FALSE;
+    }
+
+    if ($cache->serialized) {
+      $cache->data = unserialize($cache->data);
+    }
+
+    return $cache;
+  }
+
+}
+
+function topsport_init(){
+  if($_GET['q'] == 'admin/content' OR $_GET['q'] == 'admin/content/node'){
+    if(!empty($_GET['type']) AND $_GET['type'] != 'all'){
+      $_SESSION['node_overview_filter'] = array('0' => array('type', $_GET['type']));
+    }elseif(!empty($_GET['type']) AND $_GET['type'] == 'all'){
+      unset($_SESSION['node_overview_filter']);
+    }
+  }
+}
+
+function topsport_mail_alter(&$message) {
+
+  $useplain = array('darius@topsport.lt');
+
+  if(in_array($message['to'], $useplain)){
+    $message['params']['plain'] = TRUE;
+  }
+
+}

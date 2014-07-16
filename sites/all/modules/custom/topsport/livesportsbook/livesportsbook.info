@@ -1,0 +1,11 @@
+; $Id$
+name = Lažybos gyvai (OM edition)
+description = "Pilnai automatizuotas lažybų gyvai modulis"
+dependencies[] = topsport
+core = 7.x
+version = 7.x-0.x-dev
+package = TopSport
+files[] = livesportsbook.install
+files[] = livesportsbook.module
+files[] = livesportsbook.service.inc
+files[] = livesportsbook.admin.inc

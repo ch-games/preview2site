@@ -1,0 +1,414 @@
+<?php
+// $Id: account.module Exp $
+
+define("AC_MOKEJIMAI_PROJECTID", 10490);
+define("AC_MOKEJIMAI_SIGN", "eb154f8b4a8349231dfd09537615c9a3");
+define("AC_MOKEJIMAI_TEST", 0);
+
+function ac_mokejimai_menu(){
+
+	$items['payment-mokejimai-lt-callback'] = array(
+    'title' => 'Payment Mokejimai.lt Callback',
+    'access callback' => TRUE,
+    'page callback' => 'ac_mokejimai_payment_callback',
+    'type' => MENU_CALLBACK,
+	);
+
+	$items['lt/payment-mokejimai-lt-callback'] = array(
+    'title' => 'Payment Mokejimai.lt Callback',
+    'access callback' => TRUE,
+    'page callback' => 'ac_mokejimai_payment_callback',
+    'type' => MENU_CALLBACK,
+	);
+	return $items;
+}
+
+function ac_mokejimai_account_payment_method(){
+	global $base_url;
+	$icons = $base_url.'/'.drupal_get_path('module', 'ac_mokejimai').'/icons/';
+
+	$methods['vb2'] = array(
+    'id' => 'vb2',
+    'name' => t('AB bankas „SEB“ Lietuva'),
+    'title' => '<img src="'.$icons.'seb-bankas-logo.png" title="'.t('AB bankas „SEB“ Lietuva, mokėjimas pavedimu su skubiu užskaitymu').'" />',
+    'komisiniai' => '0%',
+    'update' => t('5 - 15 min'),
+    'limit' => t('Min. 10 Lt').'<br/>'.t('Max.&nbsp;50&nbsp;000&nbsp;Lt'),
+    'limit_min' => 10,
+    'limit_max' => 50000,
+    'callback' => 'ac_mokejimai_payment_start',
+    'weight' => 1,
+    'category' => 'banklink',
+    'countries' => array('LT'),
+	);
+
+	$methods['nord'] = array(
+    'id' => 'nord',
+    'name' => t('DnB Nord banko el. banko sistema. (I-linija)'),
+    'title' => '<img src="'.$icons.'dnbnord-bankas-logo.png" title="'.t('DnB Nord banko el. banko sistema. (I-linija)').'" />',
+    'komisiniai' => '0%',
+    'update' => t('Iš karto'),
+    'limit' => t('Min. 10 Lt').'<br/>'.t('Max.&nbsp;50&nbsp;000&nbsp;Lt'),
+    'limit_min' => 10,
+    'limit_max' => 50000,
+    'callback' => 'ac_mokejimai_payment_start',
+    'weight' => 3,
+    'category' => 'banklink',
+    'countries' => array('LT'),
+	);
+
+	$methods['sampo'] = array(
+    'id' => 'sampo',
+    'name' => t('Danske banko el. banko sistema'),
+    'title' => '<img src="'.$icons.'danske-bankas-logo.png" title="'.t('Danske banko el. banko sistema').'" />',
+    'komisiniai' => '0%',
+    'update' => t('Iš karto'),
+    'limit' => t('Min. 10 Lt').'<br/>'.t('Max.&nbsp;50&nbsp;000&nbsp;Lt'),
+    'limit_min' => 10,
+    'limit_max' => 50000,
+    'callback' => 'ac_mokejimai_payment_start',
+    'weight' => 5,
+    'category' => 'banklink',
+    'countries' => array('LT'),
+	);
+
+	/*$methods['ukio'] = array(
+    'id' => 'ukio',
+    'name' => t('Ūkio banko el. banko sistema Eta Bankas'),
+    'title' => '<img src="'.$icons.'ukio-bankas-logo.png" title="'.t('Ūkio banko el. banko sistema Eta Bankas').'" />',
+    'komisiniai' => '0%',
+    'update' => t('Iš karto'),
+    'limit' => t('Min. 10 Lt').'<br/>'.t('Max.&nbsp;50&nbsp;000&nbsp;Lt'),
+    'limit_min' => 10,
+    'limit_max' => 50000,
+    'callback' => 'ac_mokejimai_payment_start',
+    'weight' => 6,
+    'category' => 'banklink',
+    'countries' => array('LT'),
+	);*/ 
+    
+
+// 	$methods['parex'] = array(
+//     'id' => 'parex',
+//     'name' => t('Citadele banko el. banko sistema'),
+//     'title' => '<img src="'.$icons.'citadele-bankas-logo.png" title="'.t('Citadele banko el. banko sistema').'" />',
+//     'komisiniai' => '0%',
+//     'update' => t('Iš karto'),
+//     'limit' => t('Min. 10 Lt').'<br/>'.t('Max.&nbsp;50&nbsp;000&nbsp;Lt'),
+//     'limit_min' => 10,
+//     'limit_max' => 50000,
+//     'callback' => 'ac_mokejimai_payment_start',
+//     'weight' => 7,
+//     'category' => 'banklink',
+//     'countries' => array('LT'),
+// 	);
+
+	$methods['sb'] = array(
+    'id' => 'sb',
+    'name' => t('Šiaulių banko SB Linija'),
+    'title' => '<img src="'.$icons.'siauliu-bankas-logo.png" title="'.t('Šiaulių banko SB Linija').'" />',
+    'komisiniai' => '0%',
+    'update' => t('Iš karto'),
+    'limit' => t('Min. 10 Lt').'<br/>'.t('Max.&nbsp;50&nbsp;000&nbsp;Lt'),
+    'limit_min' => 10,
+    'limit_max' => 50000,
+    'callback' => 'ac_mokejimai_payment_start',
+    'weight' => 8,
+    'category' => 'banklink',
+    'countries' => array('LT'),
+	);
+
+	$methods['lthand'] = array(
+    'id' => 'lthand',
+    'name' => t('Mokėjimas grynais banke'),
+    'title' => '<img src="'.$icons.'bank-by-lthands.png" title="'.t('Mokėjimas grynais banke').'" />',
+    'komisiniai' => '0%',
+    'update' => t('Po apmokėjimo'),
+    'limit' => t('Min. 25 Lt').'<br/>'.t('Max.&nbsp;50&nbsp;000&nbsp;Lt'),
+    'limit_min' => 25,
+    'limit_max' => 50000,
+    'callback' => 'ac_mokejimai_payment_start',
+    'weight' => 9,
+    'category' => 'cash',
+    'countries' => array('LT'),
+	);
+
+	$methods['nordealt'] = array(
+    'id' => 'nordealt',
+    'name' => t('AB bankas „Nordea“ Lietuva'),
+    'title' => '<img src="'.$icons.'nordea-bankas-logo.png" title="'.t('AB bankas „Nordea“ Lietuva').'" />',
+    'komisiniai' => '0%',
+    'update' => t('Iš karto'),
+    'limit' => t('Min. 10 Lt').'<br/>'.t('Max.&nbsp;50&nbsp;000&nbsp;Lt'),
+    'limit_min' => 10,
+    'limit_max' => 50000,
+    'callback' => 'ac_mokejimai_payment_start',
+    'weight' => 10,
+    'category' => 'banklink',
+    'countries' => array('LT'),
+	);
+
+	$methods['nordealv'] = array(
+    'id' => 'nordealv',
+    'name' => t('AB bankas „Nordea“ Latvija'),
+    'title' => '<img src="'.$icons.'nordea-bankas-logo.png" title="'.t('AB bankas „Nordea“ Latvija').'" />',
+    'komisiniai' => '0%',
+    'update' => t('Iš karto'),
+    'limit' => t('Min. 10 Lt').'<br/>'.t('Max.&nbsp;50&nbsp;000&nbsp;Lt'),
+    'limit_min' => 10,
+    'limit_max' => 50000,
+    'callback' => 'ac_mokejimai_payment_start',
+    'weight' => 10,
+    'category' => 'banklink',
+    'countries' => array('LV'),
+	);
+
+	$methods['sebee'] = array(
+    'id' => 'sebee',
+    'name' => t('AB bankas „SEB“ Estija'),
+    'title' => '<img src="'.$icons.'seb-bankas-logo.png" title="'.t('AB bankas „SEB“ Estija').'" />',
+    'komisiniai' => '0%',
+    'update' => t('Iš karto'),
+    'limit' => t('Min. 10 Lt').'<br/>'.t('Max.&nbsp;50&nbsp;000&nbsp;Lt'),
+    'limit_min' => 10,
+    'limit_max' => 50000,
+    'callback' => 'ac_mokejimai_payment_start',
+    'weight' => 9,
+    'category' => 'banklink',
+    'countries' => array('EE'),
+	);
+	$methods['nordeaee'] = array(
+    'id' => 'nordeaee',
+    'name' => t('AB bankas „Nordea“ Estija'),
+    'title' => '<img src="'.$icons.'nordea-bankas-logo.png" title="'.t('AB bankas „Nordea“ Estija').'" />',
+    'komisiniai' => '0%',
+    'update' => t('Iš karto'),
+    'limit' => t('Min. 10 Lt').'<br/>'.t('Max.&nbsp;50&nbsp;000&nbsp;Lt'),
+    'limit_min' => 10,
+    'limit_max' => 50000,
+    'callback' => 'ac_mokejimai_payment_start',
+    'weight' => 11,
+    'category' => 'banklink',
+    'countries' => array('EE'),
+	);
+
+	$methods['hanzaee'] = array(
+    'id' => 'hanzaee',
+    'name' => t('AB bankas „Swedbank“ Estija'),
+    'title' => '<img src="'.$icons.'swedbank-bankas-logo.png" title="'.t('AB bankas „Swedbank“ Estija').'" />',
+    'komisiniai' => '0%',
+    'update' => t('Iš karto'),
+    'limit' => t('Min. 10 Lt').'<br/>'.t('Max.&nbsp;50&nbsp;000&nbsp;Lt'),
+    'limit_min' => 10,
+    'limit_max' => 50000,
+    'callback' => 'ac_mokejimai_payment_start',
+    'weight' => 12,
+    'category' => 'banklink',
+    'countries' => array('EE'),
+	);
+
+	$methods['directeb'] = array(
+    'id' => 'directeb',
+    'name' => t('Vokietijos bankai'),
+    'title' => '<img src="'.$icons.'direct-ebanking-logo.png" title="'.t('Vokietijos bankai').'" />',
+    'komisiniai' => '0%',
+    'update' => t('Iš karto'),
+    'limit' => t('Min. 10 Lt').'<br/>'.t('Max.&nbsp;50&nbsp;000&nbsp;Lt'),
+    'limit_min' => 10,
+    'limit_max' => 50000,
+    'callback' => 'ac_mokejimai_payment_start',
+    'weight' => 13,
+    'category' => 'banklink',
+    'countries' => array('DE'),
+	);
+
+	$methods['fasterpay'] = array(
+    'id' => 'fasterpay',
+    'name' => t('Didžiosios Britanijos bankai'),
+    'title' => '<img src="'.$icons.'fasterpay-logo.png" title="'.t('Didžiosios Britanijos bankai').'" />',
+    'komisiniai' => '0%',
+    'update' => t('Iš karto'),
+    'limit' => t('Min. 10 Lt').'<br/>'.t('Max.&nbsp;50&nbsp;000&nbsp;Lt'),
+    'limit_min' => 10,
+    'limit_max' => 50000,
+    'callback' => 'ac_mokejimai_payment_start',
+    'weight' => 13,
+    'category' => 'banklink',
+    'countries' => array('GB'),
+	);
+	/* 2012-05-17  */
+	$methods['seblv'] = array(
+    'id' => 'seblv',
+    'name' => t('AB bankas „SEB“ Latvija'),
+    'title' => '<img src="'.$icons.'seb-bankas-logo.png" title="'.t('AB bankas „SEB“ Latvija, mokėjimas užtrunka iki 1 minutės.').'" />',
+    'komisiniai' => '0%',
+    'update' => t('Iš karto'),
+    'limit' => t('Min. 10 Lt').'<br/>'.t('Max.&nbsp;50&nbsp;000&nbsp;Lt'),
+    'limit_min' => 10,
+    'limit_max' => 50000,
+    'callback' => 'ac_mokejimai_payment_start',
+    'weight' => 1,
+    'category' => 'banklink',
+    'countries' => array('LV'),
+	);
+    /* 2013-02-28 */
+    $methods['wallet'] = array(
+    'id' => 'wallet',
+    'name' => $description = t('Mokejimai.lt el. piniginė'),
+    'title' => '<img src="'.$icons.'mokejimai.png" title="'.$description.'" />',
+    'komisiniai' => '0%',
+    'update' => t('Iš karto'),
+    'limit' => t('Min. 10 Lt').'<br/>'.t('Max.&nbsp;50&nbsp;000&nbsp;Lt'),
+    'limit_min' => 10,
+    'limit_max' => 50000,
+    'callback' => 'ac_mokejimai_payment_start',
+    'weight' => 6,
+    'category' => 'ewallet',
+    'countries' => array('LT'),
+	);
+	return $methods;
+}
+
+function ac_mokejimai_payment_start($form, &$form_state){
+	return ac_mokejimai_payment_form($form, $form_state);
+}
+
+function ac_mokejimai_lang(){
+	global $language;
+	switch ($language->language){
+		case 'lt':
+			return 'lit';break;
+		case 'lv':
+			return 'lav';break;
+		case 'ee':
+			return 'est';break;
+		case 'ru':
+			return 'rus';break;
+		case 'en':
+		case 'en-gb':
+			return 'eng';break;
+		case 'gr':
+			return 'ger';break;
+		case 'pl':
+			return 'pol';break;
+		default:
+			return $language->language;break;
+	}
+}
+
+function ac_mokejimai_payment_form($form, &$form_state){
+	$account = $form['#user'];
+	
+	// adding check for blocked from user payment gateway
+	$method = 'mokejimailt';
+	$title = t('Mokėjimai.lt');
+	account_deposit_is_active($method, array('@PaymentName' => $title));
+
+	require_once 'WebToPay.php';
+
+	$payment_form = array();
+	$payment_form['#user'] = $account;
+	$payment_form['#action'] = WebToPay::PAY_URL;
+
+	$oid = account_createOrderUser($form, $form_state);
+
+	$request = WebToPay::buildRequest(array(
+    'projectid'     => AC_MOKEJIMAI_PROJECTID,
+    'sign_password' => AC_MOKEJIMAI_SIGN,
+    'orderid'       => $oid,
+    'lang'          => ac_mokejimai_lang(),
+    'amount'        => $form_state['values']['amount'] * 100,
+    'currency'      => $form_state['values']['currency'],
+    'accepturl'     => url('account/deposits/accept', array('absolute' => TRUE)),
+    'cancelurl'     => url('account/deposits/cancel', array('absolute' => TRUE)),
+    'callbackurl'   => /*($account->data['tsuid'] == 726 ?*/ 'https://api.topsport.lt/payments/mokejimai_lt/', // : url('payment-mokejimai-lt-callback', array('absolute' => TRUE))),
+    'payment'       => $form_state['values']['payment_method'],
+    'country'       => 'LT',
+    'paytext'       => 'UAB TOP SPORT imoka Nr.: '.$oid,
+    'p_firstname'   => $account->data['firstname'],
+    'p_lastname'    => $account->data['surname'],
+    'p_email'       => $account->mail,
+    'p_street'      => $account->data['street'],
+    'p_city'        => $account->data['city'],
+    'p_state'       => '',
+    'p_zip'         => $account->data['zip'],
+    'p_countrycode' => $account->data['country'],
+    'test'          => AC_MOKEJIMAI_TEST //($account->data['tsuid'] == 726 ? 1 : AC_MOKEJIMAI_TEST),
+	));
+
+	foreach($request as $key => $value){
+		$payment_form[$key] = array('#type' => 'hidden', '#value' =>  htmlspecialchars($value));
+	}
+	$payment_form[] = array(
+		
+		'payment_method_icon' => array(
+		'#markup' => _account_payment_method_data($form_state['values']['payment_method'], 'title'),
+		'#prefix' => '<div>',
+		'#suffix' => '</div>',
+		),
+		
+    'payment_method' => array(
+      '#markup' =>  '<strong>'.t('Įmokos būdas:').'</strong> '._account_payment_method_data($form_state['values']['payment_method'], 'name'),
+      '#prefix' => '<div class="form-item">',
+      '#suffix' => '</div>',
+	),
+    'payment_update' => array(
+      '#markup' => t('Įmokos įskaitymo trukmė').': '._account_payment_method_data($form_state['values']['payment_method'], 'update'),
+	),
+    'amount' => array(
+      '#markup' =>  '<strong>'.t('Suma:').'</strong> '.account_currency_string($form_state['values']['amount'], $form_state['values']['currency']),
+      '#prefix' => '<div class="form-item">',
+      '#suffix' => '</div>',
+	),
+	);
+
+	$payment_form['back'] = array(
+    '#markup' => l(t('Atgal'), 'account/deposits', array('attributes' => array('class' => array('form-submit', 'reset')))),
+    '#weight' => '20',
+	);
+	$payment_form['submit_action'] = array(
+    '#type' => 'submit',
+    '#value' => t('Patvirtinti'),
+    '#weight' => '21',
+    '#states' => array(
+      'enabled' => array(
+        ':input[name="info_danger"]' => array('checked' => TRUE),
+	),
+	),
+	);
+
+	return $payment_form;
+}
+
+function ac_mokejimai_payment_callback(){
+	watchdog('mokejimai.lt', 'Notification data. <pre>@data</pre>', array('@data' => print_r($_REQUEST, true)));
+	try{
+		$response = WebToPay::checkResponse($_GET, array(
+      'projectid'     => AC_MOKEJIMAI_PROJECTID,
+      'sign_password' => AC_MOKEJIMAI_SIGN,
+		));
+		$order_data = explode('_', $response['orderid']);
+		$response['orderid'] = $order_data['0'];
+		$uid = account_getOrderUser($response['orderid']);
+		$account = user_load($uid);
+		$params = array(
+      'user_id'       => userinfo_get_topsportId($account),
+      'amount'        => account_currency_api_convert($response['paycurrency'], 'LTL', $response['payamount'] / 100),
+      'extra_amount'  => 0,
+      'order_id'      => $response['orderid'],
+      'merchant_id'   => $response['projectid'],
+      'language'      => $response['lang'],
+      'currency'      => 'LTL',//$response['paycurrency'],
+      'pay_text'      => urldecode($response['paytext']),
+      'payment'       => $response['payment'],
+      'status'        => $response['status'],
+      'error'         => '',
+      'client_name'   => account_getCorrectName($response['name'] != '' ? urldecode($response['name']) : urldecode($response['p_firstname'])),
+      'client_surename'=> account_getCorrectName($response['surename'] != '' ? urldecode($response['surename']) : urldecode($response['p_lastname'])),
+		);
+		account_payment_done($account, $params);
+		echo 'OK';
+	}catch (Exception $e){
+		echo get_class($e).': '.$e->getMessage();
+	}
+}

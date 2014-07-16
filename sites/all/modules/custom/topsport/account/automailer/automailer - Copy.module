@@ -1,0 +1,188 @@
+<?php
+
+
+function automailer_prepair()
+{
+	$langcode = 'lt';
+
+	
+	
+				$text = t("Su gimimo diena! [site:name]",array(), array('langcode' => $langcode));
+	
+			$text = t("
+[user:firstname] [user:surname],
+Sveikiname su gimimo diena.
+
+
+--  [site:name] team", array(), array('langcode' => $langcode));
+	
+	
+	$text = t("Jau 3 mėnesius jūs nesilankėte svetainėje [site:name]",array(), array('langcode' => $langcode));
+
+	$text = t("Jau mėnesį jūs nesilankėte svetainėje [site:name]",array(), array('langcode' => $langcode));
+
+	$text = t("Jau dvi savaites jūs nesilankėte svetainėje [site:name]",array(), array('langcode' => $langcode));
+
+	$text = t("Jau 3 dienas jūs nesilankėte svetainėje [site:name]",array(), array('langcode' => $langcode));
+	
+	$text = t("
+Norėtume priminti, kad jūs dar nepatvirtinote savo el.pašto adreso. Tai galite padaryti paspaudę šią nuorodą: 
+
+!url
+
+",array('!url'=>  'x'), array('langcode' => $langcode));
+	
+	$text = t("
+Norėtume priminti, kad dar nebaigėti registracijos procedūros - neužpildėte reikiamos informacijos.
+",array(), array('langcode' => $langcode));
+				
+	$text = t("
+Norėtume priminti, kad dar neatsiuntėte asmens tapatybę patvirtinančio dokumento skenuotos kopijos. 
+
+",array(), array('langcode' => $langcode));
+					
+	$text = t("
+[user:firstname] [user:surname],
+
+Jau tris dienas nesilankėte [site:name] svetainėje. Galbūt iškilo klausimų ar problemų? Su malonumu padėtume Jums jas išspręsti.
+
+!notifyinactive
+
+--  [site:name] team",array(), array('langcode' => $langcode));
+				
+				
+	$text = t("
+[user:firstname] [user:surname],
+
+Jau dvi savaites nesilankėte [site:name] svetainėje. Galbūt iškilo klausimų ar problemų? Su malonumu padėtume Jums jas išspręsti.
+
+!notifyinactive
+
+--  [site:name] team",array(), array('langcode' => $langcode));
+				
+				
+					$text = t("
+[user:firstname] [user:surname],
+
+Jau mėnesį nesilankėte [site:name] svetainėje. Galbūt iškilo klausimų ar problemų? Su malonumu padėtume Jums jas išspręsti.
+
+!notifyinactive
+
+--  [site:name] team",array(), array('langcode' => $langcode));
+				
+
+					$text = t("
+[user:firstname] [user:surname],
+
+Jau tris mėnesius nesilankėte [site:name] svetainėje. Galbūt iškilo klausimų ar problemų? Su malonumu padėtume Jums jas išspręsti.
+
+!notifyinactive
+
+--  [site:name] team",array(), array('langcode' => $langcode));
+	
+}
+
+function automailer_cron()
+{
+	
+	$roles = array(12,7,8,4);
+	$limit = 100;
+	
+	automailer_sendto_birthday($roles, $limit);
+	
+	$sent = automailer_sendto_inactive($roles, 3*30*24*3600, 'account_inactive3m', 4, array(), $limit);
+	if(count($sent) < $limit)
+		$sent = automailer_sendto_inactive($roles, 30*24*3600, 'account_inactive1m', 3, $sent, $limit);
+	if(count($sent) < $limit)
+		$sent = automailer_sendto_inactive($roles, 14*24*3600, 'account_inactive2w', 2, $sent, $limit);     
+	if(count($sent) < $limit)
+		$sent = automailer_sendto_inactive($roles, 3*24*3600, 'account_inactive3d', 1, $sent, $limit);
+    
+}
+
+
+function automailer_sendto_birthday($roles, $limit)
+{
+	$date = date('m-d');
+	
+	$result = db_query('SELECT u.uid, m.uid as was FROM {users} u LEFT JOIN {automailer} m ON u.uid = m.uid , {users_roles} r WHERE r.uid = u.uid AND r.rid IN ('.implode(',',$roles).') AND 
+	substring( u.data from (position(\'"birthday";s:10\' in u.data) + 22) for 5) = :date AND position(\'"birthday";s:10\' in u.data) > 0
+		
+AND ( m.timestamp < :timeout OR m.timestamp is null) AND  ( m.type = :type OR m.type is null) AND u.status = 1 LIMIT ' . $limit, array(
+    ':type' => 'birthday' ,
+	':timeout' => REQUEST_TIME - 96*3600,
+	':date' => $date
+  ));
+	
+	$uids = array();	
+	$update = array();
+	foreach($result as $r)
+	{
+		if($r->was) array_push($update, $r->uid);
+		array_push($uids, $r->uid);			
+	}
+	if(!count($uids)) return;
+	$users = user_load_multiple($uids);
+	foreach ($users as $account)
+	if($account){
+		$params['account'] = $account;     
+		drupal_mail('account', 'account_birthday', $account->mail, user_preferred_language($account), $params);
+		if(in_array($account->uid, $update))
+		db_query('UPDATE {automailer} SET step = :step, timestamp = :time WHERE uid = :uid AND type = :type', array(
+			':step' => 0,
+			':uid' => $account->uid,
+			':time' => REQUEST_TIME,
+			':type' => 'birthday'
+		));
+		else
+			db_query('INSERT INTO {automailer} (step, uid, type, timestamp) VALUES (:step , :uid , :type, :time)', array(
+			':step' => 0,
+			':uid' => $account->uid,
+			':time' => REQUEST_TIME,
+			':type' => 'birthday'
+		));
+	} 	
+}
+
+function automailer_sendto_inactive($roles, $timeout, $key, $step, $ignore, $limit)
+{
+	
+	$result = db_query('SELECT u.uid, m.uid as was FROM {users} u LEFT JOIN {automailer} m ON u.uid = m.uid , {users_roles} r WHERE r.uid = u.uid AND r.rid IN ('.implode(',',$roles).') AND u.access < :lastaccess AND (m.step is null OR m.step < :step ) AND ( m.type = :type OR m.type is null) AND u.status = 1 LIMIT ' . $limit, array(
+    ':lastaccess' => REQUEST_TIME - $timeout,
+    ':type' => 'inactive',
+	':step' => $step 
+  ));
+	$uids = array();	
+	$update = array();
+	foreach($result as $r)
+	{
+		if(!in_array($r->uid, $ignore))
+		{
+			if($r->was) array_push($update, $r->uid);
+			array_push($uids, $r->uid);		
+			array_push($ignore, $r->uid);
+		}
+	}
+	if(!count($uids)) return $ignore;
+	$users = user_load_multiple($uids);
+	foreach ($users as $account)
+	if($account){
+		$params['account'] = $account;     
+		drupal_mail('account', $key, $account->mail, user_preferred_language($account), $params);
+		if(in_array($account->uid, $update))
+            db_query('UPDATE {automailer} SET step = :step, timestamp = :time WHERE uid = :uid AND type = :type', array(
+                ':step' => $step,
+                ':uid' => $account->uid,
+                ':time' => REQUEST_TIME,
+                ':type' => 'inactive'
+            ));
+		else
+			db_query('INSERT INTO {automailer} (step, uid, type, timestamp) VALUES (:step , :uid , :type, :time)', array(
+			':step' => $step,
+			':uid' => $account->uid,
+			':time' => REQUEST_TIME,
+			':type' => 'inactive'
+            ));
+	} 
+	return $ignore;
+}

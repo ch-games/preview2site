@@ -1,0 +1,199 @@
+<?php
+
+
+function imokosismokos_menu(){
+	$items['imokos-ismokos'] = array(
+    'title' => 'Įmokos/išmokos',
+    'page callback' => 'imokosismokos_page',
+    'access arguments' => array('access content'),
+    'type' => MENU_SUGGESTED_ITEM,
+	);
+
+	$items['admin/config/content/imokos-ismokos'] = array(
+    'title' => 'Įmokos išmokos',
+    'description' => 'Įmokų/išmokų puslapio turinys',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('imokosismokos_admin'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+	);
+
+	return $items;
+}
+
+function imokosismokos_page(){
+	$page_title = t('Lažybų balanso įmokos ir išmokos');
+
+	global $user;
+	$build = array();
+    $build[] = array('#markup' => '<div class="panel panel-deposits"><div class="panel-body">');
+	$countryCode = isset($user->data['country']) ? $user->data['country'] : (geoip_country_code() ? geoip_country_code() : variable_get('site_default_country'));
+	if(!empty($_GET['country'])){
+		$countryCode = $_GET['country'];
+		$page_title .= ' (' . $countryCode .')';
+	}
+	drupal_set_title( $page_title );
+
+	$value = variable_get('imokosismokos_content_imokos', array('value' => ''));
+	$build[] = array('#markup' => $value['value']);
+	$build[] = array(
+    '#markup' => '<label class="left" style="margin: 0.5em 0;">'.t('Valstybė').'</label>: ',
+	);
+	$build[] = array(
+    '#theme' => 'select',
+    '#title' => t('Valstybė'),
+    '#value' => $countryCode,
+    '#options' => country_get_list(),
+    '#attributes' => array(
+      'onchange' => "window.location='?country=' + this.value",
+	),
+	);
+
+	$header = array(
+    'title' => array('data' => t('Įmokos būdas'), 'colspan' => 2),
+    'komisiniai' => t('Komisiniai'),
+    'update' => t('Balanso įskaitymas'),
+    'limit' => t('Limitas'),
+	);
+
+	$paymentGroups = account_PaymentGroups();
+	$methods = _account_payment_method_list();
+	$paymentMethods = array();
+	foreach($methods as $method){
+		$paymentMethods[$method['id']] = $method;
+	}
+
+	$output = '';
+	foreach(array('main', 'another') as $position){
+		$rows = array();
+		foreach($paymentGroups as $key => $group){
+			$groupTitle = array(array('data' => '<strong>'.$group.'</strong >', 'colspan' => 5));
+			$groupRows = array();
+			foreach($paymentMethods as $methodKey => $method){
+				switch($position){
+					case 'main':
+						if(!empty($method['countries']) AND !in_array($countryCode, $method['countries'])){ continue 2; }
+						break;
+					case 'another':
+						if(empty($method['countries']) OR in_array($countryCode, $method['countries'])){ continue 2; }
+						break;
+				}
+				if($method['category'] == $key){
+					$row = array();
+					$row[] = '<div class="pay-meth-minsize">'.$paymentMethods[$methodKey]['title'].'</div>';
+					$row[] = $paymentMethods[$methodKey]['name'];
+					$row[] = $paymentMethods[$methodKey]['komisiniai'];
+					$row[] = $paymentMethods[$methodKey]['update'];
+					$row[] = t('Min.').' '.account_currency_convert_string($user->uid, $paymentMethods[$methodKey]['limit_min']);
+					$groupRows[] = $row;
+				}
+			}
+			if(!empty($groupRows)){
+				$rows[] = $groupTitle;
+				foreach($groupRows as $row){
+					$rows[] = $row;
+				}
+			}
+		}
+		$position_methods =  array(
+      '#theme' => 'fieldset',
+      '#title' => t('Kiti mokėjimo būdai'),
+      '#tree' => FALSE,
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#attached' => array(
+        'js' => array(
+          'misc/form.js',
+          'misc/collapse.js',
+	  '(function($){})(jQuery);'  => array('type' => 'inline'),  
+		),
+		),
+      '#attributes' => array(
+        'class' => array('collapsible', 'collapsed'),
+		),
+		);
+		if($position == 'main'){
+			$position_methods['#title'] = t('Pagrindiniai mokėjimo būdai');
+			$position_methods['#collapsed'] = FALSE;
+			$position_methods['#attributes']['class'] = array('collapsible');
+		}
+		$position_methods['#children'] = theme('table', array('attributes' => array('class' => array('table')), 'header' => $header, 'rows' => $rows));
+		$output .= drupal_render($position_methods);
+	}
+
+	$build[] = array('#markup' => $output);
+
+
+	$value = variable_get('imokosismokos_content_ismokos', array('value' => ''));
+	$build[] = array('#markup' => $value['value']);
+	$build[] = array(
+    '#markup' => '<label class="left" style="margin: 0.5em 0;">'.t('Valstybė').'</label>: ',
+	);
+	$build[] = array(
+    '#theme' => 'select',
+    '#title' => t('Valstybė'),
+    '#value' => $countryCode,
+    '#options' => country_get_list(),
+    '#attributes' => array(
+      'onchange' => "window.location='?country=' + this.value",
+	),
+	);
+	$build[] = array('#markup' => account_withdrawals_methods_table(true, $countryCode));
+	$value = variable_get('imokosismokos_content_end', array('value' => ''));
+	$build[] = array('#markup' => $value['value']);
+    
+    $build[] = array('#markup' => '</div></div>');
+	return $build;
+}
+
+function imokosismokos_admin($form, &$form_state){
+
+	$value = variable_get('imokosismokos_content_imokos', array('value' => ''));
+	$form['imokosismokos_content_imokos'] = array(
+    '#type' => 'text_format',
+    '#title' => t('Įmokų lentelės antraštė'),
+    '#default_value' => $value['value'],
+    '#required' => FALSE,
+	);
+
+	$value = variable_get('imokosismokos_content_ismokos', array('value' => ''));
+	$form['imokosismokos_content_ismokos'] = array(
+    '#type' => 'text_format',
+    '#title' => t('Išmokų lentelės antraštė'),
+    '#default_value' => $value['value'],
+    '#required' => FALSE,
+	);
+
+	$value = variable_get('imokosismokos_content_end', array('value' => ''));
+	$form['imokosismokos_content_end'] = array(
+    '#type' => 'text_format',
+    '#title' => t('Baigiamosios nuostatos'),
+    '#default_value' => $value['value'],
+    '#required' => FALSE,
+	);
+	return system_settings_form($form);
+}
+
+
+function imokosismokos_variable_info($options){
+	$variables['imokosismokos_content_imokos'] = array(
+    'title' => t('Įmokų lentelės antraštė'),
+    'description' => t('Įmokų lentelės antraštės tekstas Įmokų/išmokų puslapyje'),
+    'type' => 'text',
+	);
+	$variables['imokosismokos_content_ismokos'] = array(
+    'title' => t('Išmokų lentelės antraštė'),
+    'description' => t('Išmokų lentelės antraštės tekstas Įmokų/išmokų puslapyje'),
+    'type' => 'text',
+	);
+	$variables['imokosismokos_content_end'] = array(
+    'title' => t('Baigiamosios nuostatos'),
+    'description' => t('Baigiamųjų nuostatų tekstas Įmokų/išmokų puslapyje'),
+    'type' => 'text',
+	);
+
+	return $variables;
+}
+
+
+?>

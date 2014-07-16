@@ -1,0 +1,170 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Install, update and uninstall functions for the offers module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+
+
+function racingdogs_schema() {
+
+	$schema['racingdogs'] = array(
+		'description' => 'Stores racing dogs games data',
+		'fields' => array(
+			'rdid' => array(
+				'description' => 'The primary identifier for a RD game.',
+				'type' => 'serial',
+				'unsigned' => TRUE,
+				'not null' => TRUE,
+	),
+			'custid' => array(
+				'description' => "Your unique reference for your customer which is provided with the request. ",
+				'type' => 'varchar',
+				'length' => 30,
+				'not null' => TRUE,
+				'default' => '',
+	),
+			'amount' => array(
+				'type' => 'numeric',
+				'unsigned' => FALSE,
+				'not null' => FALSE,
+				'default' => 0,
+				'description' => "The amount your customer wishes to enter the RacingDogs Web game with (NOT multiplied by 100) ",
+				'precision' => 15,
+				'scale' => 2,
+	),
+			'curr' => array(
+				'description' => "Currency in accordance with ISO.",
+				'type' => 'varchar',
+				'length' => 3,
+				'not null' => TRUE,
+				'default' => '',
+	),
+			'fun' => array(
+				'description' => "'y' for 'Play for Fun' mode. 'n' for 'Play for Real' mode ",
+				'type' => 'varchar',
+				'length' => 1,
+				'not null' => TRUE,
+				'default' => '',
+	),
+			'rdstatus' => array(
+				'description' => "Status of reques",
+				'type' => 'varchar',
+				'length' => 32,
+				'not null' => FALSE,
+				'default' => "",
+	),
+			'rderror' => array(
+				'description' => "Error code",
+				'type' => 'varchar',
+				'length' => 32,
+				'not null' => FALSE,
+				'default' => "",
+	),
+			'rderrorplus' => array(
+				'description' => "Explanation of error code",
+				'type' => 'varchar',
+				'length' => 255,
+				'not null' => FALSE,
+				'default' => '',
+	),
+			'url' => array(
+				'description' => "Full URL prepared for this customer. ",
+				'type' => 'varchar',
+				'length' => 255,
+				'not null' => TRUE,
+				'default' => '',
+	),
+			'sessionid' => array(
+				'description' => "Unique ID for this customer for the session started.",
+				'type' => 'varchar',
+				'length' => 17,
+				'not null' => TRUE,
+				'default' => '',
+	),
+			'payin' => array(
+				'type' => 'numeric',
+				'unsigned' => FALSE,
+				'not null' => FALSE,
+				'default' => null,
+				'description' => "The amount your customer wishes to enter the RacingDogs Web betting game with (NOT multiplied by 100)",
+				'precision' => 15,
+				'scale' => 2,
+	),
+			'payout' => array(
+				'type' => 'numeric',
+				'unsigned' => FALSE,
+				'not null' => FALSE,
+				'default' => null,
+				'description' => "The amount your customer leaves the RacingDogs Web betting game with (NOT multiplied by 100)",
+				'precision' => 15,
+				'scale' => 2,
+	),
+			'stake' => array(
+				'type' => 'numeric',
+				'unsigned' => FALSE,
+				'not null' => FALSE,
+				'default' => null,
+				'description' => "Total stake placed by the customer",
+				'precision' => 15,
+				'scale' => 2,
+	),
+			'win' => array(
+				'type' => 'numeric',
+				'unsigned' => FALSE,
+				'not null' => FALSE,
+				'default' => null,
+				'description' => "Total winnings won by the customer",
+				'precision' => 15,
+				'scale' => 2,
+	),
+			'tipcount' => array(
+				'description' => "Number of bets",
+				'type' => 'int',
+				'not null' => FALSE,
+				'default' => null,
+	),
+			'startdt' => array(
+				'description' => "Date/ time when the game was started. Format: YYYY>MM>DD hh:mm:ss ",
+				'mysql_type' => 'DATETIME',
+				'pgsql_type' => 'timestamp without time zone',
+				'not null' => FALSE,
+				'default' => null,
+	),
+			'enddt' => array(
+				'description' => "Date/ time when the game ended. Format: YYYY>MM>DD hh:mm:ss",
+				'mysql_type' => 'DATETIME',
+				'pgsql_type' => 'timestamp without time zone',
+				'not null' => FALSE,
+				'default' => null,
+	),
+			'tpbegin' => array(
+				'description' => "TopSport RD Web Session Begin Confirmation Status Code",
+				'type' => 'varchar',
+				'length' => 5,
+				'not null' => FALSE,
+				'default' => null,
+	),
+			'tpend' => array(
+				'description' => "TopSport RD Web Session End Confirmation Status Code",
+				'type' => 'varchar',
+				'length' => 5,
+				'not null' => FALSE,
+				'default' => null,
+	),
+	),
+		'indexes' => array(
+      		'user_session' => array('sessionid', 'custid'),
+      		'session' => array('sessionid'),
+	),
+    	'primary key' => array('rdid'),
+	);
+
+	return $schema;
+
+}

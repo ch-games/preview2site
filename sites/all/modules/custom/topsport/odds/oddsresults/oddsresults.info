@@ -1,0 +1,8 @@
+; $Id: topleagues.info $
+name = Odds Results
+description = "Odds Results"
+dependencies[] = topsport
+core = 7.x
+version = 7.x-0.x-dev
+package = TopSport
+files[] = oddsresults.module

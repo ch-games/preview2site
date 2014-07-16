@@ -1,0 +1,8 @@
+; $Id: slideshow.info $
+name = Slideshow
+description = "Display slideshow"
+dependencies[] = topsport
+core = 7.x
+version = 7.x
+package = TopSport
+files[] = slideshow.module

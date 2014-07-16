@@ -1,0 +1,414 @@
+<?php
+
+define('SO_FRONT_SERVER_URL', 'http://finance.bettopsport.com/');
+define('F_API_SERVER_URL', 'http://api.finance.bettopsport.com/Api');
+define('F_API_USERNAME',   'api@finance.bettopsport.com');
+define('F_API_PASSWORD',   'rQIPrVakWgWup2wwO5NH');
+define('F_API_WHITELABEL', 'bettopsport');
+define('F_WALLET_SECURITY_CODE', 'trader777');
+
+/**
+ * Implements hook_menu().
+ */
+function finance_menu() {
+	$items = array();
+
+	$items['financials/trade'] = array(
+    'title' 		   => 'Financials',
+    'description' 	   => 'Binary options trading',
+    'page callback'    => 'finance_trade_page',
+    'access arguments' => array('access content'),  // every user can look at generated page
+	//'type' 			   => MENU_CALLBACK 			// define type of menu item as callback
+	);
+
+	$items['api/so/shared-wallet'] = array(
+  		'title' 		   => 'Shared wallet',
+  		'description' 	   => 'Shared wallet',
+  		'page callback'    => 'finance_shared_wallet',
+  		'access arguments' => array('access content'),  // every user can look at generated page
+	//'type' 			   => MENU_CALLBACK 			// define type of menu item as callback
+	);
+	
+	$items['financials/account_balance_update/ajax'] = array(
+	    'title' => 'account balance update',
+	    'page callback' => 'account_balance_update',
+	    'access arguments' => array('access content'),
+	    'type' => MENU_CALLBACK,
+	);
+
+	return $items;
+}
+
+function finance_init() {    
+    global $user;   
+    if(GeoGamesManager::showGeoContent($user)){
+        $is_current = in_array(current_path(), array('financials/trade'));
+        drupal_add_js('
+            jQuery(document).ready(function() {   				
+                 jQuery("#top-services-navigation").append("<li class=\"menu-30027'.($is_current ? ' active':'').'\"><a href=\"'.url('financials/trade').'\">'.t('Finansai').'</a></li>");   
+            });', 'inline');        
+    }    
+    
+    // @todo:remove this function then issues will be solved in SO side
+    if(user_is_logged_in()){
+            drupal_add_js('
+            jQuery(document).ready(function() {    				
+                    jQuery(".logout .button").attr("onClick", "jQuery(body).append(\'<iframe src=\"'.SO_FRONT_SERVER_URL.'Login/logout\" style=\"display:none;\"></ifame>\'); return setTimeout(function(){return true;},1000);");
+                });             
+         ', 'inline');
+    }
+}
+
+/*
+ * 
+ */
+
+/**
+ *
+ */
+function finance_trade_page(){
+    global $base_url;
+	drupal_set_title(t('Binary options trading'));
+	if ( finance_WebOperationsAreAllowed() ){		
+		global $user, $language;
+		$front_end_url = SO_FRONT_SERVER_URL;
+		drupal_add_js('jQuery(document).ready(function() { jQuery(".financials-frame").parent().css("max-width", "1014px"); });', 'inline');
+		if ( user_is_logged_in() AND isset($user->data['tsuid']) AND $user->data['tsuid'] > 0 ){		    
+			if ( !isset($user->data['so_registered']) ){
+				finance_user_create( $user );
+			} else {
+				finance_user_set_auth($user);
+			}			
+			$front_end_url .= 'Login/loginByAuth/'.finance_user_get_authkey($user).'/home';	
+			drupal_add_js('				
+    		    function account_balance_update(){    		
+		    		var url = "/front/User/balance";
+		    		jQuery.ajax({
+					 	dataType: "json",
+					  	url: url,
+						success: function(data){
+		    				if(data.BalanceString){
+		    					jQuery(".my-balance a").html(data.BalanceString);
+		    				}
+						}
+					});
+		        	setTimeout(account_balance_update, 10000);	
+		        }    						
+				jQuery(document).ready(function() {    				
+                    setTimeout(account_balance_update, 10000);
+				});                
+			' , 'inline');	
+		} else {
+			//$front_end_url .= 'Login/logout';
+		}
+		$_lang = substr($language->language, 0, 2);
+		if($_lang == 'ru') $_lang = 'en';
+		$front_end_url .= '?lang=' . $_lang;		
+		$html = '<iframe id="financials_container" src="'.$front_end_url.'" style="width:100% !important; height:722px; margin-top: 10px;"></iframe>';
+		
+		return  theme( 'finance_trade_page',  array( 'layout' =>  $html ));
+	} else {
+		drupal_set_message( t('Atsiprašome už nepatogumus, tačiau binariniai aukcionai laikinai nepasiekiami, bandykite prisijungti vėliau.'), 'warning' );
+		drupal_goto();
+		return false;
+	}
+}
+
+/**
+ * @deprecated 2013-09-26
+ */
+function account_balance_update() {
+  global $user;
+  if (user_is_logged_in() && _finance_getbalanceUpdate($user->data['tsuid'])){
+    $commands['#account-balance'] = account_balance_string();
+    echo json_encode($commands);    
+  }  
+  exit;
+}
+
+
+/**
+ * Implements hook_theme().
+ */
+function finance_theme() {
+	return array(
+      'finance_trade_page' => array(
+        'template'  => 'financials-trade',
+        'variables' => array('layout' => NULL),
+      )
+	);
+}
+
+/**
+ * @param array $data
+ * @param unknown_type $log
+ * @return Ambigous <multitype:, array, string>|boolean
+ */
+function finance_connect( array $data = null, $log = TRUE) {
+	if (is_array($data)) {
+		$data['api_username']   = F_API_USERNAME;
+		$data['api_password']   = F_API_PASSWORD;
+		$data['api_whiteLabel'] = F_API_WHITELABEL;
+		$options = array(
+				'headers' => array( 'Content-Type' => 'application/x-www-form-urlencoded'),
+				'method'  => 'POST',
+				'data'    =>  http_build_query( $data, '','&' ),
+				'timeout' => 60,
+		);
+		$respond = drupal_http_request( F_API_SERVER_URL, $options);
+		if ( $respond->code == 200 ){
+			$respond_data = sx_array( @simplexml_load_string($respond->data));
+			if ($respond_data['connection_status'] === 'successful'){
+				return $respond_data; // OK, connection went successful
+			} else {
+				watchdog('finance_connect', 'Connection failure,<br />SEND REQUEST DATA: <br /><pre>!request</pre><br /> Passed response:<br /><pre>!message</pre>', array( '!message' => print_r($respond_data, true), '!request' => print_r($data, true) ), WATCHDOG_ERROR );
+			}
+		} else {
+			watchdog('finance_connect', 'Connection failure,<br />SEND REQUEST DATA: <br /><pre>!request</pre><br /> Passed response:<br /><pre>!message</pre>', array( '!message' => print_r($respond, true), '!request' => print_r($data, true) ), WATCHDOG_ERROR );
+		}
+	}
+	return false;
+}
+
+/**
+ * @param unknown_type $user
+ * @return boolean
+ */
+function finance_user_create($user){
+	global $language;
+	$_lang = substr($language->language, 0, 2);
+	$respond_data = finance_connect(
+	$tmp = array(
+		'MODULE'     => 'Customer',
+		'COMMAND'    => 'add',
+		'FirstName'  => $user->data['firstname'].(empty($user->data['middlename']) ? '' : ' '.$user->data['middlename']),
+		'LastName' 	 => $user->data['surname'],
+		'email'    	 => $user->data['tsuid'].'@bettopsport.com',
+		'password' 	 => $user->pass,
+		'Phone' 	 => '860000000',
+		'Country'    => finance_country_view('LT'),
+		'currency'   => $user->data['currency'],
+		'birthday'   => $user->data['birthday'],
+		'gender'     => 'male',
+		'siteLanguage' => $_lang
+	));
+	if ($respond_data['operation_status'] === 'successful'){
+		$user->data['so_registered'] = $respond_data['Customer']['id'];
+		$user->data['so_currency']   = $user->data['currency'];
+		user_save( $user );
+		finance_user_set_auth( $user );
+		// make log fo user
+		account_log( $user->uid, 'Spot Option Customer API', 'Vartotojas <i>%name</i> sėkmingai užregistruotas SpotOption sistemoje.', array( '%name' => $user->name ));
+		return true;
+	} else {
+		watchdog('finance_user_create', 'OPERATION - CUSTOMER ADD failure, passed response:<br /><pre>!message</pre>', array( '!message' => print_r($respond_data, true) ), WATCHDOG_ERROR );
+	}
+	return false;
+}
+
+/**
+ * @param unknown_type $user
+ * @return boolean
+ */
+function finance_user_set_auth(&$user){
+	global $language;
+	$_lang = substr($language->language, 0, 2);
+	$respond_data = finance_connect(
+      array(
+        'MODULE'     => 'Customer',
+        'COMMAND'    => 'edit',
+        'customerId' => $user->data['so_registered'],
+        'authKey'    => finance_user_get_authkey($user),
+      	'siteLanguage' => $_lang
+      )
+	);
+	if ($respond_data['operation_status'] === 'successful'){
+		return true;
+	} else {
+		watchdog('finance_user_set_auth', 'OPERATION - CUSTOMER EDIT AUTH failure, passed response:<br /><pre>!message</pre>', array( '!message' => print_r($respond_data, true) ), WATCHDOG_ERROR );
+	}
+	return false;
+}
+
+/**
+ * @param unknown_type $user
+ * @return string
+ */
+function finance_user_get_authkey(&$user){
+	return strtoupper(md5($user->sid));
+}
+
+/**
+ * @param unknown_type $user
+ * @return boolean
+ */
+function finance_user_view(&$user){
+	$respond_data = finance_connect(
+      array(
+      	'MODULE'     	=> 'Customer',
+      	'COMMAND'    	=> 'view',
+      	'FILTER[email]' => $user->data['tsuid'].'@bettopsport.com',
+      )
+	);
+	if ($respond_data['operation_status'] === 'successful'){
+		return true;
+	} else {
+		watchdog('finance_user_create', 'OPERATION - CUSTOMER ADD failure, passed response:<br /><pre>!message</pre>', array( '!message' => print_r($respond_data, true) ), WATCHDOG_ERROR );
+	}
+	return false;
+}
+
+/**
+ * @param unknown_type $lang_iso
+ * @return boolean
+ */
+function finance_country_view($lang_iso){
+	//return 1;
+	$respond_data = finance_connect(
+      array(
+        'MODULE'      => 'Country',
+        'COMMAND'     => 'view',
+        'FILTER[iso]' => $lang_iso
+      )
+	);
+	if ($respond_data['operation_status'] === 'successful'){
+		return isset($respond_data['Country']['data_0']['id']) ? $respond_data['Country']['data_0']['id'] : false;
+	} else {
+		watchdog('finance_country_view', 'OPERATION - COUNTRY VIEW failure, passed response:<br /><pre>!message</pre>', array( '!message' => print_r($respond_data, true) ), WATCHDOG_ERROR );
+	}
+	return false;
+}
+
+
+/**
+ * @return boolean
+ */
+function finance_WebOperationsAreAllowed(){
+    return true;
+}
+
+/**
+ * ErrorCodes:
+ * 404 - Access forbiden
+ * 100 - Wrong signature passed!
+ * 101 - By request did not found any commands to do
+ * 201 - Can't connect to data base, please rollback all operation to preaviuos stage and try again later
+ * xxx - went wrong on getBalance section
+ *
+ */
+function finance_shared_wallet(){
+	$response = '<ErrorCode>Forbiden</ErrorCode>';
+	$command = $_REQUEST; /* @TODO: should be only POST request */
+	if (isset($command)){
+		$tsuid = (int)str_replace('@bettopsport.com', '',$command['email']);
+		if (finance_is_valid_security_code($command['signature'], $tsuid)){
+			if ($command['MODULE'] === 'balance' AND is_int($tsuid)){
+				$response = finance_shared_wallet_balance($tsuid);
+			}elseif ($command['MODULE'] === 'wallet' AND isset($command['wid']) AND isset($command['amount']) AND isset($command['currency']) AND isset($command['trade_id'])){
+                $response = finance_shared_wallet_save($command['wid'], $tsuid, $command['amount'], $command['currency'], $command['trade_id']);
+                watchdog('finance_balance', 'POST message in balance operation:<br /><pre>!message</pre><br/>POST message in balance operation:<br /><pre>!respond</pre>', array( '!message' => print_r($command, true), '!respond' => print_r($response, true) ), WATCHDOG_INFO );
+			} else {
+				$response = '<ErrorCode>101</ErrorCode>';
+			}
+		} else {
+			// we can do tracking logs for security and testing purposes!
+			$response = '<ErrorCode>100</ErrorCode>';
+		}
+	}
+	drupal_add_http_header('Content-Type', 'text/xml');
+	drupal_add_http_header('charset', 'utf-8');
+	print $response;
+}
+
+/**
+ * @param integer $tsuid
+ * @return string
+ */
+function finance_shared_wallet_balance($tsuid) {
+	$customer = topsport_searchClientUser($tsuid);
+	if (isset($customer['Money']['Balance'])){
+		db_query('UPDATE ts_users_data SET real_amount = :balance WHERE tsuid = :tsuid', array(
+				':tsuid' => $tsuid,
+				':balance' => $customer['Money']['Balance'],
+			));
+		return 	'<Customer email="'.$tsuid.'@bettopsport.com" timestamp="'.date('c').'">'.
+					'<Balance>'.number_format($customer['Money']['Balance'], 2, '.', '').'</Balance>'.
+					'<Currency>LTL</Currency>'.
+				'</Customer>';
+	}
+}
+
+function finance_shared_wallet_save($wid, $user_id, $amount, $currency, $trade_id) {
+	$result = topsport_saveSoSharedWallet($wid, $user_id, $amount, $currency, $trade_id);
+	if(isset($result['Code']) AND $result['Code'] == 0){
+		$shared_wallet = '<SharedWallet email="'.$user_id.'@bettopsport.com" timestamp="'.date('c').'">'.
+							'<wid>'.$wid.'</wid>'.
+							'<operation_status>successful</operation_status>'.
+						 '</SharedWallet>';
+        _finance_setbalanceUpdate($user_id);
+	} elseif (isset($result['Code']) AND $result['Code'] == 10) {            
+        $shared_wallet = '<SharedWallet email="'.$user_id.'@bettopsport.com" timestamp="'.date('c').'">'.
+                         '<wid>'.$wid.'</wid>'.
+                         '<operation_status>Trade accepted before</operation_status>'.
+                         '<operation_code>'.(int)$result['Code'].'</operation_code>'.
+                      '</SharedWallet>';
+	} elseif (isset($result['Code']) AND $result['Code'] == 11) {            
+        $shared_wallet = '<SharedWallet email="'.$user_id.'@bettopsport.com" timestamp="'.date('c').'">'.
+                         '<wid>'.$wid.'</wid>'.
+                         '<operation_status>Settlement accepted before</operation_status>'.
+                         '<operation_code>'.(int)$result['Code'].'</operation_code>'.
+                      '</SharedWallet>';
+	} else {
+		$shared_wallet = '<SharedWallet email="'.$user_id.'@bettopsport.com" timestamp="'.date('c').'"><ErrorCode>201</ErrorCode></SharedWallet>';
+	}
+	return $shared_wallet;
+}
+
+function topsport_saveSoSharedWallet($wid, $user_id, $amount, $currency, $trade_id){
+	$response = topsport_http_request(
+	  "saveSoSharedWalletXML.jsp", 
+      array(
+      		'wid'      => $wid, 
+      		'user_id'  => $user_id, 
+      		'amount'   => ($amount == 0) ? $amount : account_currency_api_convert($currency, 'LTL', $amount), 
+      		'currency' => 'LTL', 
+      		'trade_id' => $trade_id 
+      )
+	);
+	$result = sx_array(simplexml_load_string($response));
+	return $result;
+}
+
+/**
+ * @param string $signature
+ * @param int $tsuid
+ * @return boolean
+ */
+function finance_is_valid_security_code($signature = '', $tsuid){
+	return ($signature === strtoupper(md5($tsuid.'@bettopsport.com'.F_WALLET_SECURITY_CODE))) ? true : false;
+}
+
+/**
+ * @deprecated 2013-09-26
+ * @param unknown $ts_uid
+ */
+function _finance_setbalanceUpdate($ts_uid){
+    $cid = 'account_user_'.$ts_uid.'_force_balance_update';
+    cache_set($cid, true);
+}
+
+/**
+ * @deprecated 2013-09-26
+ * @param unknown $ts_uid
+ * @return boolean
+ */
+function _finance_getbalanceUpdate($ts_uid){
+    $force_update = false;
+    $cid = 'account_user_'.$ts_uid.'_force_balance_update';
+    $cache = cache_get($cid);
+    if($cache && $cache->data == true){
+        $force_update = true;        
+        cache_set($cid, false);
+    }
+    return $force_update;
+}

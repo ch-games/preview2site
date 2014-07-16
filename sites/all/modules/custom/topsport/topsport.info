@@ -1,0 +1,7 @@
+; $Id: offers.info,v 0.1 2010/11/25 10:48:38 evaldas Exp $
+name = TopSport
+description = "Module packet for topsport"
+core = 7.x
+version = 7.x-0.x-dev
+package = TopSport
+files[] = topsport.module

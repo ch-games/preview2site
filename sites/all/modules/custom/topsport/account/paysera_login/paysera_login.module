@@ -1,0 +1,474 @@
+<?php
+
+function paysera_login_menu(){
+	$items = array();
+	$items['account/login/paysera'] = array(
+			'title' => 'Login with Paysera',
+			//'description' => 'Laukiančiųjų aktyvacijos sąrašas',
+			'page callback' => 'paysera_login_oauth',
+			// 'access arguments' => array('awaiting activations'),
+			'access callback' => TRUE,
+			'type' => MENU_CALLBACK,
+		  
+	);
+	return $items;
+}
+
+
+function paysera_extract_address_from_string($str)
+{			
+	$house = '';
+	$flat = '';
+
+	$regex = '(.+)((?:\s[0-9]+[a-zA-Z]?\s?-\s?[0-9]+)|(?:\s[0-9]+[a-zA-Z]?))\s?$';
+	if(preg_match('/'.$regex.'/', $str, $matches))				
+	{
+		array_shift($matches);
+		$street = trim($matches[0]);
+		$t = explode('-', $matches[1]);
+		$house = trim($t[0]);
+		$flat = count($t)>1 ? trim($t[1]) : '';
+	}
+	else
+	{
+		$street = $s;				
+	}
+	return compact('street','house','flat');
+}
+
+function _paysera_mail_notify($op, $account, $language = NULL) {
+  $params['account'] = $account;
+  $language = $language ? $language : user_preferred_language($account);
+
+  if(in_array($op, array('account_pending_approval', 'account_partial_match'))) {
+    $mail = drupal_mail('account', $op, variable_get('account_administrator_mail', variable_get('site_mail')), language_default(), $params);
+    // $mail = drupal_mail('regimp', $op, 'admin@uzkuras.eu', language_default(), $params);
+    // $mail['to'] = 'info@topsport.lt'; drupal_mail_system('account', $op)->mail($mail);
+    // $mail['to'] = 'test@webpartners.lt'; drupal_mail_system('account', $op)->mail($mail);
+  }
+  return empty($mail) ? NULL : $mail['result'];
+}
+
+function paysera_createContractXML($account){
+  $xml = '<?xml version="1.0" encoding="UTF-8" ?>
+  <iContract>
+    <FirstName>'.$account->data['firstname'].'</FirstName>
+    <MiddleName>'.$account->data['middlename'].'</MiddleName>
+    <LastName>'.$account->data['surname'].'</LastName>
+    <BirthDate>'.$account->data['birthday'].'</BirthDate>
+    <PersonalCode>'.$account->data['personalId'].'</PersonalCode>
+    <UserCountryId>'.country_GetIdByCode($account->data['personal_country']).'</UserCountryId>
+    <ContractIdentifier>'.$account->data['ContractIdentifier'].'</ContractIdentifier>
+    <ContractDate>'.$account->data['ContractDate'].'</ContractDate>
+    <UserCardNumber>'.(isset($account->data['UserCardNumber']) ? $account->data['UserCardNumber'] : '000000').'</UserCardNumber>
+    <PinCardNumber>'.(isset($account->data['PinCardNumber']) ? $account->data['PinCardNumber'] : '000000').'</PinCardNumber>
+    <AddressCountryId>'.country_GetIdByCode($account->data['country']).'</AddressCountryId>
+    <AddressCityOrVillage>'.$account->data['city'].'</AddressCityOrVillage>
+    <AddressPostalCode>'.$account->data['zip'].'</AddressPostalCode>
+    <AddressStreet>'.$account->data['street'].'</AddressStreet>
+    <AddressBuilding>'.$account->data['house'].'</AddressBuilding>
+    <AddressApartment>'.$account->data['flat'].'</AddressApartment>
+    <DayTimePhone1>'.(isset($account->data['work_number']) ? $account->data['work_number'] : '').'</DayTimePhone1>
+    <DayTimePhone2></DayTimePhone2>
+    <EveningPhone1>'.(isset($account->data['home_number']) ? $account->data['home_number'] : '').'</EveningPhone1>
+    <EveningPhone2></EveningPhone2>
+    <CellularPhone1>'.$account->data['mobile_number'].'</CellularPhone1>
+    <CellularPhone2></CellularPhone2>
+    <Email>'.$account->mail.'</Email>
+    <UserOfficeId>'.$account->data['betcenter'].'</UserOfficeId>
+    <LanguageId>'.topsport_LangCodes($account->language).'</LanguageId>
+  </iContract>';
+
+  return $xml;
+}
+
+function _paysera_generateContractIdentifier($betcenter, $ContractNumber = false){
+  if(!$ContractNumber){
+    $key = 'variable_account_contract_'.$betcenter;
+    $ContractNumber = variable_get($key, variable_get('variable_account_contract'));
+    variable_set($key, ++$ContractNumber);
+  }
+  return '8'.sprintf('%04d', $betcenter).'-'.sprintf('%02d', $ContractNumber);
+}
+
+
+/**
+ * 
+ * @param type $num - if set then cardNumber is stored as $num, 
+ *					if null then returns current cardNumber
+ * @return type
+ */
+function paysera_login_userPinCardNumber($num = null)
+{
+	$key = 'variable_account_userPinNumbers';
+	
+	if($num)
+	{		
+		db_query('update ts_variable set value = :CardNumber where name = :key'
+				, array(
+          ':CardNumber' => serialize($num),
+          ':key' => $key,
+          ));
+	}
+	else
+	{
+		$result = db_query('select value from ts_variable where name = :key', array(':key'=>$key));
+		
+		if($r = $result->fetchObject())
+		{
+			return unserialize($r->value);
+		}
+		else return 100000;
+	}
+}
+
+function paysera_login_oauth()
+{
+	
+	global $user, $language;
+	
+	require 'Paysera/WalletApi/Autoloader.php';
+	require 'Paysera/WalletApi.php';
+	
+	Paysera_WalletApi_Autoloader::register();
+	
+	// credentials for API
+	// $clientId = '6ZJvI7W5SHWgbe5w';
+	// $secret - shared secret to use in MAC auth
+	// $secret = 'bE8ej4Vuiu4X1xlCdAD6lIvEkbbCzHGH';
+	// or information about certificate to use in SSL auth
+	//$secret = Paysera_WalletApi_Http_ClientCertificate::create()
+	//    ->setCertificatePath('/path/to/cert.crt')
+	//    ->setPrivateKeyPath('/path/to/private.key');
+	
+	// create main object to use for all functionality		
+
+	$path = substr(__FILE__, 0, strrpos(__FILE__, '/'));
+		
+	$clientId = 25;
+	$cert = Paysera_WalletApi_Http_ClientCertificate::create()
+		->setCertificatePath($path . '/cert/topsport.crt')
+		->setPrivateKeyPath($path .'/cert/private.pem');
+
+	$api = new Paysera_WalletApi($clientId, $cert);
+	
+	
+	//$api = new Paysera_WalletApi($clientId, $secret);
+	// get service, responsible for OAuth code grant type integration
+	$oauth = $api->oauthConsumer();
+	
+	// example how to get ask and get information about paysera.com user
+	
+	try {
+		if (!isset($_SESSION['token'])) {           // no token in session - let's get the token
+			$token = $oauth->getOAuthAccessToken(); // this gets code query parameter if available and exchanges for token
+			if ($token === null) {                  // no code parameter - redirect user to authentication endpoint
+				$redirectUri = null;                // URL of this file; it's optional parameter
+				header('Location: ' . $oauth->getAuthorizationUri(array(            // scopes are optional, no scope allows to get user ID/wallet ID
+				Paysera_WalletApi_OAuth_Consumer::SCOPE_EMAIL,                  // to get user's main email address
+				Paysera_WalletApi_OAuth_Consumer::SCOPE_IDENTITY,            // this scope allows to get personal code, name and surname
+				Paysera_WalletApi_OAuth_Consumer::SCOPE_FULL_NAME,           // use this scope if only name and surname is needed
+				Paysera_WalletApi_OAuth_Consumer::SCOPE_ADDRESS,
+				Paysera_WalletApi_OAuth_Consumer::SCOPE_PHONE,
+				Paysera_WalletApi_OAuth_Consumer::SCOPE_DOB,
+				Paysera_WalletApi_OAuth_Consumer::SCOPE_GENDER
+				//Paysera_WalletApi_OAuth_Consumer::SCOPE_WALLET_LIST,				
+				// Paysera_WalletApi_OAuth_Consumer::SCOPE_IDENTITY_OFFLINE,    // this allows to get identity by user ID, after token has expired, using API, not related to token
+				), $redirectUri));
+			} else {
+				$_SESSION['token'] = serialize($token);
+			}
+		}
+	
+		
+		if (isset($_SESSION['token'])) {
+	
+			$tokenRelatedClient = $api->walletClientWithToken( unserialize($_SESSION['token']));
+			
+			$paysera_user = $tokenRelatedClient->getUser();
+			$personalId = $paysera_user->getIdentity()->getCode();			
+			$email = $paysera_user->getEmail();
+			
+			$tempuser = user_load_by_mail($email);
+			
+			// IF personalId and Email maches - login
+			if($tempuser && $tempuser->data['personalId'] == $personalId)
+			{
+				$user = $tempuser;				
+				$edit = array();
+				foreach (module_implements('user_login') as $module) {
+					$function = $module . '_user_login';
+					$function($edit, $user);
+				  }
+				
+				
+				
+				watchdog('Paysera login', t('Sėkmingas prisijungimas.') . "<pre>\n\n Asmens kodas: @personalId \n El.paštas: @email \n</pre>",
+						array('@personalId'=>$personalId, '@email'=>$email));
+				drupal_goto('');
+				die;
+			}
+			
+			// IF user with email found, but personalId does not match, then show error end return
+			if($tempuser)
+			{
+				drupal_set_message(t('Jūsų el.paštas yra registruotas mūsų sistemoje su kito vartotojo duomenimis. Prašome susisiekti su pagalba.'), 'error');
+				
+				watchdog('Paysera login', t('Jūsų el.paštas yra registruotas mūsų sistemoje su kito vartotojo duomenimis. Prašome susisiekti su pagalba.') . "<pre>\n\n Asmens kodas: @personalId \n El.paštas: @email \n</pre>",
+						array('@personalId'=>$personalId, '@email'=>$email));
+				unset($_SESSION['token']);
+				drupal_goto('');
+				die;
+			}
+			
+			$tempuser = '';
+			
+			$username = substr($email, 0, strpos($email, '@'));
+			
+			$unames = db_query('SELECT name FROM {users} WHERE name LIKE :likemask', array(':likemask' => $username . '%'))
+				->fetchAll();
+			if(count($unames))
+			{
+				$un = array();
+				foreach ($unames as $n) $un[$n->name] = $n->name;
+				
+				$i = 1;
+				while(array_key_exists($username . $i, $un))
+				{
+					$i++;
+				}
+				$username .= $i;
+			}
+			
+			$userdata = array(
+				'mail' => $email,
+				'pass' => md5(time() . 'PAYSERA_AUTO_LOGIN' . $email),
+				'name' => $username,
+				'init' => $username,
+				'roles' => array(DRUPAL_AUTHENTICATED_RID => 'authenticated user'),
+				'status' => 1				
+			);
+			
+			$tempuser = user_save('', $userdata);
+			if(!$tempuser)
+			{
+				drupal_set_message(t('Nepavyko nusiųsti duomenų. Pabandykite dar kartą.'), 'error');
+				unset($_SESSION['token']);
+			  drupal_goto('/user/register');
+			  die();
+			}
+			
+			$birthday = $paysera_user->getDob();	// YYYY-MM-DD
+			$sex = $paysera_user->getGender() == 'male' ? 1 : 2;// 1 - male, 2 - female
+			/*
+			$birthday = '19' . substr($personalId, 1,2) . '-' . substr($personalId, 3, 2) . '-' . substr($personalId, 5, 2);
+			$sex = $personalId[0] % 2 == 0 ? 2 : 1; // 1 - male, 2 - female
+			*/
+			$address = paysera_extract_address_from_string($paysera_user->getAddress()->getStreet());
+			
+			$betting_centers = betting_center_centers(null, null, null, true);
+			$rand = rand(0, count($betting_centers) - 1);
+			$betcenter = $betting_centers[$rand]->tpoid;
+			
+			$user = $tempuser;				
+			$edit = array();
+			foreach (module_implements('user_login') as $module) {
+				$function = $module . '_user_login';
+				$function($edit, $user);
+			}
+			
+			$d['data'] = array(
+				'paysera_id' => $paysera_user->getId(),
+				'email' => $email,
+				'sex' => $sex,
+				'personal_country' => strtoupper($paysera_user->getIdentity()->getNationality()),
+				'firstname' => $paysera_user->getIdentity()->getName(),
+				'surname' => $paysera_user->getIdentity()->getSurname(),
+				'middlename' => '',
+				'personalId' => $personalId,
+				'birthday' => $birthday,
+				
+				'country' => strtoupper($paysera_user->getAddress()->getCountry()),
+				'city' => $paysera_user->getAddress()->getCity(),
+				'street' => $address['street'],
+				'house' => $address['house'],
+				'flat' => $address['flat'],
+				'mobile_number' => $paysera_user->getPhone(),
+				'zip' => $paysera_user->getAddress()->getPostIndex(),
+				
+				'betcenter' => $betcenter,
+				'ContractDate' => date('Y-m-d'),
+				'agreement_step' => 3,
+				'step' => 30
+				
+			);
+			
+			
+			
+			if(empty($tempuser->data['ContractIdentifier'])) {
+				$ContractIdentifier = _paysera_generateContractIdentifier($d['data']['betcenter']);
+				$d['data']['ContractIdentifier'] = $ContractIdentifier;
+			  }
+			
+			
+			// STEP 10 CHECKS
+			
+			$rez = topsport_checkClientUserUniqueness($d['data']['personalId'], country_GetIdByCode( strtoupper( $d['data']['personal_country'] ) ), $language->language);			
+			// for testing: $rez = array('a'=>1);
+			
+			watchdog('checkClientUserUniqueness', '!response', array('!response' => print_r($rez, true)));
+			
+			if($rez){
+			  if(!empty($rez['CompleteMatch'])/* OR !empty($rez['PartialMatch'])*/){
+				$d['data']['step'] = 21;	
+				drupal_set_message(t('Jūs jau turite sutartį, prašome ją priskirti, užpildydami žemiau esančią formą.'), 'warning');
+				user_save($tempuser, $d);
+				
+				watchdog('Paysera login', t('Jūs jau turite sutartį, prašome ją priskirti, užpildydami žemiau esančią formą.') . "<pre>\n\n Asmens kodas: @personalId \n El.paštas: @email \n</pre>",
+						array('@personalId'=>$personalId, '@email'=>$email));
+				drupal_goto('account/agreement');
+				die();
+				// drupal_set_message(t('Jūs jau turite pasirašytą i-lažybų sutartį.'));
+			  }else{
+				if(!empty($rez['PartialMatch'])){
+				  _paysera_mail_notify('account_partial_match', $tempuser);
+				  $edit = array();
+				  $edit['data']['PartialMatch'] = TRUE;				  
+				  $tempuser = user_save($tempuser, $edit);
+				}
+				//$form_state['storage']['step'] += 10;
+			  }
+			}else{
+			  drupal_set_message(t('Nepavyko nusiųsti duomenų. Pabandykite dar kartą.'), 'error');
+			  watchdog('Paysera login', t('Nepavyko nusiųsti duomenų. Pabandykite dar kartą.') . "<pre>\n\n Asmens kodas: @personalId \n El.paštas: @email \n</pre>",
+						array('@personalId'=>$personalId, '@email'=>$email));
+			  drupal_goto('account/agreement');
+			  die();
+			}
+			
+			
+			if(!isset($tempuser->data['UserCardNumber']) || $tempuser->data['UserCardNumber'] === '000000')
+			{
+				//$key = 'variable_account_userPinNumbers';
+				$userPinNumbers = paysera_login_userPinCardNumber();// variable_get($key, 100000);
+				paysera_login_userPinCardNumber( --$userPinNumbers );
+				$d['data']['UserCardNumber'] = $userPinNumbers;
+				$d['data']['PinCardNumber'] = $userPinNumbers;
+			}
+			
+			$tempuser = user_save($tempuser, $d);
+			
+			// STEP 20 CHECKS
+			
+			 $repeatSend = TRUE;
+			while($repeatSend)
+			{
+				$xml = paysera_createContractXML($tempuser);
+				$rez = topsport_validateNewContractData($xml);
+				// for testing: $rez = array('Succeed'=> 'true');
+				watchdog('validateNewContractData', '!response', array('!response' => print_r($rez, true)));
+				if(isset($rez['Succeed']) && $rez['Succeed'] == 'true')
+				{
+					$repeatSend = FALSE;
+					$xml = paysera_createContractXML($tempuser);
+
+					$rez = topsport_saveNewIBetContract($xml);
+					// for testing: $rez = array('Succeed'=> 'true', 'ClientUserId'=>0);
+					watchdog('saveNewContractData', '!response', array('!response' => print_r($rez, true)));
+					if(isset($rez['Succeed']) && $rez['Succeed'] == 'true' && isset($rez['ClientUserId'])){
+
+					  $edit = array();
+					  $edit['data']['step'] = 30;
+					  $edit['data']['agreement_step'] = 3;
+					  $edit['data']['tsuid'] = $rez['ClientUserId'];
+					  //set relation uid <-> tsuid
+					  db_query('UPDATE ts_users_data SET tsuid = :ClientUserId WHERE uid = :uid', array(
+					  ':uid' => $tempuser->uid,
+					  ':ClientUserId' => $rez['ClientUserId'],
+					  ));
+					  //$edit['roles'] = array(variable_get('account_roles_topsport_contract', '') => 1);
+					  $edit['roles'] = array(variable_get('account_roles_topsport_full', '') => 1);
+					  $account_unchanged = clone $tempuser;
+					  $tempuser = user_save($account_unchanged, $edit);
+					  userinfo_updateUser($tempuser);
+					  
+					  watchdog('Paysera login', t('Sėkminga registracija') . "<pre>\n\n Asmens kodas: @personalId \n El.paštas: @email \n</pre>",
+						array('@personalId'=>$personalId, '@email'=>$email));
+					  
+					}elseif(isset($rez['Errors']['Error'])){
+					  if(isset($rez['Errors']['Error']['ErrorMessage'])){
+						drupal_set_message($rez['Errors']['Error']['ErrorMessage'], 'error');
+					  }else{
+						foreach($rez['Errors']['Error'] as $error){
+						  drupal_set_message($error['ErrorMessage'], 'error');
+						  watchdog('Paysera login', $error['ErrorMessage'] . "<pre>\n\n Asmens kodas: @personalId \n El.paštas: @email \n</pre>",
+						array('@personalId'=>$personalId, '@email'=>$email));
+						}            
+					  }
+					}else{
+					  drupal_set_message(t('Nepavyko nusiųsti duomenų. Pabandykite dar kartą.'), 'error');
+					  watchdog('Paysera login', t('Nepavyko nusiųsti duomenų. Pabandykite dar kartą.') . "<pre>\n\n Asmens kodas: @personalId \n El.paštas: @email \n</pre>",
+						array('@personalId'=>$personalId, '@email'=>$email));
+					}
+			  }
+			  elseif(isset($rez['Errors']['Error']))
+				{
+
+					if(isset($rez['Errors']['Error']['ErrorMessage'])){
+					  $error = $rez['Errors']['Error'];
+					}else{
+					  $error = $rez['Errors']['Error'][0];
+					}
+
+					switch ($error['ErrorId']) {
+					  case '10': case '12':
+					//	$key = 'variable_account_userPinNumbers';
+						$userPinNumbers = paysera_login_userPinCardNumber(); // variable_get($key, 100000);
+						//variable_set($key, 
+						paysera_login_userPinCardNumber(--$userPinNumbers);
+						$edit = array();
+						$edit['data']['UserCardNumber'] = $userPinNumbers;
+						$edit['data']['PinCardNumber'] = $userPinNumbers;
+						$account_unchanged = clone $tempuser;
+						$tempuser = user_save($account_unchanged, $edit);
+						break;
+					  case '8':
+						$edit = array();
+						$ContractIdentifier = account_mobile_generateContractIdentifier($tempuser->data['betcenter']);
+						$edit['data']['ContractIdentifier'] = $ContractIdentifier;
+						$account_unchanged = clone $tempuser;
+						$tempuser = user_save($account_unchanged, $edit);
+						break;
+					  default:
+						$repeatSend = FALSE;
+						$form_state['storage']['step'] = 10;
+						$account_unchanged = clone $tempuser;
+						$edit = array();
+						$edit['data']['step'] = $form_state['storage']['step'];
+						$tempuser = user_save($account_unchanged, $edit);
+						drupal_set_message($error['ErrorMessage'], 'error');	
+						watchdog('Paysera login', $error['ErrorMessage'] . "<pre>\n\n Asmens kodas: @personalId \n El.paštas: @email \n</pre>",
+							array('@personalId'=>$personalId, '@email'=>$email));
+						break;
+					}
+
+			  }else{
+				$repeatSend = FALSE;
+				drupal_set_message(t('Nepavyko nusiųsti duomenų. Pabandykite dar kartą.'), 'error');
+				watchdog('Paysera login', t('Nepavyko nusiųsti duomenų. Pabandykite dar kartą.') . "<pre>\n\n Asmens kodas: @personalId \n El.paštas: @email \n</pre>",
+						array('@personalId'=>$personalId, '@email'=>$email));
+			  }
+			}
+			
+			// OK, LETS CONTINUE
+			
+			drupal_goto('account/agreement');
+			
+			$_SESSION['token'] = serialize($tokenRelatedClient->getCurrentAccessToken());     // this could be refreshed, re-save
+		}
+	
+	} catch (Exception $e) {
+	//	echo '<pre>', $e, '</pre>';
+	watchdog('Paysera login', "Paysera login Exception <pre>@data</pre>" , array('@data'=>$e->getTraceAsString()));
+	}
+}

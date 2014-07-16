@@ -1,0 +1,8 @@
+; $Id: account.info $
+name = Imoku ismoku puslapis
+description = "Puslapis, kuriame rodoma imoku ir ismoku informacija"
+dependencies[] = topsport
+core = 7.x
+version = 7.x-0.x-dev
+package = TopSport
+files[] = imokosismokos.module

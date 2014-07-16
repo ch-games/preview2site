@@ -1,0 +1,8 @@
+; $Id: oddsearch.info $
+name = Odds search block
+description = "Odds search block"
+dependencies[] = topsport
+core = 7.x
+version = 7.x-0.x-dev
+package = TopSport
+files[] = oddsearch.module

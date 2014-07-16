@@ -1,0 +1,8 @@
+; $Id: howtostart.info, $
+name = Kayako help desk
+description = "Shows Kayako help desk live chat toolbar or only monitoring code"
+dependencies[] = topsport
+core = 7.x
+version = 7.x-0.x-dev
+package = TopSport
+files[] = kayako_widget.module

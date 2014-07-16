@@ -1,0 +1,54 @@
+<?php
+// $Id$
+
+
+/**
+ * @file
+ * Install, update and uninstall functions for the offers module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+
+function country_schema() {
+	$schema = array();
+
+	$schema['countries'] = array(
+        'description' => 'TopSport countries list',
+        'fields' => array(
+            'cid' => array(
+                'description' => 'The primary identifier for a country.',
+                'type' => 'int',
+                'unsigned' => TRUE,
+                'not null' => TRUE,
+                'default' => 0,
+	),
+            'code' => array(
+                'description' => 'The iso code of this country.',
+                'type' => 'varchar',
+                'length' => 5,
+                'not null' => TRUE,
+                'default' => '',
+	),
+            'title' => array(
+                'description' => 'The title of this country.',
+                'type' => 'varchar',
+                'length' => 255,
+                'not null' => TRUE,
+                'default' => '',
+	),
+	),
+        'primary key' => array('cid', 'code'),
+        'foreign keys' => array(
+
+	),
+	);
+
+	return $schema;
+}
+
+function country_enable(){
+	 
+	country_updateContryList();
+}

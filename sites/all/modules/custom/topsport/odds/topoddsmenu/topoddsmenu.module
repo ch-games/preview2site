@@ -1,0 +1,56 @@
+<?php 
+use oddsManager as OddsApi;
+
+function topoddsmenu_block_info() {
+	$blocks['topoddsmenu'] = array(
+    'info' => t('Lažybų pasiūlos meniu (superbet,today, tomorrow, etc)'),
+    'cache' => DRUPAL_CACHE_CUSTOM,
+    'properties' => array(
+        'administrative' => FALSE,
+    ),
+    'status' => 1,
+    'region' => 'left',
+     'class' => 'block-menu'
+  );
+	return $blocks;
+}
+
+
+function topoddsmenu_block_view($delta = '') {
+    // avoid rendering
+    $pattern = '$home|^admin|^user$';
+    if(preg_match($pattern, current_path())){
+        return null;
+    }
+    global $language;
+    $_key = 'odds_' . implode(',', array(__CLASS__, __FUNCTION__,$language->language));
+    if($cache = cache_get($_key, 'block')) { return $cache->data; }
+	
+	require_once drupal_get_path('module', 'odds'). '/oddsManager.php';
+    $lang = $language->language;
+	$classicMode = false; 
+	$block = array('content' => '');
+	$offersManager = new  OddsApi\OddsManager();
+	$categories = $offersManager->getById($lang,  $classicMode,  null);
+	
+	if (count($categories)) {
+		$count = 0;		
+		$block['content'] .= '<ul class="nav nav-pills nav-stacked">';		
+		foreach ($categories as $sport){
+			$url = 'odds/'.$sport['object']['id'];			
+			if($url == 'odds/superbet')
+			{
+				$onclick ='';
+			}
+			else
+			{
+				$onclick = ' data-async="'.$sport['object']['id'].'" onclick="return ts.SportMenu.toggle(this); return false;"';
+			}
+			$block['content'] .= '<li class="collapsed depth-1"><a href="'.url($url).'"'.$onclick.'><span class="title">'.$sport['object']['name'].'</span><span class="badge pull-right">'.$sport['object']['count'].'</span></a></li>';
+			$count += $sport['object']['count'];
+		}
+		$block['content'] .= '</ul>';
+	}
+    cache_set($_key, $block, 'block', strtotime('+1 min'));
+	return $block;
+}

@@ -1,0 +1,76 @@
+<?php
+// $Id:$
+
+function ac_seb_account_payment_method(){
+	global $base_url, $user;
+	$icons = $base_url.'/'.drupal_get_path('module', 'ac_seb').'/icons/';
+
+	$methods['seb'] = array(
+		'id' => 'seb',
+		'name' => '',
+		'title' => '<img src="'.$icons.'seb-bankas-logotipas.png" title="'.t('SEB').'" />',
+		'komisiniai' => '0%',
+		'update' => t('Pinigai užskaitomi darbo dienomis<br/>keturis kartus per dieną:<br/>9,00; 12,00; 15,00 ir 17,00 val.'),
+		'limit' => t('Min. 10 Lt').'<br/>'.t('Max.&nbsp;50&nbsp;000&nbsp;Lt'),
+		'limit_min' => 10,
+		'limit_max' => 50000,
+		'callback' => 'ac_seb_payment_start',
+		'weight' => 10,
+    'category' => 'banktransfer',
+    'countries' => array('LT'),
+	);
+
+	// pranesimas klientui padedantis padaryti paprasta pavedima
+	if ($user->uid > 0 AND !isset($user->roles[4]) ) {
+		$methods['seb']['name'] .= '<br />';
+		$methods['seb']['name'] .= '<div class="messages warning">'.l( t('Norit atlikti banko pavedimą (banko filiale ar e-banko sistema) į Jūsų balansą Jums reikia įkelkite asmens tapatybę patvirtinantį dokumentą.'), 'account/withdrawals', array('attributes' => array('class' => array('more'))) ) .'</div>';
+	}else {
+		$methods['seb']['name'] .= t('Pavedimu a/s Nr. LT537044060002967441').'<br/>'.t('Gavėjas UAB "Top sport"') . '<br />'.t('Pavedimo paskirtyje būtina nurodyti Jūsų kliento kortelės numerį <strong>%UserCardNumber</strong>', array( '%UserCardNumber' => isset($user->data['UserCardNumber']) ? $user->data['UserCardNumber']: ''));
+	}
+
+	return $methods;
+}
+
+function ac_seb_payment_start($form, &$form_state){
+
+	$account = $form['#user'];
+
+	$payment_form = array();
+	$payment_form['#user'] = $account;
+		
+	$payment_form['payment_method'] = array(
+		'#markup' => _account_payment_method_data($form_state['values']['payment_method'], 'title'),
+		'#prefix' => '<div>',
+		'#suffix' => '</div>',
+		);
+		/*
+    $payment_form['payment_method'] = array(
+      '#markup' =>  '<strong>'.t('Įmokos būdas:').'</strong> '._account_payment_method_data($form_state['values']['payment_method'], 'name'),
+      '#prefix' => '<div class="form-item">',
+      '#suffix' => '</div>',
+	);
+	*/
+	// pranesimas klientui padedantis padaryti paprasta pavedima
+	if ( !isset($account->roles[4]) ) {
+		$payment_form['payment_name'] = array(
+		    '#markup' => '<div class="messages warning">'.l( t('Norit atlikti banko pavedimą (banko filiale ar e-banko sistema) į Jūsų balansą Jums reikia įkelkite asmens tapatybę patvirtinantį dokumentą.'), 'account/withdrawals', array('attributes' => array('class' => array('more'))) ) .'</div>',
+		);
+	}else {
+		$payment_form['payment_name'] = array(
+		    '#markup' => t('Pavedimu a/s Nr. LT537044060002967441').'<br/>'.t('Gavėjas UAB "Top sport"') . '<br />'.t('Pavedimo paskirtyje būtina nurodyti Jūsų kliento kortelės numerį <strong>%UserCardNumber</strong>', array( '%UserCardNumber' => $account->data['UserCardNumber'])),
+		);
+	}
+	$payment_form['payment_update'] = array(
+    '#markup' => '<br/><br/>'._account_payment_method_data($form_state['values']['payment_method'], 'update'),
+	);
+	$payment_form['amount'] = array(
+    '#markup' =>  '<strong>'.t('Suma:').'</strong> '.account_currency_string($form_state['values']['amount'], $form_state['values']['currency']),
+    '#prefix' => '<div class="form-item">',
+    '#suffix' => '</div>',
+	);
+	$payment_form['back'] = array(
+    '#weight' => '20',
+    '#markup' => l(t('Atgal'), 'account/deposits', array('attributes' => array('class' => array('form-submit', 'reset')))),
+	);
+	return $payment_form;
+}

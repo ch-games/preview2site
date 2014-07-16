@@ -1,0 +1,36 @@
+<?php
+
+
+function account_sync_menu(){
+
+	$items['account-sync'] = array(
+    'title' => 'Vartotojų syncronizavimas',
+    'access callback' => 'account_sync_restrict',
+    'page callback' => 'account_sync_page',
+    'weight' => 1,
+    'type' => MENU_CALLBACK,
+	);
+	return $items;
+}
+
+function account_sync_restrict(){
+	return true;
+}
+
+function account_sync_page(){
+
+	if(!empty($_POST)){
+		if(isset($_POST['e']) AND isset($_POST['p'])){
+			if ($name = db_query('SELECT name FROM {users} WHERE LOWER(mail) = LOWER(:name)', array(':name' => $_POST['e']))->fetchField()) {
+				$uid = user_authenticate($name, $_POST['p']);
+				if($uid){
+					$account = user_load($uid);
+					return drupal_json_output($account);
+				}
+			}
+		}
+	}
+	return drupal_json_output(null);
+}
+
+?>

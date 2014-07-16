@@ -1,0 +1,636 @@
+<?php
+
+function bets_placeBets($bets, $stake, $type = 'single', $systems = array()){
+	global $user;
+	$result = array();
+	$stake = account_currency_convert_back($user->uid, $stake);
+	if(!empty($bets)){
+		switch ($type){
+			case 'single':
+				$answers = bets_placeBetsSingle($bets, $stake);
+				break;
+			case 'multi':
+				$answers = bets_placeBetsMulti($bets, $stake);
+				break;
+			case 'system':
+				$answers = bets_placeBetsSystem($bets, $stake, $systems);
+				break;
+			default:
+				drupal_set_message('Toks statymo tipas kolkas negalimas', 'error');
+				$result[] = t('Toks statymo tipas kolkas negalimas');
+				return false;
+				break;
+		}				
+		foreach($answers as $answer){			
+			if(isset($answer['AnswerId'])){
+				if($answer['AnswerId'] != 0){
+				    if($answer['AnswerId'] == 6)
+				    {
+					$result[] = array('message'=>$answer['AnswerMessage'], 'events' => $answer['InvalidEvents']['Event']);
+				    }
+				    else $result[] = $answer['AnswerMessage'];
+				}
+			}else{
+				$result[] = t('Statymo atlikti nepavyko.');
+			}
+		}
+		userinfo_updateUser($user, true, true);
+		$tsuid = userinfo_get_topsportId($user);
+		cache_clear_all('account_page_bets:'.$tsuid, 'cache', true);
+	}else{
+		$result[] = t('Nėra statymų, kurios būtų galima atlikti');
+	}
+	return $result;
+}
+
+function bets_placeBetsSingle($bets, $stake){
+	global $user;
+	$tsuid = userinfo_get_topsportId($user);
+	$variables = bets_saveInTopSportVariables();
+	$variables['betType'] = 1;
+	$variables['tsuid'] = $tsuid;
+	$variables['uid'] = $user->uid;
+	$result = array();
+	foreach($bets as &$bet){
+		$betEvent = betslip_getEventFromBet($bet);
+		$gameType = offers_getGameType($betEvent->gtid);
+		$bet->rate = $betEvent->{'c'.$bet->choise};
+		$event = array(
+      'eid' => $bet->event_id,
+      'coef' => $betEvent->{'c'.$bet->choise},
+      'choise' => $gameType->{'cn'.$bet->choise},
+      'selection' => $bet->choise,
+      'info' => $betEvent,
+      'gameType' => $gameType,
+		);
+		$variables['totalAmount'] = $stake;
+		$variables['rateTotal'] = $bet->rate;
+		$variables['winTotal'] = ($stake * $bet->rate);
+		$variables['events'] = array($event);
+		$result[] = bets_saveInTopSport($variables);
+	}
+	return $result;
+}
+
+function bets_placeBetsMulti($bets, $stake){
+	global $user;
+	$tsuid = userinfo_get_topsportId($user);
+	$variables = bets_saveInTopSportVariables();
+	$variables['betType'] = 1;
+	$variables['tsuid'] = $tsuid;
+	$variables['uid'] = $user->uid;
+	$events = array();
+	$result = array();
+	$rateTotal = 1;
+	foreach($bets as &$bet){
+		$betEvent = betslip_getEventFromBet($bet);
+		$gameType = offers_getGameType($betEvent->gtid);
+		$event = array(
+      'eid' => $bet->event_id,
+      'coef' => $betEvent->{'c'.$bet->choise},
+      'choise' => $gameType->{'cn'.$bet->choise},
+      'selection' => $bet->choise,
+      'info' => $betEvent,
+      'gameType' => $gameType,
+		);
+		$rateTotal *= $event['coef'];
+		$events[] = $event;
+	}
+	$rateTotal = round($rateTotal, 2);
+	$variables['totalAmount'] = $stake;
+	$variables['rateTotal'] = $rateTotal;
+	$variables['winTotal'] = ($stake * $rateTotal);
+	$variables['events'] = $events;
+	$result[] = bets_saveInTopSport($variables);
+	return $result;
+}
+
+
+function bets_placeBetsSystem($bets, $stake, $systems){
+	global $user;
+	$tsuid = userinfo_get_topsportId($user);
+	$variables = bets_saveInTopSportVariables();
+	$variables['betType'] = 2;
+	$variables['tsuid'] = $tsuid;
+	$variables['uid'] = $user->uid;
+	$result = array();
+	$systemsToBet = array();
+	$rateTotalFirst = 0;
+	$events = array();
+	$countTotalBets = 0;
+	$totalAmount = 0;
+	$winTotal = 0;
+	foreach($bets as &$bet){
+		$betEvent = betslip_getEventFromBet($bet);
+		$gameType = offers_getGameType($betEvent->gtid);
+		$event = array(
+      'eid' => $bet->event_id,
+      'coef' => $betEvent->{'c'.$bet->choise},
+      'choise' => $gameType->{'cn'.$bet->choise},
+      'selection' => $bet->choise,
+      'info' => $betEvent,
+      'gameType' => $gameType,
+		);
+		$events[] = $event;
+	}
+	$variables['PlacedSystems'] = array();
+	foreach($systems as $constants => $sysBets){
+		foreach($sysBets as $type => $stake){
+			$stake = account_currency_convert_back($user->uid, $stake);
+			$system = array(
+        'constCount' => $constants,
+        'eventCount' => $type,
+        'betAmount' => $stake,
+			);
+			$systemsToBet[] = $system;
+
+			$betslipData = $events;
+			$k = 1;
+			$betslipConst = array();
+			while($k <= $constants){
+				$betslipConst[] = array_shift($betslipData);
+				$k++;
+			}
+			$possibleBets = bets__generate_system_bets($betslipData, $type, $betslipConst);
+			$totalAmount += round($stake * count($possibleBets), 2);
+			$countTotalBets += count($possibleBets);
+			foreach($possibleBets as $bet){
+				$betRate = 1;
+				foreach($bet as $row){
+					$betRate *= floatval($row['coef']);
+				}
+				$betRate = round($betRate, 2);
+				$rateTotalFirst += $betRate;
+				$winTotal += round($stake * $betRate, 2);
+				$variables['PlacedSystems'][$constants][] = array(
+          'bets' => $bet,
+          'coef' => $betRate,
+          'stake' => $stake,
+				);
+			}
+		}
+	}
+	$rateTotal = round( $winTotal / $totalAmount , 2 );  //round($rateTotalFirst / $countTotalBets, 2);
+	$variables['totalAmount'] = $totalAmount;
+	$variables['rateTotal'] = $rateTotal;
+	$variables['winTotal'] = $winTotal;
+	$variables['events'] = $events;
+	$variables['systems'] = $systemsToBet;
+	$result[] = bets_saveInTopSport($variables);
+	return $result;
+}
+
+function bets__generate_system_bets($bets, $size, $const = array()){
+
+	if($size < 1){ return array(); }
+
+	$results = bets_combine($bets, $size);
+
+	if(!empty($const) && !empty($results)){
+		foreach($results as $key => &$result){
+			$result = array_merge($const, $result);
+		}
+	}
+
+	return $results;
+
+}
+
+function bets_combine($a, $len){
+	if ($len > count($a)) return array();
+	$out = array();
+	if ($len == 1) {
+		foreach ($a as $v) $out[] = array($v);
+		return $out;
+	}
+	$len--;
+	while (count($a) > $len) {
+		$b = array_shift($a);
+		$c = bets_combine($a, $len);
+		foreach ($c as $v){
+			array_unshift($v, $b);
+			$out[] = $v;
+		}
+	}
+	return $out;
+}
+
+/*
+ * @todo: Panaikinti. turbut bus nenaudojamas.
+ */
+function bets_createBet($uid, $stake, $type = 'single'){
+	$bid = db_insert('users_bets')
+	->fields(array(
+    'uid' => $uid,
+      'stake' => $stake,
+      'type' => $type,
+      'status' => 1,
+      'created' => REQUEST_TIME,
+	))
+	->execute();
+
+	return $bid;
+}
+
+/*
+ * @todo: Panaikinti. turbut bus nenaudojamas.
+ */
+function bets_createBetDetail($bid, $eid, $choise, $rate){
+	$bid = db_insert('users_bets_details')
+	->fields(array(
+    'bid' => $bid,
+      'eid' => $eid,
+      'choise' => $choise,
+      'rate' => $rate,
+	))
+	->execute();
+}
+
+function bets_saveInTopSportVariables(){
+	return array(
+    'betType' => null,
+    'tsuid' => null,
+    'uid' => null,
+    'totalAmount' => null,
+    'rateTotal' => null,
+    'winTotal' => null,
+    'events' => null,
+    'systems' => null,
+	);
+}
+
+function bets_saveInTopSport($variables){
+	global $language;
+	$BetTypeId		= $variables['betType'];
+	$ClientUserId	= $variables['tsuid'];
+	$uid			= $variables['uid'];
+	$TotalBetAmount = $variables['totalAmount'];
+	$TotalCoef		= $variables['rateTotal'];
+	$TotalWinAmount = $variables['winTotal'];
+	$Events			= $variables['events'];
+	$Systems		= $variables['systems'];
+
+	$EventsString = '';
+	if(isset($Events)){
+		foreach($Events as $event){
+			$EventsString .= '
+        <Event>
+          <EventId>'.$event['eid'].'</EventId>
+          <Coef>'.number_format($event['coef'], 2, '.', '').'</Coef>
+          <Selection>'.$event['choise'].'</Selection>
+        </Event>';
+		}
+	}
+
+	$SystemsString = null;
+	if(isset($Systems)){
+		foreach($Systems as $system){
+			$SystemsString .= '
+        <System>
+          <ConstantCount>'.$system['constCount'].'</ConstantCount>
+          <EventCount>'.$system['eventCount'].'</EventCount>
+          <CombBetAmount>'.number_format($system['betAmount'], 2, '.', '').'</CombBetAmount>
+        </System>';
+		}
+	}    
+    
+    switch ($_SERVER['HTTP_HOST']) {
+        case 'www.topsport.lt':
+            $bet_source_id = 3;
+            break;
+        case 'www.bettopsport.com':
+            $bet_source_id = 4;
+            break;
+        case 'www.bettopsport.ru':
+            $bet_source_id = 5;
+            break;
+        case 'm.topsport.lt':
+            $bet_source_id = 6;
+            break;
+        case 'm.bettopsport.com':
+            $bet_source_id = 7;
+            break;
+        case 'm.bettopsport.ru':
+            $bet_source_id = 8;
+            break;
+        case 'lv.bettopsport.com':
+            $bet_source_id = 11;
+            break;
+        default:
+            $bet_source_id = 1;
+            break;
+    }
+    
+	$request_content =
+  '<?xml version="1.0" encoding="UTF-8" ?>
+  <iBet>
+    <ClientUserId>'.$ClientUserId.'</ClientUserId>
+    <BetSourceId>'.$bet_source_id.'</BetSourceId>
+    <LanguageId>'.topsport_LangCodes($language->language).'</LanguageId>
+    <Card>
+      <CardId>1</CardId>
+      <TotalBetAmount>'.number_format($TotalBetAmount, 2, '.', '').'</TotalBetAmount>
+      <TotalCoef>'.number_format($TotalCoef, 2, '.', '').'</TotalCoef>
+      <TotalWinAmount>'.number_format($TotalWinAmount, 2, '.', '').'</TotalWinAmount>
+      <BetTypeId>'.$BetTypeId.'</BetTypeId>
+      <Events>'.
+	$EventsString.'
+      </Events>
+      '.($SystemsString ?
+      '<Systems>'.
+	$SystemsString.'
+      </Systems>' : '').'
+    </Card>
+  </iBet>';    
+	$result = topsport_saveCachedCards($request_content);	
+	bets_errorHandler($variables, $result);
+	global $user;
+	$sendEmail = (isset($user->data['betdoneemail']) ? $user->data['betdoneemail'] : 1);
+	if(isset($result['AnswerId']) AND $result['AnswerId'] == 0 AND $sendEmail){
+		bets_mail_send($variables);
+	}
+	if(isset($result['AnswerId']) AND $result['AnswerId'] == 0){
+	  $ga_affilate = 'N/A Bet';
+	  $total_events = count($Events);      
+	  if($total_events == 1) $ga_affilate = 'Single Bet'; elseif($total_events > 1 && $SystemsString == null) $ga_affilate = 'Multi Bet';	elseif($total_events > 1 && strlen($SystemsString) > 0) $ga_affilate = 'System Bet';
+	  $_SESSION['ga_push'][] = array('_trackEvent', 'Krepšelis', 'Atliktas_statymas');
+	  $_SESSION['ga_push'][] = array('_addTrans', $ClientUserId.'-'.REQUEST_TIME, $ga_affilate, number_format($TotalBetAmount, 2, '.', ''));
+	  $_SESSION['ga_push'][] = array('_trackTrans');
+	}
+	return $result;
+}
+
+function bets_errorHandler($variables, &$answer){
+	$Events = $variables['events'];
+	if(isset($answer['InvalidEvents'])){
+		if(isset($answer['InvalidEvents']['Event']['EventId'])){
+			$answer['InvalidEvents']['Event'] = array($answer['InvalidEvents']['Event']);
+		}
+		$offers_changed = false;
+		foreach($answer['InvalidEvents']['Event'] as &$InvalidEvent){
+			foreach($Events as $event){
+				if($event['eid'] == $InvalidEvent['EventId']){
+					switch ($InvalidEvent['ErrorId']){
+						case 1:
+							$offers_changed = true;
+							db_update('offers_events')
+							->fields(array(
+                'c'.$event['selection'] => $InvalidEvent['NewCoef'],
+							))
+							->condition('eid', $event['eid'])
+							->execute();
+							$InvalidEvent['oldKoef'] = $event['coef'];
+							betslip_requireEventDataUpdate(intval($event['eid']), intval($event['selection']));
+							break;
+						case 4:
+						case 5:
+						case 7:
+						case 12:
+							betslip_removeEventFromSlip(intval($event['eid']));
+							break;
+						default:
+							break;
+					}
+				}
+			}
+		}
+		if($offers_changed)
+		{
+			cache_clear_all('offers', 'cache', TRUE);
+			cache_clear_all('offers', 'cache_block', TRUE);	
+		}
+	}
+}
+
+function bets_mail($key, &$message, $params) {
+	global $user, $base_url;
+	$options = array(
+    'langcode' => $message['language']->language,
+	);
+
+	switch ($key) {
+		case 'bets_placed':
+			switch($params['variables']['betType']){
+				case '2':
+					$betType = t('Sisteminis');
+					break;
+				default:
+					if(count($params['variables']['events']) == 1){
+						$betType = t('Paprastas');
+					}else{
+						$betType = t('Kombinuotas');
+					}
+					break;
+			}
+			$message['subject'] = t('Statymas atliktas');
+			$message['body'][] = t('Sveiki,').' <b>'.$user->data['firstname'].' '.$user->data['middlename'].' '.$user->data['surname'].'</b>';
+			$message['body'][] = '<br />';
+			$message['body'][] = '<b>'.t('Jūsų statymas priimtas!', array(), $options).'</b>';
+			$message['body'][] = '<br />';
+			$message['body'][] = t('Statymo data').": <b>". date('Y-m-d H:i:s') ."</b><br /><br />";
+			$headerStyle = 'text-align: left;border: 0;background: #CBCBCB url('.$base_url.'/sites/all/themes/topsport/files/img/table-th.png) repeat-x;font-weight: bold;font-size: 11px;padding: 4px 10px 4px 5px;border-top: 1px solid #CCC;border-right: 0px solid #CCC;border-left: 0px solid #CCC;border-bottom: 1px solid #CCC;color: #3F3F3F;';
+			$header = array(
+			array('data' => '', 'style' => $headerStyle),
+			array('data' => t('Nr.'), 'style' => $headerStyle),
+			array('data' => t('Įvykis'), 'style' => $headerStyle),
+			array('data' => t('Statymo tipas'), 'style' => $headerStyle),
+			array('data' => t('Statymas'), 'style' => $headerStyle),
+			array('data' => t('Koeficientas'), 'style' => $headerStyle),
+			);
+			$attributes = array(
+        'cellpadding' => '2',
+        'cellspacing' => '0',
+        'width' => '100%',
+        'border' => '1',
+        'style' => 'color:#666; font-size:11px;border-collapse: collapse;border: 0;border-spacing: 0;clear: both;border-color: #CCC;',
+			);
+			$rows = array();
+			$cellStyle = 'padding: 4px 10px 4px 5px;border-top: 1px solid #CCC;border-left: 0px solid white;border-right: 0px solid white;font-size: 11px;';
+			$i = -1;
+			$letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+			foreach($params['variables']['events'] as $event){
+				$eventLetter[$event['info']->eid] = substr($letters, ++$i, 1);
+				$rows[] = array(
+				array('data' => $eventLetter[$event['info']->eid], 'style' => $cellStyle),
+				array('data' => $event['info']->name, 'style' => $cellStyle),
+				array('data' => $event['info']->category.'<br /><b>'.$event['info']->title.'</b>', 'style' => $cellStyle),
+				array('data' => $event['gameType']->title, 'style' => $cellStyle),
+				array('data' => $event['choise'], 'style' => $cellStyle),
+				array('data' => $event['coef'], 'style' => $cellStyle),
+				);
+			}
+			unset($attributes['width']);
+			$message['body'][] = theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => $attributes));
+
+			if($params['variables']['betType'] == 2){
+				$header = array(
+				array('data' => t('Kombinacija'), 'style' => $headerStyle),
+				array('data' => t('Koeficientas'), 'style' => $headerStyle),
+				array('data' => t('Statymo suma'), 'style' => $headerStyle),
+				);
+				$rows = array();
+				foreach($params['variables']['PlacedSystems'] as $constCount => $bets){
+					foreach($bets as $bet){
+						$combString = '';$strLen = 0;
+						foreach($bet['bets'] as $event){
+							$combString .= $eventLetter[$event['eid']];$strLen++;
+							if($constCount AND $strLen == $constCount){
+								$combString .= ':';
+							}
+						}
+						$rows[] = array(
+						array('data' => $combString, 'style' => $cellStyle),
+						array('data' => $bet['coef'], 'style' => $cellStyle),
+						array('data' => account_currency_convert_string(null, $bet['stake']), 'style' => $cellStyle),
+						);
+					}
+				}
+				$message['body'][] = '<br /><b>'.t('Sisteminio statymo kombinacijos').'</b>';
+				$message['body'][] = theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => $attributes));
+			}
+
+			$message['body'][] = "<br /><br />".t('Statymo tipas') .":      <b>".$betType."</b>";
+			$message['body'][] = "<br /><br />".t('Statoma suma') .":     <b>".account_currency_convert_string(null, $params['variables']['totalAmount'])."</b>";
+			$message['body'][] = "<br />".t('Koeficientas').":      <b>".$params['variables']['rateTotal']."</b>";
+			$message['body'][] = "<br />".t('Prog. laimėjimas').": <b>".account_currency_convert_string(null, $params['variables']['winTotal'])."</b>";
+			$message['body'][] = "<br />";
+			$message['body'][] = "<br />".t('Sėkmės!');
+			break;
+	}
+}
+
+
+function bets_mail_send($variables) {
+	global $language, $user;
+	$module = 'bets';
+	$key = 'bets_placed';
+
+	$params['variables'] = $variables;
+
+	$to = $user->mail;
+
+	$result = drupal_mail($module, $key, $to, $language, $params, 'no-reply@topsport.lt');
+	/*
+
+	if ($result['result'] == TRUE) {
+	drupal_set_message(t('Your message has been sent.'));
+	}
+	else {
+	drupal_set_message(t('There was a problem sending your message and it was not sent.'), 'error');
+	}*/
+
+}
+
+
+
+function bets_two_events_are_related($event1, $event2){
+	$result = false;
+	if($event1->mid == $event2->mid){
+		$Item_1_1 = $event1->item1;
+		$Item_1_2 = $event1->item2;
+		$Item_2_1 = $event2->item1;
+		$Item_2_2 = $event2->item2;
+		$Exist_Item_1_2 = ($event1->item2 !== null);
+		$Exist_Item_2_2 = ($event2->item2 !== null);
+		$result = (
+		($Item_1_1 == $Item_2_1) or
+		($Exist_Item_2_2 and ($Item_1_1 == $Item_2_2)) or
+		($Exist_Item_1_2 and ($Item_2_1 == $Item_1_2)) or
+		($Exist_Item_1_2 and $Exist_Item_2_2 and ($Item_1_2 == $Item_2_2))
+		);
+	}
+	return $result;
+}
+
+/*
+ * @todo: Patobulinti skripta. Pridėti papildomus tikrinimus.
+ * @todo: Pakoreguoti veikima, kad tikrintų visus statymus iskart.
+ */
+function bets_can_be_combained($choise, $bet){
+	global $language;
+	$errors = array();
+
+	$betslip_data = betslip_getUsersBetSlip();
+	foreach($betslip_data as $row){
+
+		//     if($bet->combcount AND count($betslip_data) < $bet->combcount){
+		//       $errors[] = t('Per mažai įvykių kortelėje');
+		//     }
+
+		if($choise == $row){ continue; }
+		#1 EVENTS_ARE_SAME
+
+		if($row->event_id == $choise->event_id){
+			if($row->choise == $choise->choise){ continue; }
+			$errors[] = t('Events are same').' '.$row->event_id.' - '.$choise->event_id;
+		}
+
+		#2 EVENTS_FROM_CLOSED_AND_OTHER_GROUPS
+
+
+		#3 EVENTS_FROM_DIFFERENT_CLOSED_GROUPS
+
+
+		#4 TWO_EVENT_ARE_RELATED and GROUPS_CAN_NOT_BE_COMBINED
+		$in_slip = betslip_getEventFromBet($row);
+		if(bets_two_events_are_related($bet, $in_slip)){
+			$errors[] = t('Events are related').' '.$row->event_id.' - '.$choise->event_id;
+			$is_related_group = db_select('offers_groups', 'wg')
+			->fields('wg', array('a', 'b'))
+			->condition('a', array($bet->gtid, $in_slip->gtid), 'IN')
+			->condition('b', array($bet->gtid, $in_slip->gtid), 'IN')
+			->execute()
+			->fetchAll();
+			if(!empty($is_related_group)){
+				$errors[] = t('Events are related').' '.$row->event_id.' - '.$choise->event_id.' '.t('and').' '.t('Events are in related groups').' - ['.$bet->gtid.'] - ['.$in_slip->gtid.']';
+			}
+			if($bet->gtid == $in_slip->gtid){
+				$errors[] = t('Events are related').' '.$row->event_id.' - '.$choise->event_id.' '.t('and').' '.t('Events are in same groups').' - ['.$bet->gtid.'] - ['.$in_slip->gtid.']';
+			}
+		}
+
+		#5
+		//$event1_not_combine = unserialize($bet->negalima);
+		//$event2_not_combine = unserialize($in_slip->negalima);
+		//if(in_array($in_slip->event_id, $event1_not_combine) OR in_array($bet->event_id, $event2_not_combine)){
+		//	$errors[] = t('Events cannot be combained').' - ['.$bet->event_string_lt.'] - ['.$in_slip->event_string_lt.']';
+		//}
+
+		if($bet->combtosamearea AND $bet->aid == $in_slip->aid){
+			$errors[] = t('Ta pati sporto šaka.');
+		}
+
+		if($bet->combtosamemodule AND $bet->mid == $in_slip->mid){
+			$errors[] = t('Ta pati lyga');
+		}
+	}
+	if(!empty($errors)){
+		return $errors;
+	}
+	return true;
+}
+
+function bets_is_enough_events($bets){
+	global $language;
+	$errors = array();
+	$bets = betslip_getUsersBetSlip();
+	foreach($bets as $bet){
+		$event = betslip_getEventFromBet($bet);
+		if($event->combcount AND count($bets) < $event->combcount){
+			$errors[] = t('Per mažai įvykių kortelėje');
+		}
+	}
+	if(!empty($errors)){
+		return $errors;
+	}
+	return true;
+}
+
+function bets_limits($cnt){
+
+	return db_select('bet_limits', 'bl')
+	->fields('bl')
+	->condition('cnt', $cnt)
+	->execute()
+	->fetchObject();
+}

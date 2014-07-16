@@ -1,0 +1,307 @@
+<?php
+
+function topleagues_menu()
+{
+	$items['admin/config/content/topleagues'] = array(
+    'title' => 'Top lygos',
+    'description' => 'Top lygų valdymas regionams',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('topleagues_admin'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+	);
+	
+	return $items;
+}
+
+function topleagues_getmodules()
+{
+	global $language;
+	
+	$query = 'SELECT distinct on (m.mid, m.country)  m.mid, m.country, oe.category FROM
+ts_topleagues m, ts_offers_events oe
+WHERE m.mid = oe.mid AND oe.language = :language';
+	
+	$cache = db_query($query, array(':language' => $language->language))->fetchAll();  
+	
+	function extractLeague($rec) { 
+				$t = explode(' » ', $rec->category); 
+				$rec->title = $t[2]; 				
+				return $rec;				
+		 }
+		 
+	$cache = array_map('extractLeague', $cache);
+	
+	$cache = json_decode(json_encode($cache), true);
+	$cache[] = array('mid'=>'','country'=>'','title'=>'Pridėti naują');
+	return $cache;
+}
+
+/**
+ * Submit function for topleagues_admin().
+ */
+function topleagues_admin_submit($form, &$form_state) {
+	$modules = array();
+	$query = 'DELETE FROM ts_topleagues';
+	db_query($query);
+	$query = 'INSERT INTO ts_topleagues (mid, country) VALUES ';
+	$del = ''; $params = array();
+	foreach ($form_state['values']['subject'] as $k => $ob)
+	if($ob['mid'] > 0){
+		$query .= $del . " ( :m$k, :c$k) ";
+		$del = ' , ';
+		$params[':m' . $k] = $ob['mid'];
+		$params[':c' . $k] = trim($ob['country']);	
+	}	
+	db_query($query, $params);
+	
+	drupal_set_message(t('Nustatymai išsaugoti'));
+}
+
+function topleagues_admin($form, &$form_state){
+	$form['#tree'] = TRUE;
+
+	if (empty($form_state['modules'])) {
+		$modules = topleagues_getmodules();
+		$form_state['modules'] = $modules;		
+	}
+	else $modules = $form_state['modules'];
+
+	// Build the number of name fieldsets indicated by $form_state['num_names']
+	for ($i = 0; $i < count($form_state['modules']); $i++) {
+		$form['subject'][$i] = array(
+      '#type' => 'fieldset',
+      '#title' => $form_state['modules'][$i]['title'],
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE,
+		);
+
+		$form['subject'][$i]['mid'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Lygos ID (mid)'),
+      '#required' => FALSE,
+      '#default_value' => isset($modules[$i]['mid']) ? $modules[$i]['mid'] : '',
+		);
+
+		$form['subject'][$i]['country'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Šalies kodas (pvz: LT, tuščia - visom šalim)'),
+      '#required' => FALSE,
+      '#default_value' => isset($modules[$i]['country']) ? $modules[$i]['country'] : '',
+		);
+	}
+	$form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Saugoti'),
+	);
+
+	
+
+	return $form;
+}
+
+function topleagues_block_info() {
+	$blocks['topleagues']['info'] = t('TOP leagues (GEOIP)');
+	$blocks['topleagues']['cache'] = DRUPAL_CACHE_CUSTOM ;
+	return $blocks;
+}
+
+
+function topleagues_block_view($delta = '') { 
+    // avoid rendering
+    $pattern = '$home|^admin|^user$';
+    if(preg_match($pattern, current_path())){
+        return null;
+    }
+    $block['content'] = '';
+    $leagues = _topleagues_getFeatruredLeagues(); 
+   
+    $leagues_icons_patch = 'sites/all/img/icons/module_png/';
+    if(count($leagues)){        
+        $block['content'] .= '<ul class="nav nav-pills nav-stacked">';
+        foreach ($leagues as $key => $item){
+            $url =  $item->source;
+            $icon_path = $leagues_icons_patch.$item->mid.'.png';
+            if(file_exists($icon_path))
+                    $icon = '<span class="tssporticon tsleagueicon" style="background-image:url(/'.$icon_path.');"></span>';
+            else    $icon = '<span class="tssporticon tssporticon-s'.$item->aid.'"></span>';
+            
+            switch ($item->mid) {
+                /*case 676: // NBA CUSTOM
+                    $icon = '<span class="tssporticon tssporticon-s'.$item->aid.'"></span>';
+                    $block['content'] .= '<li>';
+                    $block['content'] .= l($icon.'<span class="title">'.$item->title . '</span><span class="badge pull-right">'.$item->event_count.'</span>', $url, array('html' => true, 'attributes'=> array('title' => $item->title. ' ('.$item->event_count.')', 'onclick' => "_gaq.push(['_trackEvent', 'OddsMenu: top-leagues-geoip', '{$item->title}', '']);")));
+                    $block['content'] .= '</li>';
+                    break;*/
+                default:
+                    //<span class="badge pull-right">'.$item->event_count.'</span>
+                    $block['content'] .= '<li>';
+                    $block['content'] .= l($icon.'<span class="title">'. $item->title .'</span>', $url, array('html' => true, 'attributes'=> array('title' => $item->title/*. ' ('.$item->event_count.')'*/, 'onclick' => "_gaq.push(['_trackEvent', 'OddsMenu: top-leagues-geoip', '{$item->title}', '']);")));
+                    $block['content'] .= '</li>';
+                    break;
+            }
+        }
+        $block['content'] .= '</ul>';
+    }
+    return $block;
+}
+
+function _topleagues_getFeatruredLeagues(){
+    global $language/*, $user*/;
+    $geo_country = geoip_country_code();
+    if(\strlen($geo_country) != 2){ $geo_country = 'lt'; }
+    $cid = __FUNCTION__.'_'.$language->language.$geo_country/*.$user->uid*/;        
+    if($cache = cache_get($cid, 'cache')){
+        $cache = $cache->data;        
+    }else{		
+		$cache = _topleagues_prepareModuleQuery($language, $geo_country);
+				 
+		 function extractLeague($rec) { 
+				$t = explode(' » ', $rec->category); 
+				$rec->title = $t[2]; 
+				$rec->source = 'odds/all/'.$rec->aid.'/'.$rec->cid.'/'.$rec->mid; 
+				return $rec;				
+		 }
+		 
+		 
+		$cache = array_map('extractLeague', $cache);
+		
+        cache_set($cid,  $cache, 'cache', strtotime('+5 min'));
+    }      
+    return $cache;
+}
+
+function _topleagues_prepareModuleQuery($language, $geo_country){
+    $query = "
+        SELECT * FROM 
+        (
+            SELECT DISTINCT ON (mid) mid,cid,aid, category,name,event_count, min(weight) as weight FROM (
+                    (
+                            SELECT 
+                                            min(e.name) as name,
+                                            e.aid, e.cid, e.mid,
+                                            e.category,
+                                            0 as event_count,
+                                            0 as weight
+                            FROM ts_offers_events e 
+                            WHERE 
+                                            e.language = :language
+                                            AND e.date >= extract(epoch from now())::INT
+                                            AND e.date < extract(epoch from now() + INTERVAL '14 days')::INT
+                                            AND e.peid is null 
+                                            AND (e.name < 60000 OR e.name > 99999)
+                                            AND e.mid IN(SELECT mid FROM ts_topleagues) 
+                                            AND e.enabled = 1
+                            GROUP BY e.mid,e.aid,e.cid,e.category LIMIT 4
+                    ) UNION (	
+                            SELECT 
+                                            min(e.name) as name,
+                                            e.aid, e.cid, e.mid,
+                                            e.category,
+                                            0 as event_count,
+                                            1 as weight
+                            FROM ts_offers_events e 
+                            WHERE 
+                                            e.language = :language
+                                            AND e.date >= extract(epoch from now())::INT
+                                            AND e.date < extract(epoch from now() + INTERVAL '2 days')::INT
+                                            AND e.peid is null 
+                                            AND e.enabled = 1
+                                            AND (e.name < 60000 OR e.name > 99999)
+                                            AND (e.item1country_id = (SELECT cid from ts_countries WHERE code = :geo_country) OR e.item2country_id = (SELECT cid from ts_countries WHERE code = :geo_country))
+                            GROUP BY e.mid,e.aid,e.cid,e.category LIMIT 4
+                    )
+            ) l
+            GROUP BY mid,name,aid,cid,category,event_count
+            LIMIT 6
+        ) l2
+        ORDER BY weight,name
+        ";
+    $cache = db_query($query, array(':language' => $language->language, ':geo_country' => strtoupper($geo_country)))->fetchAll(PDO::FETCH_OBJ);
+    
+    return $cache;
+}
+
+function _topleague_unused(){
+    $query = "SELECT * FROM 
+		(	
+			
+	)
+		";
+		
+        $query = 
+				"SELECT * 
+  FROM 
+     (SELECT 
+         DISTINCT ON (oe.mid)
+            oe.mid,	
+			oe.cid,
+            oe.aid,
+	        oe.category,
+            t_md.weight,
+            t_md.name as event_name,
+            t_md.cache_time as event_cache_time,
+            (	
+		SELECT count(*) from ts_offers_events WHERE mid = oe.mid and peid IS NULL AND enabled = 1 
+            		AND language = :language
+			AND date >= extract(epoch from now())::INT
+		) as event_count
+        FROM ts_offers_events oe
+ 	INNER JOIN (
+		select mid, name, cache_time, min(weight) as weight 
+		from (
+			(
+				SELECT e.mid, min(e.name) as name, min(e.date) as cache_time, 0 as weight
+				FROM ts_offers_events e,
+					ts_topleagues tl
+				WHERE tl.mid = e.mid AND ( tl.country = UPPER( :geo_country
+					) OR length( trim(BOTH ' ' FROM tl.country)) < 2 )
+				GROUP BY e.mid
+				ORDER BY name
+			) 
+" . ( $user->uid > 0 ? "			
+UNION 
+			(
+				SELECT e.mid, min(e.name) as name, min(e.date) as cache_time, -1 as weight
+				FROM ts_offers_events e,
+					mapi_user_favorites uf
+				WHERE uf.refid = e.mid AND uf.uid = :uid AND uf.type = 'm'
+				GROUP BY e.mid
+				ORDER BY name
+			) " : '' ) .
+		"	UNION 
+			(
+				SELECT e.mid, min(e.name) as name, min(e.date) as cache_time, min(e.name) as weight
+				FROM ts_offers_events e,				
+				(	
+					SELECT cid FROM ts_countries c WHERE c.code = UPPER( :geo_country
+						) and length(c.code) = 2
+				) cc
+				WHERE 
+					language = :language 
+					AND 
+					( item1country_id = cc.cid 
+					OR item2country_id = cc.cid
+					) 
+					AND peid is null 
+					AND date >= extract(epoch from now())::INT 
+					AND date < extract(epoch from now()+ INTERVAL '2 weeks')::INT 
+					AND aid != 16
+					AND enabled = 1
+				group by e.mid
+				order by name
+			)
+		) ttmt 
+		group by mid, name, cache_time
+	) t_md ON t_md.mid = oe.mid
+
+        WHERE                    
+             oe.language = :language				
+        ) tt
+		WHERE event_count > 0
+    ORDER BY weight LIMIT 5
+
+";
+			
+         $cache = db_query($query, array(':language' => $language->language, ':geo_country' => $geo_country, ':uid' => $user->uid))->fetchAll(PDO::FETCH_OBJ); 
+}

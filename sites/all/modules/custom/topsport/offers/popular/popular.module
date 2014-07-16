@@ -1,0 +1,215 @@
+<?php
+// $Id$
+
+
+/**
+ * Implements hook_block_info().
+ */
+function popular_block_info() {
+	$blocks['popular']['info'] = t('Populiariausios lažybos');
+	$blocks['popular']['cache'] = DRUPAL_CACHE_CUSTOM;
+	return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ *
+ * Generates a block containing the popular offers.
+ */
+function popular_block_view($delta = '') {
+	global $user;
+	$user_loged = ($user->uid?1:0);
+	$cid_parts[] = 'offers';
+	$cid_parts[] = $delta;
+	$cid_parts[] = 'europeview-'.(int)offers_show_europeview();
+	$cid_parts[] = 'loged'.$user_loged;
+	$cid_parts = array_merge($cid_parts, drupal_render_cid_parts(DRUPAL_CACHE_GLOBAL));
+	$cid = implode(':', $cid_parts);
+	if($cache = cache_get($cid, 'cache_block')){
+		return $cache->data;
+	}
+	global $language;
+	$popularEvents = &drupal_static(__FUNCTION__);
+	$block['subject'] = t('Populiariausios lažybos');
+
+	$block['content'] = '';
+
+	$popularEventsContent = "";
+	$popularEvents = array();
+	$popularEvents['events'] = array();
+	$popularEvents['areas'] = array();
+	$minCache = strtotime('+ 15 min');
+	$areaRanks = array();
+	$topEvents = topsport_getTopBetEvents(10);
+	if(isset($topEvents['Areas']['Area'])){
+		if(isset($topEvents['Areas']['Area']['AreaId'])){
+			$topEvents['Areas']['Area'] = array('0' => $topEvents['Areas']['Area']);
+		}
+		foreach($topEvents['Areas']['Area'] as $topEventArea){
+			$popularEvents['areas'][$topEventArea['AreaId']] = array(
+        '#aid' => $topEventArea['AreaId'],
+        '#name' => (is_array($topEventArea['AreaName'])
+          ? (isset($topEventArea['AreaName'][offers_formatLang($language->language)]) ? $topEventArea['AreaName'][offers_formatLang($language->language)] : $topEventArea['AreaName']['Default'])
+          : $topEventArea['AreaName']
+          ),
+      );
+      if(isset($topEventArea['Events']['Event']['EventId'])){
+        $topEventArea['Events']['Event'] = array('0' => $topEventArea['Events']['Event']);
+      }
+      
+      foreach($topEventArea['Events']['Event'] as $topEvent){
+        $eventOffer = offers_getEventById($topEvent['EventId']);	
+        if($eventOffer){
+          $popularEvents['events'][] = $eventOffer;
+          $popularEvents['areas'][$eventOffer->aid]['events'][$topEvent['GlobalPosition']] = $eventOffer;
+	  
+		  if(!isset($areaRanks[$eventOffer->aid]) || $topEvent['GlobalPosition'] < $areaRanks[$eventOffer->aid])
+			  $areaRanks[$eventOffer->aid] = $topEvent['GlobalPosition'];
+		  
+          if($eventOffer->date < $minCache){
+            $minCache = $eventOffer->date;
+          }
+        }
+      }
+    }
+    foreach($popularEvents['areas'] as $key => $area){
+      if(!empty($popularEvents['areas'][$key]['events'])){
+        ksort($popularEvents['areas'][$key]['events']);
+      }else{
+        unset($popularEvents['areas'][$key]);
+      }
+    }
+  }
+  
+    $areaRanks = array_flip($areaRanks);
+	ksort($areaRanks);
+	
+  
+  if(sizeof($popularEvents['events']) > 0){
+    $odd_codes = array('1' => '1', '0' => '2', '2' => '3', '10' => '4', '02' => '5');
+    $header = array(
+      'title' => array('header' => true, 'data' => '', 'colspan' => $user_loged?3:4),
+      '1' => array('header' => true, 'data' => '1', 'class' => array('odd_title')),
+      '2' => array('header' => true, 'data' => '0', 'class' => array('odd_title')),
+      '3' => array('header' => true, 'data' => '2', 'class' => array('odd_title')),
+      '4' => array('header' => true, 'data' => '10', 'class' => array('odd_title')),
+      '5' => array('header' => true, 'data' => '02', 'class' => array('odd_title')),
+      'more' => array('header' => true, 'data' => '', 'class' => array('more')),
+		);
+		$attributes = array(
+      'class' => array('odds', 'control-offers-list'),
+		);
+		$rows = array();
+		$aid_selected = reset($areaRanks);//$aid_selected = $aid_selected['#aid'];
+		$popularEventsContent .= '<ul id="popular-offers-list-conttrol" class="offers-list-control content-block-menu">';
+		foreach($areaRanks as $areaId){
+			$area = $popularEvents['areas'][$areaId];
+			$popularEventsContent .= '
+        <li id="pol_'.$area['#aid'].'_popular" class="item'.($area['#aid'] == $aid_selected ? ' active first' : '').'">'.($area['#aid'] ? '<span class="icon"><img width="18px" src="/sites/all/img/icons/area/'.$area['#aid'].'.png"  alt="" /></span>' : '').$area['#name'].'</li>
+      ';
+		}
+		$popularEventsContent .= '</ul>';
+    
+    
+    
+    
+    $acats = array();  
+  global $language;
+  
+  foreach($areaRanks as $key){
+	  
+	  $area = $popularEvents['areas'][$key];
+      foreach($area['events'] as $e)  
+	{
+
+		$k = $e->aid .'-'. $e->cid .'-'. $e->mid;
+
+		if(!array_key_exists($e->aid, $acats) || !array_key_exists($k, $acats[$e->aid]))
+		{
+	  $tt = explode('»', $e->category);
+	  $tt = array_pop($tt);
+	  $ttt = db_select('offers_cat', 'cats')->fields('cats')->condition('country_id', $e->cid)->condition('language', $language->language);
+
+	  $ttt->isNull('event_id');
+
+	  $ttt->condition ('area_id', $e->aid);
+
+	  if(!$e->mid) $ttt->isNull('module_id');
+		  else
+		  $ttt->condition ('module_id', $e->mid);
+
+	  $ttt->condition('country_id', $e->cid);
+
+	  $ttt = $ttt->execute()->fetch();
+	  if(!empty($ttt))
+
+		  $acats[$key][$k] = array('title'=>$tt , 'node'=>$ttt->nid);	
+		}
+	}
+    
+  }
+    
+		foreach($areaRanks as $key){
+	  
+	  $area = $popularEvents['areas'][$key];
+			$areaRows = array();
+			$areaColumnsEmpty = array();
+			if(!offers_show_europeview()){
+				$areaRows[] = array(
+          'data' => $header,
+          'header' => true,
+          'class' => array('aid_'.$key.'_popular'),
+          'style' => ($key != $aid_selected ? array('display: none;') : array()),
+				);
+			}
+			foreach($popularEvents['areas'][$key]['events'] as $event){
+				$areaColumnsEmpty2 = array();
+				$eventRows = offers_format_event_row($event, 'popular', $areaColumnsEmpty2);
+				if(!count($areaColumnsEmpty)) $areaColumnsEmpty = $areaColumnsEmpty2;
+				else
+				{
+				$tt = array();
+					foreach ($areaColumnsEmpty2 as $kk => $v)
+						if($v && $areaColumnsEmpty[$kk]) $tt[$kk] = true;
+					$areaColumnsEmpty = $tt;
+				}
+				
+				foreach($eventRows as $row){
+					$row['style'][] = ($event->aid != $aid_selected ? 'display: none;' : '');
+					$areaRows[] = $row;
+				}
+			}
+			
+			if($user_loged) $areaColumnsEmpty['name'] = true;
+			
+			foreach($areaColumnsEmpty as $columnId => $isEmpty){
+				if($isEmpty){
+          foreach($areaRows as $ky => $areaRow){
+            unset($areaRows[$ky]['data'][$columnId]);
+					}
+				}
+			}
+			$rows = array_merge($rows, $areaRows);
+		}
+		$popularEventsContent .= theme('table', array('sticky'=>false, /*'header' => $header,*/ 'rows' => $rows, 'attributes' => $attributes));
+	}
+
+  
+  
+  
+  foreach ($acats as $aid => $titles)
+  {
+    $popularEventsContent .= '<div class="aid_'.$aid.'_popular speclinks" '.($aid != $aid_selected ? 'style="display: none;"' : '').'><span class="spectitle">'.t('Top lygos:').'</span> ';  
+
+
+    foreach ($titles as $title)
+    {	
+	$popularEventsContent .= '<a href="'.url('node/'.$title['node']).'">' .$title['title'].'</a> ';    
+    }
+    $popularEventsContent .= '</div>';
+  }
+  
+	$block['content'] = $popularEventsContent;
+	cache_set($cid, $block, 'cache_block', $minCache);
+	return $block;
+}

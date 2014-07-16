@@ -1,0 +1,89 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Install, update and uninstall functions for the livesportsbook module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+
+function livesportsbook_schema() {
+	$schema['livesportsbook_wallet'] = array(
+		'description' => 'Stores live sportsbook wallet data',
+		'fields' => array(
+			'wid' => array(
+				'description' => 'The primary identifier for a wallet transfers ID.',
+				'type' 		  => 'serial',
+				'unsigned' 	  => TRUE,
+				'not null' 	  => TRUE,
+	),
+			'amount' => array(
+				'type' 	 	  => 'numeric',
+				'unsigned'    => FALSE,
+				'not null' 	  => TRUE,
+				'default' 	  => 0,
+				'description' => "The amount of money to transfer. The positive amounts means transferring money to sports betting account and the negative amounts means withdrawing money from sports betting account.",
+				'precision'   => 15,
+				'scale'       => 2,
+	),
+			'currency' => array(
+				'description' => "Currency in accordance with ISO.",
+				'type' 		  => 'varchar',
+				'length' 	  => 3,
+				'not null' 	  => TRUE,
+				'default' 	  => '',
+	),
+			'uid' => array(
+				'description' => 'The primary identifier for a wallet transfers ID.',
+				'type'        => 'serial',
+				'unsigned'    => TRUE,
+				'not null'    => TRUE,
+	),
+			'created' => array(
+				'description' => "Date/ time when the game was started. Format: YYYY>MM>DD hh:mm:ss ",
+				'mysql_type'  => 'DATETIME',
+				'pgsql_type'  => 'timestamp without time zone',
+				'not null'    => TRUE,
+				'default'     => null,
+	),
+			'transfer_time' => array(
+				'description' => "The time when the transfer is started.About DateTime,please refer to 2.4.Data Type reference",
+				'mysql_type'  => 'DATETIME',
+				'pgsql_type'  => 'timestamp without time zone',
+				'not null'    => FALSE,
+				'default'     => null,
+	),
+			'status' => array(
+				'description' => "The status got in 4th step “3.3.1.4 Do transfer”",
+				'type'        => 'varchar',
+				'length'      => 20,
+				'not null'    => TRUE,
+				'default'     => null,
+	),
+			'message' => array(
+				'description' => "The message got in 4th step “3.3.1.4 Do transfer”",
+				'type'        => 'varchar',
+				'length' 	  => 250,
+				'not null'    => FALSE,
+				'default' 	  => '',
+	),
+			'error_code' => array(
+				'description' => "The code or status answer of TOP SPORT API, if its equal to zero operation was done succeded",
+				'type'        => 'int',
+				'length'      => 5,
+				'not null'    => FALSE,
+				'default'     => null,
+	),
+	),
+    	'primary key' => array('wid'),		
+		'indexes' => array(
+	    	'wid'    => array('wid'),
+			'uid'    => array('uid'),
+			'status' => array('status'),
+	),
+	);
+	return $schema;
+}

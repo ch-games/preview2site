@@ -1,0 +1,9 @@
+; $Id: account_log.info $
+name = Betslip events logging
+description = "Registruojami vartotojų veiksmai susiję Mano statymai"
+dependencies[] = topsport
+core = 7.x
+version = 7.x-0.x-dev
+package = TopSport
+files[] = betslip_log.install
+files[] = betslip_log.module

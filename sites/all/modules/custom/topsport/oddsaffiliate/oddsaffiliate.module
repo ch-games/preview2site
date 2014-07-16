@@ -1,0 +1,247 @@
+<?php
+/**
+ *  TODO:
+ *  - Think about scalability this part system...
+ */
+
+define('CAMPAIGN_VAR', 'aff');
+define('CAMPAIGN_TAG', 'affiliate_trackcode');
+
+/**
+ * Implements hook_init().
+ */
+function oddsaffiliate_init() {
+	if (strpos( $_GET['q'], 'admin' ) === FALSE) {
+		oddsaffiliate_campaing_tracker();
+		if ( strpos( $_GET['q'], 'user/register/done' ) !== FALSE OR isset($_GET['registration'])) {
+			oddsaffiliate_save_user_to_aff_list();
+		}
+	}
+}
+
+/**
+ * Implements hook_menu().
+ */
+function oddsaffiliate_menu() {
+	$items = array();
+
+	$items['affiliate/main'] = array(
+    'title' 		   => 'Affiliate main page',
+    'description' 	   => 'On this page we can view rewards of advertisment performance',
+    'page callback'    => 'oddsaffiliate_user_campaings_reward_page',
+  	'file'			   => 'oddsaffiliate.pages.inc',
+  	'access callback'  => 'user_access',
+	'access arguments' => array('administer site configuration'),
+	);
+
+	/*$items['affiliate/history'] = array(
+	 'title' 		 => 'Withdrawal history',
+	 'description' 	 => '',
+	 'page callback'  => '',
+	 'file'			 => 'oddsaffiliate.pages.inc',
+	 'page arguments' => array()
+	 );*/
+
+	$items['affiliate/api/list-of-affilates'] = array(
+    'title' 		  => 'Affilates XML FEED',
+    'description' 	  => 'This feed must accesible for restricted IPs',
+    'page callback'   => 'oddsaffiliate_get_affiliates_as_xml',
+  	'file'			  => 'oddsaffiliate.pages.inc',
+    'access callback'  => 'user_access',
+	'access arguments' => array('administer site configuration'),
+	);
+	return $items;
+}
+
+function oddsaffiliate_create_new() {
+	// Not yet implemented
+}
+
+function oddsaffiliate_create_new_form($form, &$form_state) {
+	$form['title'] = array(
+	    '#type' 	    => 'textfield', 
+	    '#title' 	    => t('Campaign title'), 
+	    '#required'     => TRUE, 
+	    '#description'  => t('Ši reikšmė apibūdina, kur bus naudojama kampanija'), 
+	    '#size' 	    => 50
+	);
+	$form['submit'] = array(
+	    '#type'   => 'submit', 
+	    '#value'  => t('Patvirtinti')
+	);
+	return $form;
+}
+
+function oddsaffiliate_create_new_form_validate($form, &$form_state) {
+	// nothing to do
+}
+
+function oddsaffiliate_create_new_form_submit($form, &$form_state) {
+	global $user;
+	$title = $form_state['values']['title'];
+	db_insert('affiliate_campaigns')->fields(
+	array(
+			'title' => $title,
+			'uid'	=> $user->uid
+	)
+	)->execute();
+}
+
+/**
+ * Atsakingas už kampanijos sukūrimą čia sugeneruojama nuoroda:
+ * affiliate_id
+ * zone_id
+ * Language_id
+ * bonus_id // jei ateityje skirstytume į vienokius ar kitokius
+ */
+function oddsaffiliate_create_campaing() {
+	// Not yet implemented
+}
+
+/**
+ * Atsakingas už duomenų patirkinimą ir jų užsaugojimą sesijoje arba sausainyje. fiksavimą .
+ */
+function oddsaffiliate_campaing_tracker() {
+	if (oddsaffiliate_is_campaing_tracker_request(isset($_GET[CAMPAIGN_VAR]) ? $_GET[CAMPAIGN_VAR] : '') &&
+	(!isset($_SESSION[CAMPAIGN_TAG]) && !isset($_COOKIE[CAMPAIGN_TAG])))
+	{
+		$campaing = $_GET[CAMPAIGN_VAR];
+
+		oddsaffiliate_save_aff_stat_visit($campaing); // save campaign visits
+
+		// Marking this client as possible affiliate user
+		$_SESSION[CAMPAIGN_TAG] = $campaing;
+		setcookie(CAMPAIGN_TAG, $campaing, strtotime('+ 14 days'), '/');
+	}
+}
+
+/**
+ * SHOULD WE NEED TAKE CARE THIS? YES : NO
+ * Accepting only get pushes others we ignore... and let pass only 10 variables for spam purpose
+ * @param array $reguest
+ * @return boolean
+ */
+function oddsaffiliate_is_campaing_tracker_request($reguest) {
+	if ( isset($reguest) && !empty($reguest) /*&& !user_is_logged_in() */){
+		$params = explode('-', $reguest);
+		$index  = count($params);
+		if ( $index > 0 && $index < 10 ){
+			for ( $i = 0; $i < $index; $i++ ) {
+				if ( !is_int((int)$params[$i]) ) {
+					return false;
+				}
+			}
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Get exploded array of data
+ * @param unknown_type $reguest
+ * @return multitype:|boolean
+ */
+function oddsaffiliate_get_campaing_tracker_array($reguest) {
+	if ( isset($reguest) && !user_is_logged_in() ){
+		$params = explode('-', $reguest);
+		$index  = count($params);
+		if ( $index > 0 && $index < 5 ){
+			return $params;
+		}
+	}
+	return false;
+}
+
+/**
+ * Saving brought new customer to affiliator user list
+ * @param unknown_type $aff_if
+ * @param unknown_type $campaing
+ * @param unknown_type $new_client_id
+ */
+function oddsaffiliate_save_user_to_aff_list(){
+	global $user;
+
+	if(isset($_SESSION['#user'])){
+		$account = $_SESSION['#user'];
+	}else{
+		$account = $user;
+	}
+	if ( $account->uid > 0 && ( isset($_SESSION[CAMPAIGN_TAG]) || isset($_COOKIE[CAMPAIGN_TAG]) )) {
+		$source = isset($_COOKIE[CAMPAIGN_TAG]) ? $_COOKIE[CAMPAIGN_TAG] : $_SESSION[CAMPAIGN_TAG];
+		$data   = oddsaffiliate_get_campaing_tracker_array($source);
+		$is_exist_camp = db_query('SELECT campaign_id FROM {affiliate_campaigns} WHERE campaign_id = :campaign', array( ':campaign' => $data[0] ))->fetchObject();
+
+		if ($is_exist_camp){
+			db_insert('affiliate_users')->fields( array(
+				'campaign_id' => intval($data[0]), 
+				'uid' 		  => $account->uid, 
+				'ip' 	      => $_SERVER['REMOTE_ADDR'], 
+			))->execute();
+			// work done, unsetting data...
+			unset($_SESSION[CAMPAIGN_TAG], $_COOKIE[CAMPAIGN_TAG]);
+			setcookie(CAMPAIGN_TAG, '', strtotime('-14 days'), '/');
+		}
+	}
+}
+
+function oddsaffiliate_save_aff_stat_visit($campaing_string){
+	$campaing_data = oddsaffiliate_get_campaing_tracker_array($campaing_string);
+	if ($campaing_data != false){
+		db_query('UPDATE {affiliate_campaigns} SET total_visits = total_visits + 1 WHERE campaign_id = :campaign_id;', array( ':campaign_id' => $campaing_data[0]));
+	}
+}
+
+/**
+ * Get Specifield Affiliate user customers list
+ * @param unknown_type $affilate_uid
+ * @return multitype:
+ */
+function oddsaffiliate_get_affiliate_users($affilate_uid){
+	return db_query('SELECT u.uid, u."name", u.mail, u.created, u."language", u."data", ac.title, au.campaign_id, au.ip FROM {users} u RIGHT JOIN {affiliate_users} au ON u.uid = au.uid RIGHT JOIN {affiliate_campaigns} ac ON ac.campaign_id = au.campaign_id where au.campaign_id IN (SELECT campaign_id FROM {affiliate_campaigns} where uid = :uid)', array(':uid' => $affilate_uid ))->fetchAll();
+}
+
+/**
+ * Get specifield Affiliate user commissions
+ * @param unknown_type $user_id
+ * @return Ambigous <Ambigous, array, string>|boolean
+ */
+function oddsaffiliate_get_affiliate_profit_data($user_id){
+	$users = oddsaffiliate_get_affiliate_users($user_id);
+	if ($users){
+		// making request variables
+		$xml_request .= '<AffiliateUsers>';
+		foreach ($users as $user){
+			$user->data = unserialize($user->data);
+			if (isset($user->data['tsuid'])){
+				$xml_request .= '<client uid="'.$user->uid.'" tsuid="'.$user->data['tsuid'].'" />';
+			}
+		}
+		$xml_request .= '</AffiliateUsers>';
+		$result = topsport_get_affiliate_profit_data($xml_request);
+
+		if (isset($result['Profit'])){
+			return $result;
+		}
+	}
+	return false;
+}
+
+function oddsaffiliate_get_affiliate_campaigns($user_id){
+	//$campaigns = db_query('SELECT *, (SELECT count(*) FROM {affiliate_users} where campaign_id = c.campaign_id ) as total_clients FROM {affiliate_campaigns} c WHERE uid = :uid', array( ':uid' => $user_id ))->fetchAll();
+	$campaigns = db_query('SELECT *, (SELECT count(*) FROM {affiliate_users} where campaign_id = c.campaign_id ) as total_clients FROM {affiliate_campaigns} c ')->fetchAll();
+	return isset($campaigns) ? $campaigns : false;
+}
+
+/**
+ * Connecting to get RAW XML object from TOP SPORT DATABASES
+ * @param string $xml_request
+ * @return Ambigous <array, string>
+ */
+function topsport_get_affiliate_profit_data($xml_request){
+	// making connectiong with API
+	$response = file_get_contents(dirname(__FILE__).'/data/affiliateProfit.xml');
+	//$response = topsport_http_request('affiliateProfit.jsp', $xml_request, 'POST', FALSE );
+	$result = sx_array(@simplexml_load_string($response));
+	return $result;
+}

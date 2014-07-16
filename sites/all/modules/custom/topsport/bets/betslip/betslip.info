@@ -1,0 +1,9 @@
+; $Id: offers.info,v 0.1 2010/11/19 11:48:38 evaldas Exp $
+name = Jūsų statymai
+description = "Display bet slip block in pages"
+dependencies[] = topsport
+core = 7.x
+version = 7.x-1.0
+package = TopSport
+files[] = betslip.module
+files[] = betslip.install

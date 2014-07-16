@@ -1,0 +1,242 @@
+<?php
+// $Id: account.module Exp $
+
+define('AC_MONETARU_ID',  				  '31575372'); //Merchant ID in PayAnyWay.ru system
+define('AC_MONETARU_DATA_INTEGRITY_CODE', '5NxuJgqOrN');
+define('AC_MONETARU_TEST_MODE', 		  0); // 1 - TESTING MODE; 0 - LIVE PAYMENTS
+
+
+function ac_monetaru_menu(){
+	$items['payment-moneta-ru-callback'] = array(
+    'title' 		  => 'Payment Moneta.ru Callback',
+    'access callback' => TRUE,
+    'page callback'   => 'ac_monetaru_payment_callback',
+    'type' 			  => MENU_CALLBACK,
+	);
+	return $items;
+}
+
+function ac_monetaru_account_payment_method(){
+	global $base_url;
+	$icons 			   = $base_url.'/'.drupal_get_path('module', 'ac_monetaru').'/icons/';
+	$methods['monetaru'] = array(
+    'id' 		 => 'monetaru',
+    'name' 		 => t('Moneta.ru'),
+    'title' 	 => '<img src="'.$icons.'monetaru-logo.png" title="'.t('Moneta.ru').'" />',
+    'komisiniai' => '0%',
+    'update' 	 => t('Iš karto'),
+    'limit' 	 => t('Min. 10 Lt').'<br/>'.t('Max.&nbsp;50&nbsp;000&nbsp;Lt'),
+    'limit_min'  => 10,
+    'limit_max'  => 50000,
+    'callback'   => 'ac_monetaru_payment_start',
+    'weight' 	 => 2,
+    'category' 	 => 'ewallet',
+    'countries'	 => array(),
+	);
+	return $methods;
+}
+
+function ac_monetaru_payment_start($form, &$form_state){
+	return ac_monetaru_payment_form($form, $form_state);
+}
+
+function ac_monetaru_lang(){
+	global $language;
+	switch ($language->language){
+		case 'ru':
+			return $language->language;break;
+		default:
+			return 'en'; break;
+	}
+}
+
+function ac_monetaru_payment_form($form, &$form_state){
+	$account 				   		  = $form['#user'];
+	
+	// adding check for blocked from user payment gateway
+	$method = 'monetaru';
+	$title = t('Moneta.ru');
+	account_deposit_is_active($method, array('@PaymentName' => $title));
+	
+	$payment_form 		   		  = array();
+	$payment_form['#user']   		  = $account;
+	$payment_form['#action'] 		  = 'https://www.payanyway.ru/assistant.htm';
+	$form_state['values']['amount'] = sprintf("%01.2f", $form_state['values']['amount']);
+
+	$oid = account_createOrderUser($form, $form_state);
+	$amount_in_euros = account_currency_api_convert($form_state['values']['currency'], 'EUR', $form_state['values']['amount']);
+	$request = array(
+	//  ---------------------------------
+	//  ------ Merchant Details ---------
+    'MNT_ID'    	  => AC_MONETARU_ID,
+  	'MNT_SIGNATURE'   => md5( AC_MONETARU_ID . $oid . $amount_in_euros . 'EUR' . 
+	AC_MONETARU_TEST_MODE . AC_MONETARU_DATA_INTEGRITY_CODE
+	), // sign parameter with correlation secret code
+    'MNT_TEST_MODE'   => AC_MONETARU_TEST_MODE,  	
+    'MNT_SUCCESS_URL' => url('account/deposits/accept', array('absolute' => TRUE)),
+    'MNT_FAIL_URL' 	  => url('account/deposits/cancel', array('absolute' => TRUE)),
+	//  ---------------------------------
+	//  ------ Personal ID data----------
+    'MNT_CUSTOM1' => account_getCorrectName($account->data['firstname'].($account->data['middlename'] ? ' '.$account->data['middlename'] : '')) . ' ' . account_getCorrectName($account->data['surname']),
+	'MNT_CUSTOM2' => userinfo_get_topsportId($account),
+    'MNT_CUSTOM3' => $account->mail,
+	//  ---------------------------------
+	//  ------ Payment Details ----------
+	'MNT_TRANSACTION_ID' => $oid,
+    'MNT_AMOUNT' 		 => $amount_in_euros, //Amount of payment $form_state['values']['amount']
+    'MNT_CURRENCY_CODE'	 => 'EUR', // we using only EUR ACC on moneta.ru
+  	'MNT_DESCRIPTION'    => t('Sąskaitos papildymas'),
+    'moneta.locale'      => ac_monetaru_lang(), 
+	);
+
+	foreach($request as $key => $value){
+		$payment_form[$key] = array('#type' => 'hidden', '#value' =>  htmlspecialchars($value));
+	}
+
+	$payment_form[] = array(
+    'payment_method_icon' => array(
+		'#markup' => _account_payment_method_data($form_state['values']['payment_method'], 'title'),
+		'#prefix' => '<div>',
+		'#suffix' => '</div>',
+		),
+		
+    'payment_method' => array(
+      '#markup' =>  '<strong>'.t('Įmokos būdas:').'</strong> '._account_payment_method_data($form_state['values']['payment_method'], 'name'),
+      '#prefix' => '<div class="form-item">',
+      '#suffix' => '</div>',
+	),
+    'payment_update' => array(
+      '#markup' => t('Įmokos įskaitymo trukmė').': '._account_payment_method_data($form_state['values']['payment_method'], 'update'),
+	),
+    'amount' => array(
+      '#markup' =>  '<strong>'.t('Suma:').'</strong> '.account_currency_string($form_state['values']['amount'], $form_state['values']['currency']) . (($form_state['values']['currency'] == 'EUR') ? '' : ' ('.account_currency_string(account_currency_api_convert($form_state['values']['currency'], 'EUR', $form_state['values']['amount']), 'EUR').')') ,
+      '#prefix' => '<div class="form-item">',
+      '#suffix' => '</div>',
+	),
+	);
+
+	$payment_form['back'] = array(
+    '#markup' => l(t('Atgal'), 'account/deposits', array('attributes' => array('class' => array('form-submit', 'reset')))),
+    '#weight' => '20',
+	);
+
+	$payment_form['submit_action'] = array(
+    '#type' 	=> 'submit',
+    '#value' 	=> t('Patvirtinti'),
+    '#weight'	=> '21',
+    '#states' 	=> array(
+      	'enabled' => array( ':input[name="info_danger"]' => array('checked' => TRUE) ),
+	),
+	);
+	return $payment_form;
+}
+
+function uc_monetaru_payment_cancelled_form() {
+	$form['uc_monetaru_payment_cancelled_form'] = array(
+    '#value' => '<strong>' . t('Your payment was canceld.') . '</strong><br/>' .
+	t('Feel free to continue shopping on our site.'),
+    '#prefix' => '<div class="moneybookers_infotext">',
+    '#suffix' => '</div>',
+	);
+	$form['submit'] = array(
+    '#type'  => 'submit',
+    '#value' => t('continue'),
+	);
+	$form['#action'] = url('cart');
+	return $form;
+}
+
+/**
+ * Process paseed paid orders from 3third party payment proccessor
+ * Feedback variables:
+ * checkURL?
+ *   [MNT_ID] => 31575372
+ *   [MNT_TRANSACTION_ID] => 206144
+ *   [MNT_OPERATION_ID] => 123456789
+ *   [MNT_AMOUNT] => 28.96
+ *   [MNT_CURRENCY_CODE] => EUR
+ *   [MNT_TEST_MODE] => 1
+ *   [MNT_SIGNATURE] => b9867866deb7e4a772fe8feb5c252a4a
+ *   [MNT_USER] => 61864149
+ *   [MNT_CORRACCOUNT] => 61864149
+ *   [MNT_CUSTOM1] => Vardenis Antravardenis Pavardenis
+ *   [MNT_CUSTOM2] => 726
+ *   [MNT_CUSTOM3] => admin@emodus.lt
+ *
+ */
+function ac_monetaru_payment_callback(){
+	watchdog('Moneta.ru', 'Notification data. <pre>@data</pre>', array('@data' => print_r($_REQUEST, true)));
+
+	//  Does the call have a transaction id? If not, forget it!
+	if (!isset($_POST['MNT_TRANSACTION_ID'])) {
+		watchdog('Moneta.ru', 'Notification attempt without order ID. <pre>@data</pre>',  array('@data' => print_r($_REQUEST, true)), WATCHDOG_ERROR);
+		return;
+	}
+	/*
+	 * AC_MONETARU_ID . $oid . $amount_in_euros . 'EUR' .
+	 AC_MONETARU_TEST_MODE
+	 */
+	//  Is the md5 hash valid?
+	if ( !ac_monetaru_md5check($_POST['MNT_TRANSACTION_ID'], $_POST['MNT_OPERATION_ID'], $_POST['MNT_AMOUNT'], $_POST['MNT_CURRENCY_CODE'], $_POST['MNT_SIGNATURE']))
+	{
+		watchdog('Moneta.ru', 'Wrong MD5 signature. <pre>@data</pre>',  array('@data' => print_r($_REQUEST, true)), WATCHDOG_ERROR);
+		return;
+	}
+
+	//  Do we have the corresponding order?
+	$order_id = intval($_POST['MNT_TRANSACTION_ID']);
+	$uid = account_getOrderUser($order_id);
+	if ($uid == FALSE) {
+		watchdog('Moneta.ru', 'Notification attempt for non-existent order. <pre>@data</pre>',  array('@data' => print_r($_REQUEST, true)), WATCHDOG_ERROR);
+		return;
+	}
+	$account = user_load($uid);
+	try{
+		$language = 'LT';
+
+		// 3. send and save data
+		$params = array(
+      'user_id'         => userinfo_get_topsportId($account),
+      'amount'          => account_currency_api_convert($_POST['MNT_CURRENCY_CODE'], 'LTL', $_POST['MNT_AMOUNT']),
+      'extra_amount'    => 0,
+      'order_id'        => $order_id,
+      'merchant_id'     => 888, // it does not mater, we can send any int
+      'language'        => $language,
+      'currency'        => 'LTL',//$_POST['paycurrency'],
+      'pay_text'        => t('Moneta.ru ID %payno', array('%payno' => $_POST['MNT_OPERATION_ID'])),
+      'payment'         => 'Moneta.ru',
+      'status'          => 'done',
+      'error'           => '',
+      'client_name'     => account_getCorrectName($account->data['firstname'].($account->data['middlename'] ? ' '.$account->data['middlename'] : '')),
+      'client_surename' => account_getCorrectName($account->data['surname']),    
+		);
+		account_payment_done($account, $params);
+
+		// Printing out our proccess status
+		$order_final = db_query('SELECT errorcode FROM {users_orders} WHERE oid = :oid', array(':oid' => $order_id ))->fetchObject();
+		if ($order_final->errorcode == 0) {
+			echo 'SUCCESS';
+		} else {
+			echo 'FAIL';
+		}
+	}catch (Exception $e){
+		echo 'FAIL'; 	// if all goes wrong we let know about it payment provaider
+		echo get_class($e).': '.$e->getMessage();
+	}
+}
+/** *
+ * Signature validation
+ * This prevent for only registered orders, then we knew who, when, how much.
+ * MD5 parameters order: MNT_ID + MNT_TRANSACTION_ID + MNT_AMOUNT + MNT_CURRENCY_CODE + TEST MODE + DATA INTEGRITY CODE
+
+ * @param unknown_type $MNT_TRANSACTION_ID
+ * @param unknown_type $MNT_AMOUNT
+ * @param unknown_type $MNT_CURRENCY_CODE
+ */
+function ac_monetaru_md5check( $MNT_TRANSACTION_ID, $MNT_OPERATION_ID, $MNT_AMOUNT, $MNT_CURRENCY_CODE, $MNT_SIGNATURE ) {
+	$shop_signature = md5( AC_MONETARU_ID . $MNT_TRANSACTION_ID . $MNT_OPERATION_ID . $MNT_AMOUNT . $MNT_CURRENCY_CODE . AC_MONETARU_TEST_MODE . AC_MONETARU_DATA_INTEGRITY_CODE);
+	if ($shop_signature === $MNT_SIGNATURE ) {
+		return true;
+	}
+	return false;
+}

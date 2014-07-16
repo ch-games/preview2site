@@ -1,0 +1,9 @@
+; $Id: account.info $
+name = Account automailer
+description = "Sends conditional emails like birthday congratulations and notifies to inactive users"
+dependencies[] = topsport
+core = 7.x
+version = 7.x-0.x-dev
+package = TopSport
+files[] = automailer.install
+files[] = automailer.module

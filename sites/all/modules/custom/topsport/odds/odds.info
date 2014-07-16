@@ -1,0 +1,8 @@
+; $Id$
+name = Odds
+description = "Optimized and superb fast Odds listing module"
+dependencies[] = topsport
+core = 7.x
+version = 7.x-0.x-dev
+package = TopSport
+files[] = odds.module

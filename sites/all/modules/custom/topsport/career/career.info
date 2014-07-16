@@ -1,0 +1,10 @@
+; $Id$
+name = Darbo pasiūlymai
+description = "Darbo pasiūlymų modulis"
+dependencies[] = topsport
+core = 7.x
+version = 7.x-0.x-dev
+package = TopSport
+files[] = carrer.module
+
+configure = admin/config/career

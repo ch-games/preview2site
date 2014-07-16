@@ -1,0 +1,357 @@
+<?php 
+define("GAMMATRIX_SYSTEM", true);
+define("GAMMATRIX_TESTMODE", false);
+//define("GAMMATRIX_FE_URL", 'http://topsport.gammatrix-dev.net/');
+define("GAMMATRIX_FE_URL", '//casino.topsport.lt/');
+
+function gammatrix_menu(){
+	$items = array();
+	
+	$items['casino-games'] = array(
+			'title' 		   => 'Casino games', // page title
+			'page callback'    => 'gammatrix_PageCasinoGames', // callback function name
+			'access arguments' => array('access content'),  // every user can look at generated page
+			//'access callback'  => true,
+			//'file' 			   => 'livesportsbook.service.inc',
+			'type' 			   => MENU_NORMAL_ITEM // define type of menu item as callback
+	);
+	$items['live-casino'] = array(
+			'title' 		   => 'Casino games', // page title
+			'page callback'    => 'gammatrix_PageLiveCasino', // callback function name
+			'access arguments' => array('access content'),  // every user can look at generated page
+			//'access callback'  => true,
+			//'file' 			   => 'livesportsbook.service.inc',
+			'type' 			   => MENU_NORMAL_ITEM // define type of menu item as callback
+	);
+	return $items;
+}
+
+function gammatrix_init(){
+    global $user;   
+    if(GAMMATRIX_SYSTEM /*&& in_array($_SERVER['REMOTE_ADDR'], array('85.9.7.222‏', '88.119.21.64'))*/ && GeoGamesManager::showGeoContent($user)){
+        $is_current = in_array(current_path(), array('live-casino', 'casino-games'));
+        drupal_add_js('
+            jQuery(document).ready(function() {   				
+                 jQuery("#top-services-navigation").append("<li class=\"menu-casino'.($is_current ? ' active':'').'\"><a href=\"/live-casino\">'.t('Casino').'</a></li>");   
+            });', 'inline');        
+    }    
+}
+
+function gammatrix_PageCasinoGames(){
+	global $user, $language;
+	$html = '';	
+	drupal_set_title( t('Kazino žaidimai') );
+    
+	if(GAMMATRIX_SYSTEM){
+		// check confirmation
+        $agrrement = _gammatrix_agreement_exists($user);
+        if($agrrement){ return $agrrement;}
+        $gmx = new GamMatrix();
+		$session = $gmx->initSession($user);
+		$_lang = substr($language->language, 0, 2);
+		$uri = GAMMATRIX_FE_URL.$_lang.'/casino/hall';
+        $domain = array('lt' => 'topsport.lt', 'en' => 'bettopsport.com', 'lv' => 'bettopsport.com', 'ru' => 'bettopsport.ru');
+        if(isset($domain[$_lang])){
+            drupal_add_js('document.domain="'.$domain[$_lang].'";', 'inline');
+        }
+        $min_heigt = 1300;
+        if($_lang != 'lt') {$min_heigt = 2000;}
+		if(strlen($session)) {
+			$uri .= '?_sid=' . $session;			
+			drupal_add_js('				
+    		    function account_balance_update(){    		
+		    		var url = "/front/User/balance";
+		    		jQuery.ajax({
+					 	dataType: "json",
+					  	url: url,
+						success: function(data){
+		    				if(data.BalanceString){
+		    					jQuery(".my-balance a").html(data.BalanceString);
+		    				}
+						}
+					});
+		        	setTimeout(account_balance_update, 10000);	
+		        }    						
+				jQuery(document).ready(function() {    				
+                    setTimeout(account_balance_update, 10000);
+				});                
+			' , 'inline');	
+			
+		}
+		$html .= '<iframe src="'.$uri.'" scrolling="no" frameborder="0" style="border: medium none; overflow: hidden; width: 100%;min-height: '.$min_heigt.'px" marginheight="0" marginwidth="0" border="0" allowtransparency="true"></iframe>';
+	} else {
+		drupal_set_message( t('Atsiprašome už nepatogumus, tačiau ši paslauga yra laikinai pristabdyta, bandykite prisijungti vėliau.'), 'warning' );
+		drupal_goto();
+	}
+	return $html;
+}
+
+function gammatrix_PageLiveCasino(){
+	global $user, $language;
+	$html = '';
+	drupal_set_title( t('Live Kazino, Kazino stalai, Black Jack') );    
+	if(GAMMATRIX_SYSTEM){
+		// check confirmation
+        $agrrement = _gammatrix_agreement_exists($user);
+        
+        if($agrrement){ return $agrrement;}
+        $gmx = new GamMatrix();
+		$session = $gmx->initSession($user);
+		$_lang = substr($language->language, 0, 2);
+		$uri = GAMMATRIX_FE_URL.$_lang.'/livecasino/hall';
+        $domain = array('lt' => 'topsport.lt', 'en' => 'bettopsport.com', 'lv' => 'bettopsport.com', 'ru' => 'bettopsport.ru');
+        if(isset($domain[$_lang])){
+            drupal_add_js('document.domain="'.$domain[$_lang].'";', 'inline');
+        }
+        $min_heigt = 2000;
+        if($_lang != 'lt') {$min_heigt = 2000;}
+		if(strlen($session)) {
+			$uri .= '?_sid=' . $session; 
+			drupal_add_js(' 
+    		    function account_balance_update(){    		
+		    		var url = "/front/User/balance";
+		    		jQuery.ajax({
+					 	dataType: "json",
+					  	url: url,
+						success: function(data){
+		    				if(data.BalanceString){
+		    					jQuery(".my-balance a").html(data.BalanceString);
+		    				}
+						}
+					});
+		        	setTimeout(account_balance_update, 10000);	
+		        }    						
+				jQuery(document).ready(function() {    				
+                    setTimeout(account_balance_update, 10000);
+				});                
+			' , 'inline');	
+		}
+		$html .= '<iframe src="'.$uri.'" scrolling="no" frameborder="0" style="border: medium none; overflow: hidden; width: 100%; min-height: '.$min_heigt.'px;" marginheight="0" marginwidth="0" border="0" allowtransparency="true"></iframe>';
+	} else {
+		drupal_set_message( t('Atsiprašome už nepatogumus, tačiau ši paslauga yra laikinai pristabdyta, bandykite prisijungti vėliau.'), 'warning' );
+		drupal_goto();
+	}
+	return $html;
+}
+
+
+function gammatrix_agreement_form($form, &$form_state, $user){
+    $form['#user'] = $user;
+    $form['title'] = array(
+      '#type'   => 'markup',
+      '#markup' => '<div class="panel-"><h2>'.t('Casino Service Terms & Conditions').'</h2></div>'
+    );
+    
+    $form['agreement'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('By using services of the online casinos provided on the website “bettopsport.com", I agree to be legally bound by these <a href="/sites/default/files/upload/TandC_bettopsport.pdf" target="_blank">terms and conditions</a>, which shall take effect immediately on my first use of services of the online casinos.'),
+      '#required' => TRUE,
+    );
+    $form['submiter'] = array(
+        '#type' => 'submit',
+        '#value' => t('Agree & Play'),
+        '#attributes' => array(
+          'class' => array('btn btn-primary'),
+        ),
+    );
+    $form['#prefix'] = '<div class="col-xs- col-xs-offset-"><div class="alert alert-warning">';
+    $form['#suffix'] = '</div></div>';
+    return $form;
+}
+
+function gammatrix_agreement_form_submit(&$form, &$form_state){
+    $user = $form['#user'];
+    $fields = array(
+      'tsuid' => $user->data['tsuid'],
+      'type'=> 'EVERYMATRIX NV',
+      'version' => 1,
+      'ip' => $_SERVER['REMOTE_ADDR']
+    );    
+    db_insert('users_agreement')->fields($fields)->execute();
+    
+    drupal_goto(current_path());
+}
+
+function _gammatrix_agreement_exists($user){
+    $return = false;
+    if($user->uid > 0 && isset($user->data['tsuid']) && $user->data['tsuid'] > 0 && !isset($user->data['gmx_registered'])){
+        $rez = db_query('Select * FROM ts_users_agreement Where tsuid = :tsuid', array(':tsuid'=>$user->data['tsuid']))->fetch();       
+        if(!$rez){
+            //Neeed agreemenet
+            $form = drupal_get_form('gammatrix_agreement_form', $user);
+            return drupal_render($form);
+       }        
+    }
+    return $return;
+}
+// UNUSED
+function gammatrix_IsRegisteredUser(&$user){
+	if(!isset($user['data']->gammatrix_id)){
+		$request = array(
+			'address1' => (isset($user['data']->street)? $user['data']->street : ''). ' '.  (isset($user['data']->street)? $user['data']->street : ''),
+			'' => '',
+			'' => '',
+			'' => '',
+			'' => '',
+			'' => '',
+			'' => '',
+		); 
+	}
+}
+
+
+
+class GamMatrix extends GamMatrixService {	
+	
+	function initSession($user)
+	{
+		$sessionId = false;
+		if(user_is_logged_in())
+		{
+           
+			if(isset($user->data['gmx_registered']) && $user->data['gmx_registered'])
+			{
+				$sessionId = $this->LoginUser($user);
+				if(!$sessionId)
+				if($this->RegisterUser($user))
+					$sessionId = $this->LoginUser($user);
+			}
+			else 
+			{
+                
+				if($this->RegisterUser($user))
+					$sessionId = $this->LoginUser($user);				
+			}
+		}
+		
+		return $sessionId;
+		
+	}
+	
+	function RegisterUser($user){
+		
+		
+		$cuid = db_query('SELECT api."f_oauth_getForThirdPartyUserID"(:uid , :consumer_id ) as cuid', array(':uid'=>(int)$user->data['tsuid'], ':consumer_id' => $this->consumer_id))
+		->fetchField();
+		$user->data['sex'] = isset($user->data['sex']) ? $user->data['sex'] : 'Mr.';
+		$request = array(
+			'address1' => (isset($user->data['street'])? $user->data['street'] : ''). ' '.  (isset($user->data['street'])? $user->data['street'] : ''),
+			'birthDate' => $user->data['birthday'],
+			'activateAccount' => 1,
+			'city' => $user->data['city'],
+			'countryCode' => $user->data['country'],
+			'currency' => isset($user->data['currency']) ? $user->data['currency']:'LTL',
+			'email' => 'tsuser' . $cuid . '@topsport.lt',
+			'firstName' => $user->data['firstname'],
+			'lastName' => $user->data['surname'],
+			'mobile' => '00000000',
+			'mobilePrefix' => '+370',// $user->data['mobile_number_code'],
+			'password' => substr(md5($cuid . 'topsport'),0,20),
+			'postalCode' => isset($user->data['zip']) && strlen($user->data['zip']) > 1 ? $user->data['zip'] : '000',
+			'signupIp' => $_SERVER['REMOTE_ADDR'],
+			'title' => $user->data['sex'] ? 'Mr.' : 'Ms.',
+			'alias' => $user->name,
+			'userName' => 'ts' . sprintf('%08d', $cuid),			
+		); 
+		
+		$options = array(
+				'headers' => array( 'Content-Type' => 'application/json'),
+				'method'  => 'POST',
+				'data'    =>  json_encode($request),
+				'timeout' => 50,
+                'max_redirects' => 10
+		);
+		$respond = drupal_http_request( $this->GmApiURL . '/RegisterUser/' . $this->API_version . '/' . $this->PartnerId .'/' . $this->PartnerKey, $options);
+		if ( $respond->code == 200 ){
+			$resp  = json_decode($respond->data);
+			
+			watchdog('gammatrix_registeruser', 'Registration success,<br />SEND REQUEST DATA: <br /><pre>!request</pre><br /> Passed response:<br /><pre>!message</pre>', array( '!message' => print_r($respond, true), '!request' => print_r($request, true) ), WATCHDOG_INFO );
+			
+			
+			if($resp->success)
+			{              
+                $edit = array();
+				$edit['data']['gmx_registered'] = $resp->userId;
+				$edit['data']['gmx_currency'] = $user->data['currency'];
+				user_save( $user, $edit );
+				return true;
+			}
+			elseif($resp->errorData->errorCode == 1002 || ($resp->errorData->errorCode == 1001 && $user->uid ==111074) )
+			{
+				if(!isset($user->data['gmx_registered']) || !$user->data['gmx_registered'])
+				{
+                    $edit = array();
+					$edit['data']['gmx_registered'] = 1;
+					$edit['data']['gmx_currency'] = $user->data['currency'];
+					user_save( $user, $edit );
+				}
+				return true;
+			}
+			else
+			{
+				watchdog('gammatrix_registeruser', 'Registration failure,<br />SEND REQUEST DATA: <br /><pre>!request</pre><br /> Passed response:<br /><pre>!message</pre>', array( '!message' => print_r($respond, true), '!request' => print_r($request, true) ), WATCHDOG_ERROR );
+			}
+			
+		}
+		else{
+			watchdog('gammatrix_registeruser', 'Connection failure,<br />URI: !uri <br />  SEND REQUEST DATA: <br /><pre>!request</pre><br /> Passed response:<br /><pre>!message</pre>', array( '!message' => print_r($respond, true), '!request' => print_r($request, true), '!uri' => $this->GmApiURL . '/RegisterUser/' . $this->API_version . '/' . $this->PartnerId .'/' . $this->PartnerKey ), WATCHDOG_ERROR );
+		}
+		return false;
+	}
+	/**
+	 * Logins user to Gammatrix system and returns Session Id
+	 * @param User $user
+	 * @return string Session Id
+	 */
+	function LoginUser($user){
+		if(isset($user->data['gmx_registered']) && $user->data['gmx_registered'])
+		{
+			
+			$cuid = db_query('SELECT api."f_oauth_getForThirdPartyUserID"(:uid , :consumer_id ) as cuid', array(':uid'=>(int)$user->data['tsuid'], ':consumer_id' => $this->consumer_id))
+			->fetchField();
+			
+			if(!$cuid) return false;
+			$options = array(
+                    'timeout' => 50,
+                    'max_redirects' => 10
+            );
+			$respond = drupal_http_request( $this->GmApiURL . '/LoginUser/' . $this->API_version . '/' . $this->PartnerId .'/' . $this->PartnerKey
+                . '/ts' . sprintf('%08d',$cuid) . '/' . substr(md5($cuid . 'topsport'),0,20) . '/' . $_SERVER['REMOTE_ADDR']
+                , $options);
+			if ( $respond->code == 200 ){
+				$resp  = json_decode($respond->data);
+					
+				if($resp->success)
+				{	
+					watchdog('gammatrix_loginuser', 'Login success,<br />SEND REQUEST DATA: <br /><pre>!request</pre><br /> Passed response:<br /><pre>!message</pre>', array( '!message' => print_r($respond, true), '!request' => '' ), WATCHDOG_INFO );
+			
+					return $resp->sessionId;
+				}
+				else
+				{
+					watchdog('gammatrix_loginuser', 'Login failure,<br />SEND REQUEST DATA: <br /><pre>!request</pre><br /> Passed response:<br /><pre>!message</pre>', array( '!message' => print_r($respond, true), '!request' => '' ), WATCHDOG_ERROR );
+				}
+					
+			}
+			else{
+				watchdog('gammatrix_loginuser', 'Connection failure,<br />SEND REQUEST DATA: <br /><pre>!request</pre><br /> Passed response:<br /><pre>!message</pre>', array( '!message' => print_r($respond, true), '!request' => '' ), WATCHDOG_ERROR );
+			}
+		}
+		return false;
+	}
+	
+	function LogoutUser($sessionId){		
+		// TBD
+	}	
+	
+}
+
+class GamMatrixService {
+	protected $GmServiceURL = 'http://casino.topsport.lt';
+	protected $GmApiURL = 'https://core.gammatrix.com/TopSportPartnerApi';
+	protected $OperatorId = 'TopSportPartnerApi';
+	protected $PartnerId  = 'TopSportPartnerID12';
+	protected $PartnerKey = 'TopSportPartnerCode61';
+	protected $API_version = '1.0';
+	protected $consumer_id = 3;
+}

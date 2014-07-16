@@ -1,0 +1,306 @@
+<?php
+// $Id$
+
+
+/**
+ * @file
+ * Install, update and uninstall functions for the offers module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+
+function live_schema() {
+	$schema = array();
+
+	$schema['live_area'] = array(
+		'description' => 'Live betting areas',
+		'fields' => array(
+      		'laid' => array(
+        		'description' => 'The primary identifier for a live area.',
+        		'type' => 'serial',
+        		'unsigned' => TRUE,
+        		'not null' => TRUE,
+	),
+	      	'title' => array(
+	        	'description' => 'The title of this live area.',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+	),
+      		'status' => array(
+				'description' => 'Stauts of this live area (active or inactive)',
+				'type' => 'int',
+				'not null' => TRUE,
+				'default' => 1,
+	),
+	),
+      	'primary key' => array('laid'),
+    	'foreign keys' => array(
+		
+	),
+	);
+
+	$schema['live_status'] = array(
+		'description' => 'Live betting statuses',
+		'fields' => array(
+      		'sid' => array(
+        		'description' => 'The primary identifier for a live betting status.',
+        		'type' => 'serial',
+        		'unsigned' => TRUE,
+        		'not null' => TRUE,
+	),
+      		'laid' => array(
+        		'type' => 'int',
+        		'unsigned' => TRUE,
+        		'not null' => TRUE,
+        		'default' => 0,
+        		'description' => "The live betting status' {live_area}.laid",
+	),
+	      	'title' => array(
+	        	'description' => 'The title of this status',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+	),
+      		'status' => array(
+				'description' => 'Status of this live betting status (active or inactive)',
+				'type' => 'int',
+				'not null' => TRUE,
+				'default' => 1,
+	),
+	),
+      	'primary key' => array('sid'),
+    	'foreign keys' => array(
+			'live_area' => array(
+	        	'table' => 'live_area',
+	        	'columns' => array('laid' => 'laid'),
+	),
+	),
+	);
+
+	$schema['live'] = array(
+		'description' => 'Live betting events',
+		'fields' => array(
+      		'lid' => array(
+        		'description' => 'The primary identifier for a live.',
+        		'type' => 'serial',
+        		'unsigned' => TRUE,
+        		'not null' => TRUE,
+	),
+      		'laid' => array(
+        		'type' => 'int',
+        		'unsigned' => TRUE,
+        		'not null' => FALSE,
+        		'default' => 0,
+        		'description' => "The live betting event's {live_area}.laid",
+	),
+      		'leid' => array(
+        		'type' => 'int',
+        		'unsigned' => TRUE,
+        		'not null' => FALSE,
+        		'default' => 0,
+        		'description' => "The live betting event's number",
+	),
+      		'eid' => array(
+        		'type' => 'int',
+        		'unsigned' => TRUE,
+        		'not null' => FALSE,
+        		'default' => 0,
+        		'description' => "The live betting event's id",
+	),
+  			'show_date' => array(
+        		'type' => 'int',
+        		'unsigned' => FALSE,
+        		'not null' => FALSE,
+        		'default' => 0,
+        		'description' => "Live betting event' show_date",
+	),
+  			'start_date' => array(
+        		'type' => 'int',
+        		'unsigned' => FALSE,
+        		'not null' => FALSE,
+        		'default' => 0,
+        		'description' => "Live betting event' start_date",
+	),
+  			'end_date' => array(
+        		'type' => 'int',
+        		'unsigned' => FALSE,
+        		'not null' => FALSE,
+        		'default' => 0,
+        		'description' => "Live betting event' end_date",
+	),
+	      	'title' => array(
+	        	'description' => 'The title of this status',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+	),
+      		'sid' => array(
+        		'type' => 'int',
+        		'unsigned' => TRUE,
+        		'not null' => FALSE,
+        		'default' => 0,
+        		'description' => "The live betting {live_status}'s id",
+	),
+	      	'item1name' => array(
+	        	'description' => 'The title of live bet item1',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => FALSE,
+	        	'default' => '',
+	),
+	      	'item2name' => array(
+	        	'description' => 'The title of live bet item2',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => FALSE,
+	        	'default' => '',
+	),
+	      	'result1' => array(
+	        	'description' => 'Item 1 result',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => FALSE,
+	        	'default' => 0,
+	),
+	      	'result2' => array(
+	        	'description' => 'Item 2 result',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => FALSE,
+	        	'default' => 0,
+	),
+		
+	      	'url' => array(
+	        	'description' => 'Live bet url',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => FALSE,
+	        	'default' => '',
+	),
+		
+	      	'url_name' => array(
+	        	'description' => 'Live bet url title',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => FALSE,
+	        	'default' => '',
+	),
+      		'status' => array(
+				'description' => 'Status of this live betting event (active or inactive)',
+				'type' => 'int',
+				'not null' => TRUE,
+				'default' => 1,
+	),
+      		'file' => array(
+				'description' => 'Live event photo',
+				'type' => 'int',
+				'not null' => FALSE,
+				'default' => null,
+	),
+	),
+      	'primary key' => array('lid'),
+    	'foreign keys' => array(
+			'live_area' => array(
+	        	'table' => 'live_area',
+	        	'columns' => array('laid' => 'laid'),
+	),
+			'live_status' => array(
+	        	'table' => 'live_status',
+	        	'columns' => array('sid' => 'sid'),
+	),
+	),
+	);
+
+	$schema['live_events'] = array(
+		'description' => 'Live betting events',
+		'fields' => array(
+      		'leid' => array(
+        		'description' => 'The primary identifier for a live.',
+        		'type' => 'serial',
+        		'unsigned' => TRUE,
+        		'not null' => TRUE,
+	),
+      		'lid' => array(
+        		'type' => 'int',
+        		'unsigned' => TRUE,
+        		'not null' => TRUE,
+        		'default' => 0,
+        		'description' => "The live betting event's {live}.lid",
+	),
+	      	'time' => array(
+	        	'description' => 'Time of event',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+	),
+	      	'item1name' => array(
+	        	'description' => 'The title of live bet item1',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => FALSE,
+	        	'default' => '',
+	),
+	      	'item2name' => array(
+	        	'description' => 'The title of live bet item2',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => FALSE,
+	        	'default' => '',
+	),
+	      	'result1' => array(
+	        	'description' => 'Item 1 result',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => FALSE,
+	        	'default' => 0,
+	),
+	      	'result2' => array(
+	        	'description' => 'Item 2 result',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => FALSE,
+	        	'default' => 0,
+	),
+	),
+      	'primary key' => array('leid'),
+    	'foreign keys' => array(
+			'live' => array(
+	        	'table' => 'live',
+	        	'columns' => array('lid' => 'lid'),
+	),
+	),
+	);
+	return $schema;
+}
+/*
+ function live_install(){
+ db_query("SELECT create_struct('ts_live_status')");
+ db_query("UPDATE struct_columns SET default_sql = 'nextval(''ts_live_status_sid_seq''::regclass)' WHERE table_name = 'ts_live_status' AND column_name = 'sid'");
+ db_query("UPDATE struct_columns SET default_const = '0' WHERE table_name = 'ts_live_status' AND column_name = 'status'");
+
+ db_query("SELECT create_struct('ts_live_area')");
+ db_query("UPDATE struct_columns SET default_sql = 'nextval(''ts_live_area_laid_seq''::regclass)' WHERE table_name = 'ts_live_area' AND column_name = 'laid'");
+ db_query("UPDATE struct_columns SET default_const = '0' WHERE table_name = 'ts_live_area' AND column_name = 'status'");
+
+ db_query("SELECT create_struct('ts_live')");
+ db_query("UPDATE struct_columns SET default_sql = 'nextval(''ts_live_lid_seq''::regclass)' WHERE table_name = 'ts_live' AND column_name = 'lid'");
+ db_query("UPDATE struct_columns SET default_const = '0' WHERE table_name = 'ts_live' AND column_name = 'status'");
+ }
+ */
+/*
+ function live_enable(){
+ drupal_install_schema('live');
+ }
+ */
+/*
+ function live_uninstall(){
+ db_query("DELETE FROM struct_columns WHERE table_name IN ('ts_live', 'ts_live_area', 'ts_live_status')");
+ }
+ */

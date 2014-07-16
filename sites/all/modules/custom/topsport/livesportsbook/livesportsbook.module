@@ -1,0 +1,1005 @@
+<?php
+/**
+ * This XML FEED of today live events with pre-live
+ * @var string
+ * TEST URL: http://stage.oddsmatrix.com/xmlfeed/
+ * LIVE URL: http://www.oddsmatrix.com:81/xmlfeed/
+ */
+define('OM_XML_FEED_URL', 'http://www.oddsmatrix.com:81/frxmlfeed/');
+
+/**
+ * Implements hook_init().
+ */
+function livesportsbook_init() {
+	if ( strpos($_GET['q'], 'user/logout' ) !== FALSE ) {
+		livesportsbook_logout();
+	}
+}
+/**
+ * Implementation of hook_menu().
+ */
+function livesportsbook_menu() {
+	$items = array();
+
+	$items['live-sportsbook/odds'] = array(
+	    'title' 		   => 'Lažybos gyvai', // page title    
+	    'page callback'    => 'livesportsbook_iframe_page', // callback function name
+	    'access arguments' => array('access content'),  // every user can look at generated page
+	//'access callback'  => true,
+	    'file' 			   => 'livesportsbook.service.inc',
+	    'type' 			   => MENU_CALLBACK // define type of menu item as callback
+	);
+
+	$items['live-sportsbook/odds2'] = array(
+	    'title' 		   => 'Lažybos gyvai', // page title    
+	    'page callback'    => 'livesportsbook_iframe_page2', // callback function name
+	    'access arguments' => array('access content'),  // every user can look at generated page
+	//'access callback'  => true,
+	    'file' 			   => 'livesportsbook.service.inc',
+	    'type' 			   => MENU_CALLBACK // define type of menu item as callback
+	);
+    
+    /*$items['live-sportsbook/bettingshop'] = array(
+	    'title' 		   => 'Lažybos gyvai', // page title    
+	    'page callback'    => 'livesportsbook_iframe_page3', // callback function name
+	    'access arguments' => array('access content'),  // every user can look at generated page
+	//'access callback'  => true,
+	    'file' 			   => 'livesportsbook.service.inc',
+	    'type' 			   => MENU_CALLBACK // define type of menu item as callback
+	);*/
+
+	$items['live-sportsbook/wallet'] = array(
+	    'title' 		   => 'Lažybos gyvai piniginė', // page title    
+	    'page callback'    => 'livesportsbook_wallet_page', // callback function name
+	    'access arguments' => array('access content'),  // every user can look at generated page
+	//'access callback'  => true,
+	    'file' 			   => 'livesportsbook.service.inc',
+	    'type' 			   => MENU_CALLBACK // define type of menu item as callback
+	);
+	$items['user/%user/odds-matrix'] = array(
+			'title' => 'User Live account',
+			'page callback' => 'livesportsbook_redirect_selected_user',
+			'page arguments' => array('user', 1),
+			'access arguments' => array('access oddsmatrix information'),
+			'type' => MENU_LOCAL_TASK,
+			'weight' => 100,
+	);
+
+	/**************************
+	 * API SERVER COMMUNICATION
+	 */
+	$items['odds-matrix/api/customer-info-request'] = array(
+	    'title' 		  => 'OM logon user INIT',
+	    'page callback'   => 'livesportsbook_api_customer_info',
+	    'access callback' => 'odds_matrix_api_permissions',
+	    'type' 			  => MENU_CALLBACK,
+	);
+
+	$items['odds-matrix/api/register-done'] = array(
+	    'title' 		  => 'OM logon user INIT',
+	    'page callback'   => 'livesportsbook_api_register_done',
+	    'access callback' => 'odds_matrix_api_permissions',
+	    'type' 			  => MENU_CALLBACK,
+	);
+
+	$items['odds-matrix/api/wallet-transfer-done'] = array(
+	    'title' 		  => 'OM logon user INIT',
+	    'page callback'	  => 'livesportsbook_api_wallet_transfer_done',
+	    'access callback' => 'odds_matrix_api_permissions',
+	    'type' 		 	  => MENU_CALLBACK,
+	);
+
+	$items['odds-matrix/api/dailyplayers'] = array(
+	    'title' 		  => 'OM logon user INIT',
+	    'page callback'   => 'livesportsbook_api_PlayersDailyActivity',
+	    'access callback' => 'odds_matrix_api_permissions',
+	    'type' 			  => MENU_CALLBACK,
+		'file' 			  => 'livesportsbook.service.inc',
+	);
+
+	$items['odds-matrix/api/sync-wallet-statuses'] = array(
+	    'title' 		  => 'OM logon user INIT',
+	    'page callback'   => 'sync_wallet_statuses',
+	    'access callback' => 'odds_matrix_api_permissions',
+	    'type' 			  => MENU_CALLBACK,
+		'file' 			  => 'livesportsbook.service.inc',
+	);
+
+	$items['admin/config/content/livesportsbook'] = array(
+	    'title' 		   => 'Global settings of live odds',
+	    'description' 	   => 'Live gyvai globalus valdymas',
+	    'page callback'    => 'drupal_get_form',
+	    'page arguments'   => array('livesportsbook_settings_form'),
+	    'access callback'  => 'user_access',
+	    'access arguments' => array('administer site configuration'),
+	    'file' 			   => 'livesportsbook.admin.inc',
+	);
+
+	$items['odds-matrix/api/odds-feed-updater'] = array(
+	    'title' 		   => 'Odds Matrix updater',
+	    'description'      => 'Update odds xml feed',
+	    'page callback'    => 'livesportsbook_odds_feed_updater',
+	    'access arguments' => array('access content'),
+	    'type'             => MENU_CALLBACK,
+	);
+
+	$items['odds-matrix/api/get_opened_wallet_transfers'] = array(
+	    'title'            => 'Odds Matrix updater',
+	    'description'      => 'Update transfers statuses',
+	    'page callback'    => 'get_opened_wallet_transfers',
+	    'access arguments' => array('access content'),
+	    'type'             => MENU_CALLBACK,
+  		'file' 			   => 'livesportsbook.service.inc',
+	);
+
+	return $items;
+}
+
+/**
+ * Permission to protect APIs from others connections
+ * @return boolean
+ */
+function odds_matrix_api_permissions () {
+	$allowed_ips = array(
+        '85.9.28.130',      # NEW design API    
+		'78.133.103.100',   # stage server IP 
+		'78.133.103.103',   # live server is inbound ip.
+		'79.133.103.100',   # stage server is outband ip of prod.
+		'213.190.50.130',   # TOPSPORT ip
+		'124.233.3.10',   	# OM jack long IP
+		'193.226.132.218',  # OM Corina IP
+		'92.80.21.194',		# OM Corina IP 
+		'127.0.0.1',		# Local host
+	);
+	if ( in_array( $_SERVER['REMOTE_ADDR'], $allowed_ips ) )  return true;
+	return false;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function livesportsbook_permission() {
+	return array(
+    'access livesportsbook control' => array(
+      'title' 		=> t('Live gyvai globalus valdymas'), 
+      'description' => t('Live gyvai globalus valdymas'),
+	),
+	);
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function livesportsbook_block_info() {
+	$blocks['livesportsbook'] = array(
+	    'info' 		 => t('Lažybos gyvai'), 
+	  	'properties' => array( 'administrative' => FALSE ),
+	    'region' 	 => 'right',
+	    'status' 	 => 1,
+	    'visibility' => 0,
+	    'weight' 	 => 5,
+	    'cache' 	 => DRUPAL_NO_CACHE
+	);
+	return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function livesportsbook_block_view($delta = '') {
+	//$block['subject'] = ;
+	$block['content'] = 
+            '<ul  class="nav nav-tabs nav-justified live-bet-tabs">'
+            . '<li><a href="javascript:;" onclick="Odds.liveController(1)" id="live-bytton-a">'.t('Lažybos gyvai (Beta)').'</a></li>'
+            . '<li><a href="javascript:;" id="live-bytton-b" onclick="Odds.liveController(2)">'.t('Lažybos gyvai (Beta)').'</a></li>'
+            . '</ul>'.
+                        '<div id="block-livesportsbook-a" class="livewidget"></div>
+                         <div id="block-livesportsbook-b" class="livewidget"></div>';
+    //drupal_add_js(drupal_get_path('module', 'livesportsbook') . '/livesportsbook-block.js');
+	//drupal_add_css(drupal_get_path('module', 'livesportsbook') . '/livesportsbook-styles.css');
+    return $block;
+    
+    /**
+     * avoid generation it will be made via ajax.
+     */
+	$default_per_sport = 3;
+	$counter_per_sport = 0;
+	$current_live 	   = null;
+
+	if(!isset($_GET['flush']) ) {
+		if ( $cached = cache_get( 'livesportsbook_block_view', 'cache' ) ) {
+			$lives_feed = $cached->data;
+		}else {
+			return;
+		}
+	}else {
+		$lives_feed = livesportsbook_live_events_feed();
+		cache_set( 'livesportsbook_block_view', $lives_feed, 'cache',  CACHE_PERMANENT);
+	}
+
+	// if no life at this moment turn off block
+	if ($lives_feed['total'] > 0){
+		//drupal_add_js(drupal_get_path('module', 'livesportsbook') . '/livesportsbook-block.js');
+		//drupal_add_css(drupal_get_path('module', 'livesportsbook') . '/livesportsbook-styles.css');
+		$_timestamp  = new DateTime( 'now', new DateTimeZone( empty($user->timezone) ? 'Europe/Vilnius' : $user->timezone ) );
+		$time_offset = $_timestamp->getOffset();
+		$block['content'] .= '<div class="current-live-now">&nbsp;</div>';
+		$block['content'] .= '<ul>';
+		foreach ($lives_feed['events'] as $sid => $sports){
+			$block['content'] .= '<li class="sport-area"><img src="'. base_path() .'sites/all/modules/topsport/livesportsbook/icons/'.strtolower($sid).'.png" alt="'.t($sid).'" class="sport-icon" /> '.t($sid).'</li>';
+			$counter_per_sport = 0;
+			foreach ($sports as $mid => $match){
+				$match['start_date'] += $time_offset;
+				$block['content'] .= '<li class="live-match'.(($match['start_date'] > time() AND $counter_per_sport > $default_per_sport) ? ' last' : '').'" title="'.date('Y-m-d H:i', $match['start_date']).', '.$match['country'].' &raquo; '.$match['tournament'].' &raquo; '.$match['match1'].' - '.$match['match2'].'" onClick="window.location=\''.url('live-sportsbook/odds2/') . '?id='.$match['mid'] .'\'">'.
+									 	'<span class="'.(($match['start_date'] <= time()) ? 'live-now': 'upcomming').'">'.(($match['start_date'] <= time()) ? t('Live') : date('H:i', $match['start_date'])).'</span>'.
+									 	'<div class="title-holder"><span class="title">'.$match['match1'].' - '.$match['match2'].'</span></div>'.
+									 '</li>';
+				if ($match['start_date'] > time() AND $counter_per_sport > $default_per_sport) { break; }
+				if($match['start_date'] <= time()){
+					if (is_array($current_live)){
+						if ($current_live['start_date'] > $match['start_date']) { $current_live = $match; }
+					} else {
+						$current_live = $match;
+					}
+				}
+				$counter_per_sport++;
+			}
+		}
+		$block['content'] .= '</ul>';
+		$block['content'] .= l(t('Daugiau įvykių (@count)', array( '@count' => $lives_feed['total'] )), 'live-sportsbook/odds2', array('attributes' => array('class' => array('all-live-link'))));;
+		if (is_array($current_live)){
+			$current_live_html = '<div class="current-live-now '.str_replace(' ', '', strtolower($current_live['sport'])).'" onClick="window.location=\''.url('live-sportsbook/odds2/') . '?id='.$current_live['mid'] .'\'">'
+			.'<span class="team1">'.$current_live['match1'].'</span>'
+			.'<span class="vs">VS</span>'
+			.'<span class="team2">'.$current_live['match2'].'</span>'.
+								 '</div>';
+			$block['content']  = str_replace('<div class="current-live-now">&nbsp;</div>', $current_live_html, $block['content']);
+		} else {
+			$block['content']  = str_replace('<div class="current-live-now">&nbsp;</div>', '', $block['content']);
+		}
+	} else {
+		return;
+	}
+
+	return $block;
+}
+
+/**
+ * Function which generate page (this generate any content - you need only your own code...)
+ */
+function livesportsbook_iframe_page() {
+	drupal_set_title( t('Lažybos gyvai, statymai gyvai') );
+	global $user, $language;
+	$params 	   = array();
+	$html   	   = '';
+	$domain_iframe = OM_BACKEND_SERVER;
+	$base_domain   = preg_replace('`^www.`', '', $_SERVER['HTTP_HOST']);
+	/*remove it's for dev version*/$base_domain   =  preg_replace('`^dev.`', '', $base_domain);
+
+	if ( !topsport_WebOperationsAreAllowed() ){
+		drupal_set_message( t('Atsiprašome už nepatogumus, tačiau lažybų gyvai galimybė yra laikinai pristabdyta, bandykite prisijungti vėliau.'), 'warning' );
+		drupal_goto();
+		return false;
+	}
+
+	if ( isset( $_REQUEST['id']) ){
+		$params['matchid'] 	  = $_REQUEST['id'];
+	} else {
+		$params['actiontype'] = 'live';
+		$params['livetype']   = 2;
+	}
+
+	if ( user_is_logged_in() AND isset($user->data['tsuid']) AND $user->data['tsuid'] > 0 ){
+		// Mark as registered on OM server side
+		if ( !isset($user->data['om_registered']) ){
+			if ( livesportsbook_registerPlayer( $user ) ){ $params['currentSession'] = $user->sid; }
+		} else {
+			$params['currentSession'] = $user->sid;
+		}
+	}
+
+	if ( strpos( $language->language, 'lt') !== false ){
+		$params['lang'] = 'lt_LT';
+	}elseif ( strpos( $language->language, 'en') !== false ){
+		$params['lang'] = 'en_GB';
+		$domain_iframe  = str_replace('topsport.lt', $base_domain, OM_BACKEND_SERVER );
+	}elseif ( strpos( $language->language, 'ru') !== false ){
+		$params['lang'] = 'ru_RU';
+		$domain_iframe  = str_replace('topsport.lt', $base_domain, OM_BACKEND_SERVER );
+	}else {
+		$params['lang'] = 'lt_LT';
+	}
+
+	// sending OddsMatrix transfer page link
+	$params['transfer_link'] = url('live-sportsbook/wallet', array( 'absolute' => true ) );
+
+	drupal_add_js('
+	  function resizeLiveSportsbook(){    
+	    jQuery(\'#live-sportsbook-app iframe\').width( jQuery(\'#content\').width() ); 
+	  }	  
+	  function sportsbook_logout(){}	  
+	  jQuery(document).ready(function($){	    
+	    jQuery(\'#content.live-sportbook-frame\').css("margin-right", 0);	    
+	    jQuery(\'.page-live-sportsbook-odds #page\').css("min-width", "1400px");	
+	    jQuery(\'.page-live-sportsbook-odds #page .container\').css("width", "1400px");	     
+	    resizeLiveSportsbook();
+	    $(window).resize(function () { resizeLiveSportsbook(); });
+	    if (document.domain.search("'.$base_domain.'")>=0){
+	         document.domain="'.$base_domain.'";
+		 }	
+	  });' , 'inline');	
+
+
+	$params = http_build_query($params, '', '&');
+
+	// adding IFRAME for OM live sportsbook UI
+	$html .= '<div id="live-sportsbook-app"><iframe id="sportsFrame" src="' . $domain_iframe . '?'. $params .'" scrolling="no" frameborder="0" style="border: medium none; overflow: hidden;" marginheight="0" marginwidth="0" border="0" allowtransparency="true"></iframe></div>';
+	$html .= '<iframe id="emptyFrame" name="emptyFrame" marginheight="0" marginwidth="0" src="/sites/all/modules/topsport/livesportsbook/ping-'.$base_domain.'.html" width="0" frameborder="0" height="0" scrolling="no"></iframe>';
+
+	return $html;
+}
+
+/**
+ * Function which generate page (this generate any content - you need only your own code...)
+ */
+function livesportsbook_iframe_page2() {
+    setcookie("Odds.liveSetDefault", 1, strtotime('+1 year'), '/');
+	drupal_set_title( t('Lažybos gyvai, statymai gyvai') );
+	global $user, $language;
+	$params 	   = array();
+	$html   	   = '';
+	$domain_iframe = OM_SERVER;
+	$base_domain   = preg_replace('`^www.`', '', $_SERVER['HTTP_HOST']);
+	/*remove it's for dev version*/$base_domain   =  preg_replace('`^dev.`', '', $base_domain);
+
+    //drupal_set_message('<p>Šiuo metu vyksta "Lažybos gyvai" techninė profilaktika. Atsirašome už nepatogumus. Užsukite į šią skiltį vėliau.</p>
+    //    <p>Lažybų gyvai balanso operacijas galite pasiekti <a href="/lazybos-gyvai-beta/balansas">balanso pervedimas</a></p>', 'warning');
+	if ( !topsport_WebOperationsAreAllowed() ){
+		drupal_set_message( t('Atsiprašome už nepatogumus, tačiau lažybų gyvai galimybė yra laikinai pristabdyta, bandykite prisijungti vėliau.'), 'warning' );
+		drupal_goto();
+		return false;
+	}
+
+	if ( isset( $_REQUEST['id']) ){
+		$params['matchid'] 	  = $_REQUEST['id'];
+	} else {
+		$params['actiontype'] = 'live';
+		$params['livetype']   = 2;
+	}
+
+	if ( user_is_logged_in() AND isset($user->data['tsuid']) AND $user->data['tsuid'] > 0 ){
+		// Mark as registered on OM server side
+		if ( !isset($user->data['om_registered']) ){
+			if ( livesportsbook_registerPlayer( $user ) ){ $params['currentSession'] = $user->sid; }
+		} else {
+			$params['currentSession'] = $user->sid;
+		}
+	}
+
+	if ( strpos( $language->language, 'lt') !== false ){
+		$params['lang'] = 'lt_LT';
+	}elseif ( strpos( $language->language, 'en') !== false ){
+		$params['lang'] = 'en_GB';
+		$domain_iframe  = str_replace('topsport.lt', $base_domain, OM_SERVER );
+	}elseif ( strpos( $language->language, 'ru') !== false ){
+		$params['lang'] = 'ru_RU';
+		$domain_iframe  = str_replace('topsport.lt', $base_domain, OM_SERVER );
+	}elseif ( strpos( $language->language, 'lv') !== false ){
+		$params['lang'] = 'en_GB';
+        $base_domain = 'bettopsport.com';
+		$domain_iframe  = str_replace('topsport.lt', 'bettopsport.com', OM_SERVER );
+	}else {
+		$params['lang'] = 'en_GB';
+	}
+
+	// sending OddsMatrix transfer page link
+	$params['transfer_link'] = url('live-sportsbook/wallet', array( 'absolute' => true ) );
+
+		
+    //$info_notification = t('Jums yra suteikta teisė išbandyti <a href="@url">beta lažybas gyvai</a>. Čia rasite ypač didelį kiekį lažybų.', array('@url' => url('betconstruct')));
+	//drupal_set_message($info_notification, 'warning');
+    $params = http_build_query($params, '', '&');      
+    
+	// adding IFRAME for OM live sportsbook UI
+	$html .= '<div id="live-sportsbook-app"></div>';
+	//$html .= '<iframe id="emptyFrame" name="emptyFrame" marginheight="0" marginwidth="0" src="/sites/all/modules/topsport/livesportsbook/ping-'.$base_domain.'.html" width="0" frameborder="0" height="0" scrolling="no"></iframe>';
+
+    drupal_add_js('
+	  function resizeLiveSportsbook(){    
+	    jQuery(\'#live-sportsbook-app iframe\').width( jQuery(\'#content\').width() ); 
+	  }	  
+	  function sportsbook_logout(){}	  
+	  jQuery(document).ready(function($){	    
+	    jQuery(\'#content.live-sportbook-frame\').css("margin", "15px 0 0 0");	    
+	    //resizeLiveSportsbook();
+	    $(window).resize(function () { resizeLiveSportsbook(); });	            
+	  });
+      if (document.domain.search("'.$base_domain.'")>=0){
+	         document.domain="'.$base_domain.'";
+        }
+        jQuery("#live-sportsbook-app").append("<iframe id=\"sportsFrame\" src=\"' . $domain_iframe . '?'. $params .'\" scrolling=\"no\" frameborder=\"0\" style=\"border: medium none; overflow: hidden; width: 100%; height: 410px;\" marginheight=\"0\" marginwidth=\"0\" border=\"0\" allowtransparency=\"true\"></iframe>");
+    ' , 'inline');
+    
+	return $html;
+}
+
+/**
+ * Function which generate page (this generate any content - you need only your own code...)
+ */
+/*function livesportsbook_iframe_page3() {
+	drupal_set_title( t('Lažybos gyvai, statymai gyvai') );
+	global $user, $language;
+	$params 	   = array();
+	$html   	   = '';
+    $OM_SERVER = 'http://betshop.dev.topsport.lt/fe_betshop_cashier';
+	$domain_iframe = $OM_SERVER;
+	$base_domain   = preg_replace('`^www.`', '', $_SERVER['HTTP_HOST']);
+	//remove it's for dev version
+    $base_domain   =  preg_replace('`^dev.`', '', $base_domain);
+
+    //drupal_set_message('<p>Šiuo metu vyksta "Lažybos gyvai" techninė profilaktika. Atsirašome už nepatogumus. Užsukite į šią skiltį vėliau.</p>
+    //    <p>Lažybų gyvai balanso operacijas galite pasiekti <a href="/lazybos-gyvai-beta/balansas">balanso pervedimas</a></p>', 'warning');
+	if ( !topsport_WebOperationsAreAllowed() ){
+		drupal_set_message( t('Atsiprašome už nepatogumus, tačiau lažybų gyvai galimybė yra laikinai pristabdyta, bandykite prisijungti vėliau.'), 'warning' );
+		drupal_goto();
+		return false;
+	}
+
+	if ( isset( $_REQUEST['id']) ){
+		$params['matchid'] 	  = $_REQUEST['id'];
+	} else {
+		$params['actiontype'] = 'live';
+		$params['livetype']   = 2;
+	}
+
+	if ( user_is_logged_in() AND isset($user->data['tsuid']) AND $user->data['tsuid'] > 0 ){
+		// Mark as registered on OM server side
+		if ( !isset($user->data['om_registered']) ){
+			if ( livesportsbook_registerPlayer( $user ) ){ $params['currentSession'] = $user->sid; }
+		} else {
+			$params['currentSession'] = $user->sid;
+		}
+	}
+
+	if ( strpos( $language->language, 'lt') !== false ){
+		$params['lang'] = 'lt_LT';
+	}elseif ( strpos( $language->language, 'en') !== false ){
+		$params['lang'] = 'en_GB';
+		$domain_iframe  = str_replace('topsport.lt', $base_domain, $OM_SERVER );
+	}elseif ( strpos( $language->language, 'ru') !== false ){
+		$params['lang'] = 'ru_RU';
+		$domain_iframe  = str_replace('topsport.lt', $base_domain, $OM_SERVER );
+	}else {
+		$params['lang'] = 'lt_LT';
+	}
+
+	// sending OddsMatrix transfer page link
+	$params['transfer_link'] = url('live-sportsbook/wallet', array( 'absolute' => true ) );
+
+	drupal_add_js('
+	  function resizeLiveSportsbook(){    
+	    jQuery(\'#live-sportsbook-app iframe\').width( jQuery(\'#content\').width() ); 
+	  }	  
+	  function sportsbook_logout(){}	  
+	  jQuery(document).ready(function($){	    
+	    jQuery(\'#content.live-sportbook-frame\').css("margin", "15px 0 0 0");	    
+	    //resizeLiveSportsbook();
+	    $(window).resize(function () { resizeLiveSportsbook(); });
+	    if (document.domain.search("'.$base_domain.'")>=0){
+	         document.domain="'.$base_domain.'";
+		 }         
+	  });' , 'inline');	
+
+
+	$params = http_build_query($params, '', '&');
+
+	// adding IFRAME for OM live sportsbook UI
+	$html .= '<div id="live-sportsbook-app"><iframe id="sportsFrame" src="' . $domain_iframe . '?'. $params .'" scrolling="no" frameborder="0" style="border: medium none; overflow: hidden; width: 100%; height: 100%;" marginheight="0" marginwidth="0" border="0" allowtransparency="true"></iframe></div>';
+	$html .= '<iframe id="emptyFrame" name="emptyFrame" marginheight="0" marginwidth="0" src="/sites/all/modules/topsport/livesportsbook/ping-'.$base_domain.'.html" width="0" frameborder="0" height="0" scrolling="no"></iframe>';
+
+	return $html;
+}*/
+
+/**
+ * 1.Check is loged in
+ * 2. Is TS customer
+ * 3. Update TS wallet balance
+ * 4. Render html page
+ * @return  html string
+ */
+function livesportsbook_wallet_page () {
+	global $user;
+	drupal_set_title( $title = t('Lažybų gyvai balanso pildymas') );
+	$html = '';
+
+	// disable all operations
+	if ( !topsport_WebOperationsAreAllowed() ){
+		drupal_set_message( t('Atsiprašome už nepatogumus, tačiau lažybų gyvai galimybė yra laikinai pristabdyta, bandykite prisijungti vėliau.'), 'warning' );
+		drupal_goto();
+		return false;
+	}
+
+	// allowed web operations
+	if ( user_is_logged_in() ){
+		if(isset($user->data['tsuid']) AND $user->data['tsuid']){
+			userinfo_updateUser($user);
+			// Passing OM wallet current balance
+			$balance = livesportsbook_walletBalance( $user );
+			if ( !isset($balance->amount) ) {
+				drupal_set_message( t('Atsiprašome, nepavyskta pasiekti Jūsų "lažybų gyvai" balanso, bandykite vėliau.'), 'warning' );
+				unset($user->om_amount, $user->om_currency);
+			}else {
+				$user->om_amount   = (string)$balance->amount;
+				$user->om_currency = (string)$balance->currency;
+                $livesportsbook_wallet_form = drupal_get_form( 'livesportsbook_wallet_form', $user );
+				$html 			  .= render( $livesportsbook_wallet_form );
+			}
+		}else {
+			drupal_set_message( t('Pirma reikia pasirašyti i-lažybų sutartį.'), 'warning');
+			drupal_goto('account/agreement');
+		}
+	} else {
+		drupal_set_message( t('Privalote būti prisijungęs prie sistemos'), 'warning');
+		drupal_goto('user/login', array('destination'=> 'live-sportsbook/wallet'));
+	}
+    $html = '<div class="panel panel-page"><div class="panel-heading"><h2>'.$title.'</h2></div><div class="panel-body">'.$html.'</div></div>';
+	return $html;
+}
+
+/**
+ * Get wallet add fund form
+ * @param object $form
+ * @param object $form_state
+ * @param object $account
+ * @return multitype:string
+ */
+function livesportsbook_wallet_form($form, &$form_state, $account) {
+    $permission = (isset($account->data['tsuid']) AND $account->data['tsuid'] AND isset($account->om_amount) );
+
+    $form['#user'] = $account;
+    $form['#attributes'] = array(
+      'onsubmit' => "jQuery('#livesportsbook-wallet-form #edit-submit').attr('disabled', 'disabled')"
+    );
+    $form['description'] = array(
+      '#markup' => '<p>' . t('Lažybos gyvai skiltis reikalauja, kad klientas persivestų į virtualę lažybos gyvai piniginę
+				norimą pinigų sumą iš savo balanso, norint atlikti statymus, 
+				kadangi lažybos gyvai rezultatai paaiškėja po varžybų ir laimėjimai užskaitomi ir išmokami netrukus, laimėjimai pervedami į virtualę lažybos gyvai piniginę. 
+				Norit išsimokėti laimėjimus Jums reikia įvesti sumą ir pasrinkti operacijos tipą - "Grąžinti į balansą", 
+				kurią norite gražintis į savo pagrindinį balansą ir tuomet įprastais būdais galite <a href="/mano-paskyra/pinigu-ismokejimas">išsigryninti pinigus</a>.'
+      ) . '</p>',
+    );
+    $form['topsport-balance'] = array(
+      '#type' => 'item',
+      '#title' => t('Jūsų balansas:'),
+      '#markup' => isset($account->data['balance']) ? account_balance_string() : t('...bandykite vėliau...')
+    );
+    $form['oddsmatrix-balance'] = array(
+      '#type' => 'item',
+      '#title' => t('"Lažybų gyvai" balansas:'),
+      '#markup' => isset($account->om_amount) ? betslip_number_format(floatval($account->om_amount)) . ' ' . $account->om_currency : t('...bandykite vėliau...')
+    );
+    $form['type'] = array(
+      '#type' => 'radios',
+      '#title' => t('Pasirinkite operaciją'),
+      '#options' => array(0 => t('Pervesti į lažybas gyvai'), 1 => t('Grąžinti į balansą')),
+      '#required' => TRUE,
+    );
+    $form['amount'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Pervedama suma'),
+      '#required' => TRUE,
+      '#description' => t('Ši suma bus naudojama "lažybos gyvai" statymams atlikti.'),
+      '#size' => 5,
+      '#maxlength' => 8,
+      '#field_suffix' => isset($account->om_currency) ? $account->om_currency : '',
+      '#access' => $permission,
+    );
+    $form['back'] = array(
+      '#markup' => l(t('Atgal'), 'live-sportsbook/odds2', array('attributes' => array('class' => array('btn btn-default')))),
+      '#weight' => 20,
+    );
+    $form['submit-action'] = array(
+      '#type' => 'submit',
+      '#value' => t('Patvirtinti'),
+      '#access' => $permission,
+      '#attributes' => array('class' => array('btn-primary')),
+      '#weight' => 21,
+    );
+    return $form;
+}
+
+/**
+ * Validating form function
+ * @param array $form
+ * @param array $form_state
+ */
+function livesportsbook_wallet_form_validate( $form, &$form_state ) {
+	$amount     = $form_state['values']['amount'] = floatval( str_replace(',', '.', $form_state['values']['amount'] ) );
+	$currency   = $form['#user']->om_currency;
+	$max_amount = 10000;
+	$min_amount = 1;
+
+	if ( !is_numeric($amount) ){
+		form_set_error('amount', t('Jūsų reikšmė nepanaši į sumą.'));
+	}
+
+	if ( $amount > $max_amount ) {
+		form_set_error('amount', t('Pervedama suma turi būti mažesnė, nei nustatyta maksimali @amount @currency', array(
+			'@amount'   => betslip_number_format($max_amount), 
+			'@currency' => $currency))
+		);
+	}
+
+	if($form_state['values']['type'] == 0 ){
+		// siuntimas pinigu i Odds Matrix
+		if ( $amount < $min_amount ) {
+			form_set_error('amount', t('Pervedama suma turi būti didesnė, nei nustatyta minimali @amount @currency', array(
+				'@amount'   => betslip_number_format($min_amount), 
+				'@currency' => $currency))
+			);
+		}
+		if ( $form['#user']->data['balance'] < $amount ){
+			form_set_error('amount', t('Jūsų balansas nepakankamas, prašome papildyti <a href="/mano-paskyra/saskaitos-papildymas">balansą</a>.'));
+		}
+	} elseif ( $form_state['values']['type'] == 1) {
+		// grazinimas pinigu is Odds Matrix
+		if ( $form['#user']->om_amount < $amount  ){
+			form_set_error('amount', t('Jūsų pageidaujama išsimokėjimo suma viršija Jūsų turimą "lažybų gyvai" balansą! Įveskite mažesnę išmokėjimo sumą.'));
+		}
+
+		if ( $amount <= 0 ) {
+			form_set_error('amount', t('Atlikti operacijos negalime, nes Jūsų balansas yra tuščias.', array(
+				'@amount' 	=> $min_amount , 
+				'@currency' => $currency))
+			);
+		}
+
+		if ( $amount > $max_amount ) {
+			form_set_error('amount', t('Pervedama suma turi būti mažesnė, nei nustatyta maksimali @amount @currency.', array(
+				'@amount'   => $max_amount , 
+				'@currency' => $currency))
+			);
+		}
+		$form_state['values']['amount'] = $form_state['values']['amount'] * -1;
+	}else {
+		form_set_error('type', t('Prašome pasirinkti operacijos tipą ir bandyti dar kartą.'));
+	}
+}
+
+/**
+ * Form submition form
+ * @param array $form
+ * @param array $form_state
+ */
+function livesportsbook_wallet_form_submit($form, &$form_state) {
+	$account = $form['#user'];
+	$amount  = $form_state['values']['amount'];
+	livesportsbook_walletTransfer( $account, $amount );
+}
+
+function livesportsbook_redirect_selected_user($account){
+	$account = user_load($account);
+	drupal_goto('https://sports.topsport.lt/userTrace.do?username='. $account->data['tsuid']);
+}
+
+
+/*
+ * Customer Information Request
+ *
+ * http://<Operator-website.com>/customerInfoRequest?currentSession=A2343233&username=auser&passwordMD5=2134243234&currency=gbp&affiliateMarker=bonus2&ip=10.9.10.2
+ * CODES:
+ * 101 - by passed data user dont found
+ * 102 - currentSession not passed in request as get paramater
+ * 103 - session not found
+ */
+function livesportsbook_api_customer_info () {
+	drupal_add_http_header('Content-Type', 'text/xml');
+	drupal_add_http_header('charset', 'utf-8');
+
+	// om request data to get info about user
+	$om_u_data = array(
+		'sid'  		=> isset($_GET['currentSession']) ? $_GET['currentSession'] : '',
+		'name' 		=> isset($_GET['username']) 	  ? $_GET['username'] 		: '',	
+		'ip' 		=> isset($_GET['ip']) 			  ? $_GET['ip'] 			: '',
+		'currency'	=> isset($_GET['currency']) 	  ? $_GET['currency'] 		: '',
+	);
+
+	if ( !isset($_GET['currentSession'])){
+		print ('<error><code>102</code></error>');
+		return;
+	}
+
+	// finding user from db by session
+	$data = db_select('sessions', 'sid')
+	->fields('sid')
+	->condition( 'sid', $om_u_data['sid'] )
+	->execute()->fetch();
+
+	if ( !isset( $data->uid ) ) {
+		print '<UserEntity><isAuthenticated>0</isAuthenticated></UserEntity>';
+		return;
+	}
+	$user = user_load( $data->uid );
+
+	if ( isset($user->uid) ){
+		$user->data['sex'] = ( isset($user->data['sex']) && ($user->data['sex'] == 1) ) 				  ? 'm': 'f';
+		$om_registered     = (isset($user->data['om_registered']) && $user->data['om_registered'] = true) ? 1 : 0;
+
+		$_timestamp  	   = new DateTime( 'now', new DateTimeZone( empty($user->timezone) ? 'Europe/Vilnius' : $user->timezone ) );
+		$time_offset       = $_timestamp->format('O');
+		$respond 		   = "<UserEntity><userName>{$user->data['tsuid']}</userName><email>{$user->mail}</email><isEnabled>{$user->status}</isEnabled><isRegistered>{$om_registered}</isRegistered><isAuthenticated>1</isAuthenticated><familyName>{$user->data['surname']}</familyName><givenName>{$user->data['firstname']}</givenName><gmtTimeZoneOffset>{$time_offset}</gmtTimeZoneOffset><addressLine1>{$user->data['street']} {$user->data['house']}</addressLine1><city>{$user->data['city']}</city><zipCode>{$user->data['zip']}</zipCode><country>{$user->data['country']}</country><preferredCurrency>{$user->data['currency']}</preferredCurrency><birthDate>{$user->data['birthday']}</birthDate><gender>{$user->data['sex']}</gender><currentSession>{$om_u_data['sid']}</currentSession><usingRealMoney>1</usingRealMoney></UserEntity>";
+		print $respond;
+	} else {
+		print '<error><code>101</code></error>';
+	}
+
+	$message = '<strong>REQUESTSET FROM OM:</strong><br /><pre>' . print_r( $_REQUEST, true ) . '</pre>';
+	watchdog('livesportsbook_api_customer_info', '!message', array('!message' => $message), WATCHDOG_NOTICE);
+}
+
+/*
+ * Updates of customer info
+ *
+ * To keep the player info updated, it is also possible to submit this to the OddsMatrix
+ * servers by calling this URL:
+ * https://<sports.operator_website.com>/partnerapi1/customerInfoUpdated.do?username=auser
+ */
+function livesportsbook_api_customer_info_update () {
+
+}
+
+/*
+ * Confirm the registration
+ *
+ * After the registration has been done in OddsMatrix, the following operator’s service can
+ * be chosen to be called in case that operators want OddsMatrix to confirm a “registration
+ * already done” information.
+ *
+ * http://<Operator-website.com>/registerDone&username=auser
+ *
+ * Operator should respond with a HTTP Status of 200 OK. Otherwise, OddsMatrix may try
+ * to retransmit the registerDone if this is not the case, and furthermore, please notice that
+ * this return HTTP status cannot rollback the registration operation which has been done
+ * on OddsMatrix..
+ *
+ * CODES:
+ * 101 - nevisi parametrai buvo pateikti
+ * 102 - user not found
+ */
+function livesportsbook_api_register_done() {
+	drupal_add_http_header('Content-Type', 'text/xml');
+	drupal_add_http_header('charset', 'utf-8');
+
+	if ( isset($_GET['username']) ){
+		$tsuid = $_GET['username'];
+		$user =  db_query(
+			"SELECT * FROM {users} WHERE \"data\" LIKE '%s:5:\"tsuid\";s:".strlen($tsuid).":\"".$tsuid."\"%'"
+			)->fetchObject();
+			if ( isset($user->uid) ){
+				$user->data = unserialize($user->data);
+				echo "<UserEntity><userName>{$user->data['tsuid']}</userName></UserEntity>";
+			}else {
+				drupal_add_http_header("Status", "404 Not Found");
+				echo '<error><code>102</code></error>';
+			}
+	} else {
+		drupal_add_http_header("Status", "404 Not Found");
+		echo '<error><code>101</code></error>';
+	}
+}
+
+/**
+ * @deprecated: we dont use WalletTransferDone
+ *
+ * The following is an example of the “walletTransferDone” confirmation:
+ * http://<Operator-website.com>/walletTransferDone&amount=5.00&currency=USD?username=auser&walletTransferId=1234&transferTime=2008-04-08 14:45:04+0800&status=TRANSFER&20;ABORTED&message=not enoughfunds
+ */
+function livesportsbook_api_wallet_transfer_done() {
+
+}
+
+/*
+ * Daily Players Activity
+ *
+ * This report gives the latest day’s player activity data:
+ * https://<sports.operator-website.com>/api/playerDailyActivityDetailed.do
+ *
+ * If you want to go back in time, add a date parameter like this
+ * https://<sports.operator-website.com>/api/playerDailyActivityDetailed.do? date=yyy-mm-dd
+ */
+function livesportsbook_api_PlayersDailyActivity () {
+	$query =  array(
+		'date' => isset( $_REQUEST['date']) ? $_REQUEST['date'] : date('Y-m-d', time() ),	
+	);
+
+	$query  = '?' . http_build_query( $query, '', '&');
+	$result = livesportsbook_OM_request( 'api/playerDailyActivityDetailed.do' . $query );
+
+	print ($result);
+}
+
+/**
+ * Implements hook_cron().
+ */
+function livesportsbook_cron() {
+	 
+}
+
+/**
+ * Implements hook_cron().
+ */
+function livesportsbook_odds_feed_updater(){
+	$lives_feed = livesportsbook_live_events_feed();
+	if ($lives_feed['total'] > 0 ) {
+		cache_set( 'livesportsbook_block_view', $lives_feed, 'cache', CACHE_PERMANENT );
+		$message = 'Live odds block xml feed was <span style="color:green;">done succeded</span>.';
+	}else {
+		cache_set( 'livesportsbook_block_view', null, 'cache', CACHE_PERMANENT );
+		$message = 'Live odds block xml feed was <span style="color:red;">NOT COMPLETED</span>.';
+	}
+	watchdog('live xml feed update', '!message', array( '!message' => $message ), WATCHDOG_INFO );
+}
+
+function livesportsbook_live_events_feed ( $event_count = 6 ) {
+	$livematchs = array('total' => 0);
+	$map_feed   = connect_live_events_feed( '' );
+	if ( isset($map_feed->file) ){
+		foreach ( $map_feed->file as $file ){
+			$file = (string)$file;
+			if ( strrpos( $file, '_live_today' ) != FALSE ){
+				//collect_livesportsbook_live_events_feeds( $livematchs, $file  , str_replace('_live_today.xml', '', strtolower($file) ) );
+                $sport_name = explode('_', strtolower($file));
+				collect_livesportsbook_live_events_feeds_by_sports( $livematchs, $file  , $sport_name[0] );
+			}
+		}
+	}
+
+	// sorting by starting live date
+	//usort($livematchs, '_sort_date');
+	sort_live_events($livematchs);
+
+	return $livematchs;
+}
+
+/**
+ * Manipulating
+ * @param array $livematchs
+ * @param string $url
+ * @param string $lid
+ */
+function collect_livesportsbook_live_events_feeds( &$livematchs, $url, $lid ){
+	$data = connect_live_events_feed( $url );
+	if ( $data ) {
+		// sports array
+		foreach ( $data as $sport ){
+			// countries array
+			foreach ( $sport->Country as $country ) {
+				// tournament
+				foreach ( $country->Tournament as $tournament ){
+					// match
+					foreach ( $tournament->Match as $match ){
+						$push = null;
+						$push = array(
+							'mid' 		 => (int)$match->attributes()->id,
+							'sport' 	 => (string)$sport->attributes()->name,
+							'country' 	 => (string)$country->attributes()->name,
+							'tournament' => (string)$tournament->attributes()->name,
+							'match1' 	 => (string)$match->Participants->Participant[0]->attributes()->name,
+							'match2' 	 => (string)$match->Participants->Participant[1]->attributes()->name,
+							'start_date' => (int)strtotime( $match->StartDate ),
+							'lid' 		 => $lid,
+						);
+						array_push($livematchs, $push);
+					}
+				}
+			}
+		}
+		$data = null;
+	}
+}
+
+/**
+ * Manipulating
+ * @param array $livematchs
+ * @param string $url
+ * @param string $lid
+ */
+function collect_livesportsbook_live_events_feeds_by_sports( &$livematchs, $url, $lid ){
+	$data = connect_live_events_feed( $url );
+	if ( $data ) {
+		$match_counter = 0;
+		// sports array
+		foreach ( $data as $sport ){
+			// countries array
+			foreach ( $sport->Country as $country ) {
+				// tournament
+				foreach ( $country->Tournament as $tournament ){
+					// match
+					foreach ( $tournament->Match as $match ){                        
+						if(strtotime($match->StartDate) > strtotime('+1 hours GMT') ) continue;
+						$push = null;
+						$push = array(
+							'mid' 		 => (int)$match->attributes()->id,
+							'sport' 	 => (string)$sport->attributes()->name,
+							'country' 	 => (string)$country->attributes()->name,
+							'tournament' => (string)$tournament->attributes()->name,
+							'match1' 	 => (string)$match->Participants->Participant[0]->attributes()->name,
+							'match2' 	 => (string)$match->Participants->Participant[1]->attributes()->name,
+							'start_date' => (int)strtotime( $match->StartDate ),
+							'lid' 		 => $lid,
+						);
+						$livematchs['events'][$push['sport']][] = $push;	
+                        $match_counter++;
+					}
+				}
+			}
+		}
+		$livematchs['total'] += $match_counter;
+		$data = null;
+	}
+}
+
+function _sort_date( $t1, $t2){
+	return strcmp($t1['start_date'], $t2['start_date']);
+}
+
+function sort_live_events(&$events){
+    if(isset ($events['events'])){
+        foreach ($events['events'] as &$sport){
+            usort($sport, '_sort_date');
+        }
+    }
+}
+
+/**
+ * Main connection to grab new xml feed
+ * @param string $url
+ * @return Ambiguous
+ */
+function connect_live_events_feed( $url ){
+	$options = array(
+		'method' => 'GET',
+	);
+	//$respond = drupal_http_request( OM_XML_FEED_URL . $url, $options);
+	$ch = curl_init();
+	curl_setopt( $ch, CURLOPT_HEADER, 0);
+	curl_setopt( $ch, CURLOPT_HTTPHEADER, array( 'Content-Type : application/x-www-form-urlencoded' ) );
+	curl_setopt( $ch, CURLOPT_URL,  OM_XML_FEED_URL . $url);
+	curl_setopt( $ch, CURLOPT_FRESH_CONNECT, 1);
+	curl_setopt( $ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt( $ch, CURLOPT_FORBID_REUSE, 1);
+	curl_setopt( $ch, CURLOPT_POST, 0);
+	curl_setopt( $ch, CURLOPT_CONNECTTIMEOUT, 20);
+	curl_setopt( $ch, CURLOPT_TIMEOUT, 30);
+	curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false);
+
+	if( !$respond = curl_exec( $ch ) ) {
+		trigger_error($error_message = curl_error($ch));
+		$message = 'Requested URL: <i>' . OM_XML_FEED_URL . $url .'</i><br /><pre>' . print_r($error_message, true) . '</pre>';
+		watchdog('livesportsbook_OM_request', '!message', array( '!message' => $message ), WATCHDOG_ERROR );
+	}
+	curl_close( $ch );
+
+	// drop not needed tags data
+	$respond =  preg_replace('%(<MatchOdds.*?>)(.*?)(<\/MatchOdds.*?>)%is', '', $respond);
+	$result  =  @simplexml_load_string( $respond );
+
+	return $result;
+}
+
+/**
+ * Overload user_logout function, need add Odds martix logout too
+ */
+function livesportsbook_logout( ) {
+	global $user;
+	if ( isset($user->data['om_registered']) ) {
+		require_once drupal_get_path( 'module', 'livesportsbook' ) . '/livesportsbook.service.inc';
+		livesportsbook_LogoutPlayer( $user->sid , $user->data['tsuid'] );
+	}
+}
+
+function sync_wallet_statuses(){
+	get_opened_wallet_transfers();
+}
+
+?>

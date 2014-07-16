@@ -1,0 +1,10 @@
+; $Id$
+
+name = "Lažybų punktai"
+description = "Lažybų punktų atvaizdavimas svetainėje"
+dependencies[] = topsport
+core = 7.x
+version = 7.x
+package = TopSport
+files[] = betting_center.install
+files[] = betting_center.module

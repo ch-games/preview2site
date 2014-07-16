@@ -1,0 +1,7 @@
+; $Id: 
+name = Payment - Neteller
+description = Integrates Neteller payment services.
+;dependencies[] = account
+package = TopSport
+core = 7.x
+files[] = ac_neteller.module

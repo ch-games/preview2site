@@ -1,0 +1,349 @@
+<?php
+// $Id: account.install $
+
+/**
+ * @file
+ * Install, update and uninstall functions for the offers module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+
+function account_schema() {
+
+	$schema['users_withdrawals'] = array(
+  		'description' => 'Stores users orders',
+  		'fields' => array(
+      		'wid' => array(
+        		'type' => 'serial',
+        		'unsigned' => TRUE,
+        		'not null' => TRUE,
+        		'description' => "The withdrawal id.",
+      		),
+      		'uid' => array(
+        		'type' => 'int',
+        		'unsigned' => TRUE,
+        		'not null' => TRUE,
+        		'default' => 0,
+        		'description' => "The user's {users}.nid.",
+      		),
+      		'tsuid' => array(
+        		'type' => 'int',
+        		'unsigned' => TRUE,
+        		'not null' => TRUE,
+        		'default' => 0,
+        		'description' => "",
+      		),
+	      	'firstname' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+	      	),
+	      	'surname' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+	      	),
+	      	'amount' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+	      	),
+	      	'extra_amount' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => FALSE,
+	        	'default' => '',
+	      	),
+	      	'iban' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+	      	),
+	      	'iban' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+	      	),
+	      	'bankname' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+	      	),
+	      	'swift' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+	      	),
+		    'result' => array(
+				'type' => 'blob',
+				'not null' => FALSE,
+				'size' => 'big',
+				'serialize' => TRUE,
+				'description' => '',
+			),
+	      	'errorcode' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => FALSE,
+	        	'default' => '',
+	      	),
+	      	'errormessage' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => FALSE,
+	        	'default' => '',
+	      	),
+	      	'errordescription' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => FALSE,
+	        	'default' => '',
+	      	),
+      		'timestamp' => array(
+        		'type' => 'int',
+        		'unsigned' => FALSE,
+        		'not null' => TRUE,
+        		'default' => 0,
+        		'description' => "",
+      		),
+      	),
+  		'primary key' => array('wid'),
+    	'foreign keys' => array(
+	      	'orders_users' => array(
+	        	'table' => 'users',
+	        	'columns' => array('uid' => 'uid'),
+	      	),
+		),
+  	);
+	$schema['users_orders'] = array(
+  		'description' => 'Stores users orders',
+  		'fields' => array(
+      		'oid' => array(
+        		'type' => 'serial',
+        		'unsigned' => TRUE,
+        		'not null' => TRUE,
+        		'description' => "The order id.",
+      		),
+      		'uid' => array(
+        		'type' => 'int',
+        		'unsigned' => TRUE,
+        		'not null' => TRUE,
+        		'default' => 0,
+        		'description' => "The user's {users}.nid.",
+      		),
+      		'tsuid' => array(
+        		'type' => 'int',
+        		'unsigned' => TRUE,
+        		'not null' => TRUE,
+        		'default' => 0,
+        		'description' => "",
+      		),
+	      	'firstname' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+	      	),
+	      	'surname' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+	      	),
+	      	'amount' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+	      	),
+	      	'email' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+	      	),
+	      	'payment' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+	      	),
+      		'status' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+      		),
+	      	'pay_firstname' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => FALSE,
+	        	'default' => '',
+	      	),
+	      	'pay_surname' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => FALSE,
+	        	'default' => '',
+	      	),
+		    'result' => array(
+				'type' => 'blob',
+				'not null' => FALSE,
+				'size' => 'big',
+				'serialize' => TRUE,
+				'description' => '',
+			),
+	      	'errorcode' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => FALSE,
+	        	'default' => '',
+	      	),
+	      	'errormessage' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => FALSE,
+	        	'default' => '',
+	      	),
+	      	'errordescription' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => FALSE,
+	        	'default' => '',
+	      	),
+      		'timestamp' => array(
+        		'type' => 'int',
+        		'unsigned' => FALSE,
+        		'not null' => TRUE,
+        		'default' => 0,
+        		'description' => "",
+      		),
+      		'done_timestamp' => array(
+        		'type' => 'int',
+        		'unsigned' => FALSE,
+        		'not null' => FALSE,
+        		'default' => 0,
+        		'description' => "",
+      		),
+      	),
+  		'primary key' => array('oid'),
+    	'foreign keys' => array(
+	      	'orders_users' => array(
+	        	'table' => 'users',
+	        	'columns' => array('uid' => 'uid'),
+	      	),
+		),
+  	);
+   	$schema['users_bankaccounts'] = array(
+  		'description' => 'Stores users bank accounts',
+  		'fields' => array(
+      		'baid' => array(
+        		'type' => 'serial',
+        		'unsigned' => TRUE,
+        		'not null' => TRUE,
+        		'description' => "The bank account id.",
+      		),
+      		'uid' => array(
+        		'type' => 'int',
+        		'unsigned' => TRUE,
+        		'not null' => TRUE,
+        		'default' => 0,
+        		'description' => "The user's {users}.nid.",
+      		),
+	      	'iban' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+	      	),
+	      	'bankname' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+	      	),
+	      	'swift' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+	      	),
+      	),
+  		'primary key' => array('baid'),
+    	'foreign keys' => array(
+	      	'orders_users' => array(
+	        	'table' => 'users',
+	        	'columns' => array('uid' => 'uid'),
+	      	),
+		),
+  	);
+	$schema['bankslist'] = array(
+		'description' => 'Stores list with banks',
+  		'fields' => array(
+	      	'country' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+	      	),
+	      	'code' => array(
+	        	'description' => '',	
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+	      	),
+	      	'bankname' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+	      	),
+	      	'swift' => array(
+	        	'description' => '',
+	        	'type' => 'varchar',
+	        	'length' => 255,
+	        	'not null' => TRUE,
+	        	'default' => '',
+	      	),
+      	),
+  		'primary key' => array('country', 'code'),
+	);
+  	return $schema;
+}

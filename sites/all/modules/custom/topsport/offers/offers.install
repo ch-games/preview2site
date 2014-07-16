@@ -1,0 +1,605 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Install, update and uninstall functions for the offers module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+
+function offers_schema() {
+	$schema['offers_cat'] = array(
+    'description' => 'Stores offers-specific information for offers nodes.',
+    'fields' => array(
+        'nid' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => "The offers's {node}.nid.",
+	),
+        'language' => array(
+          'type' => 'varchar',
+          'length' => 12,
+          'not null' => TRUE,
+          'default' => '',
+          'description' => "The offers's language.",
+	),
+        'area_id' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => "The offers's area ID.",
+	),
+        'country_id' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => FALSE,
+          'default' => 0,
+          'description' => "The offers's country ID.",
+	),
+        'module_id' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => FALSE,
+          'default' => 0,
+          'description' => "The offers's module ID.",
+	),
+        'event_id' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => FALSE,
+          'default' => 0,
+          'description' => "The offers's event ID.",
+	),
+	),
+    'indexes' => array(
+        'offers_cats' => array('area_id', 'country_id', 'module_id', 'event_id'),
+        'nid' => array('nid'),
+	),
+    'primary key' => array('nid'),
+    'foreign keys' => array(
+        'offer_node' => array(
+          'table' => 'node',
+          'columns' => array('nid' => 'nid'),
+	),
+	),
+	);
+
+	$schema['offers_rules'] = array(
+    'description' => 'Stores offers-specific information for offers rules.',
+    'fields' => array(
+        'nid' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => "The offers rule {node}.nid.",
+	),
+        'language' => array(
+          'type' => 'varchar',
+          'length' => 12,
+          'not null' => TRUE,
+          'default' => '',
+          'description' => "The offers rule language.",
+	),
+        'area_id' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => "The offers rule area ID.",
+	),
+	),
+    'indexes' => array(
+        'offers_cats' => array('area_id'),
+        'nid' => array('nid'),
+	),
+    'primary key' => array('nid'),
+    'foreign keys' => array(
+        'offer_node' => array(
+          'table' => 'node',
+          'columns' => array('nid' => 'nid'),
+	),
+	),
+	);
+
+	$schema['offers_gametypes'] = array(
+    'description' => 'Stores game types for offers.',
+    'fields' => array(
+        'gtid' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => "The gameTypes's Id.",
+	),
+        'language' => array(
+          'type' => 'varchar',
+          'length' => 12,
+          'not null' => TRUE,
+          'default' => '',
+          'description' => "The gameTypes's {node}.language.",
+	),
+        'title' => array(
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "The gameTypes's Name.",
+	),
+        'weight' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => FALSE,
+          'default' => 0,
+          'description' => "",
+	),
+        'fieldtypeid' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => FALSE,
+          'default' => 0,
+          'description' => "",
+	),
+        'cn1' => array(
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "The gameTypes's Coef1 Name.",
+	),
+        'cn2' => array(
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "The gameTypes's Coef2 Name.",
+	),
+        'cn3' => array(
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "The gameTypes's Coef3 Name.",
+	),
+        'cn4' => array(
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "The gameTypes's Coef4 Name.",
+	),
+        'cn5' => array(
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "The gameTypes's Coef5 Name.",
+	),
+        'cn6' => array(
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "The gameTypes's Coef6 Name.",
+	),
+        'patternid' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "",
+	),
+	),
+    'primary key' => array('gtid', 'language'),
+	);
+
+	$schema['offers_events'] = array(
+    'description' => 'Stores events for offers.',
+    'fields' => array(
+      'eid' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => "The event's Id.",
+	),
+        'language' => array(
+          'type' => 'varchar',
+          'length' => 12,
+          'not null' => TRUE,
+          'default' => '',
+          'description' => "The gameTypes's {node}.language.",
+	),
+      'peid' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "Parent event Id.",
+	),
+      'aid' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => "Event's area Id.",
+	),
+      'cid' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => "Event's country Id.",
+	),
+      'mid' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => "Event's module Id.",
+	),
+      'gtid' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => "Event's gameType Id.",
+	),
+        'title' => array(
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+          'default' => '',
+          'description' => "Event's Name.",
+	),
+        'category' => array(
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+          'default' => '',
+          'description' => "Event's Category Name.",
+	),
+        'name' => array(
+          'type' => 'int',
+              'unsigned' => FALSE,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "Event's Name(Code).",
+	),
+      'item1' => array(
+          'type' => 'int',
+          'unsigned' => FALSE,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "Event's item1 Id.",
+	),
+        'item1Name' => array(
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => FALSE,
+          'default' => '',
+          'description' => "Event's item1Name.",
+	),
+      'item2' => array(
+          'type' => 'int',
+          'unsigned' => FALSE,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "Event's item1 Id.",
+	),
+        'item2Name' => array(
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => FALSE,
+          'default' => '',
+          'description' => "Event's item2Name.",
+	),
+      'date' => array(
+          'type' => 'int',
+          'unsigned' => FALSE,
+          'not null' => FALSE,
+          'default' => 0,
+          'description' => "Event's date",
+	),
+        'c1' => array(
+          'type' => 'numeric',
+          'unsigned' => FALSE,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "Event's coef1 value",
+          'precision' => 10,
+          'scale' => 2,
+	),
+        'c2' => array(
+          'type' => 'numeric',
+          'unsigned' => FALSE,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "Event's coef2 value",
+          'precision' => 10,
+          'scale' => 2,
+	),
+        'c3' => array(
+          'type' => 'numeric',
+          'unsigned' => FALSE,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "Event's coef3 value",
+          'precision' => 10,
+          'scale' => 2,
+	),
+        'c4' => array(
+          'type' => 'numeric',
+          'unsigned' => FALSE,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "Event's coef4 value",
+          'precision' => 10,
+          'scale' => 2,
+	),
+        'c5' => array(
+          'type' => 'numeric',
+          'unsigned' => FALSE,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "Event's coef5 value",
+          'precision' => 10,
+          'scale' => 2,
+	),
+        'c6' => array(
+          'type' => 'numeric',
+          'unsigned' => FALSE,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "Event's coef6 value",
+          'precision' => 10,
+          'scale' => 2,
+	),
+      'enabled' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => "Is Event Enabled",
+	),
+        'totalforaresult1' => array(
+          'type' => 'numeric',
+          'unsigned' => FALSE,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "Event's TotalForaResult1",
+          'precision' => 10,
+          'scale' => 2,
+	),
+        'totalforaresult2' => array(
+          'type' => 'numeric',
+          'unsigned' => FALSE,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "Event's TotalForaResult2",
+          'precision' => 10,
+          'scale' => 2,
+	),
+      'combcount' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => FALSE,
+          'default' => 0,
+          'description' => "Event's CombCount",
+	),
+      'combtosamearea' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => FALSE,
+          'default' => 0,
+          'description' => "Event's CombToSameArea",
+	),
+      'combtosamemodule' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => FALSE,
+          'default' => 0,
+          'description' => "Event's CombToSameModule",
+	),
+      'modified' => array(
+          'type' => 'int',
+          'unsigned' => FALSE,
+          'not null' => FALSE,
+          'default' => 0,
+          'description' => "Event's entry modification date",
+	),
+      'search_data' => array(
+          'type' => 'text',
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "Event's data for search",
+	),
+	),
+    'indexes' => array(
+        'gametype_events' => array('aid', 'cid', 'mid', 'gtid'),
+      'module_events' => array('aid', 'cid', 'mid'),
+      'country_events' => array('aid', 'cid'),
+      'area_events' => array('aid'),
+        'event_events' => array('peid'),
+      'event' => array('eid'),
+	),
+    'primary key' => array('eid', 'language'),
+    'foreign keys' => array(
+        'gametype' => array(
+          'table' => 'offers_gametypes',
+          'columns' => array('gtid' => 'gtid'),
+	),
+	),
+	);
+
+	$schema['offers_results'] = array(
+    'description' => 'Stores events results for offers.',
+    'fields' => array(
+      'rid' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => "The result's Id.",
+	),
+      'eid' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => "The event's Id.",
+	),
+        'language' => array(
+          'type' => 'varchar',
+          'length' => 12,
+          'not null' => TRUE,
+          'default' => '',
+          'description' => "The gameTypes's {node}.language.",
+	),
+      'peid' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "Parent event Id.",
+	),
+      'aid' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => "Event's area Id.",
+	),
+      'cid' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => "Event's country Id.",
+	),
+      'mid' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => "Event's module Id.",
+	),
+      'gtid' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => "Event's gameType Id.",
+	),
+        'title' => array(
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+          'default' => '',
+          'description' => "Event's Name.",
+	),
+        'name' => array(
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+          'default' => '',
+          'description' => "Event's Name(Code).",
+	),
+      'item1' => array(
+          'type' => 'int',
+          'unsigned' => FALSE,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "Event's item1 Id.",
+	),
+      'item2' => array(
+          'type' => 'int',
+          'unsigned' => FALSE,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "Event's item1 Id.",
+	),
+      'date' => array(
+          'type' => 'int',
+          'unsigned' => FALSE,
+          'not null' => FALSE,
+          'default' => 0,
+          'description' => "Event's date",
+	),
+        'r1' => array(
+          'type' => 'numeric',
+          'unsigned' => FALSE,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "Event's result1 value",
+          'precision' => 10,
+          'scale' => 2,
+	),
+        'r2' => array(
+          'type' => 'numeric',
+          'unsigned' => FALSE,
+          'not null' => FALSE,
+          'default' => null,
+          'description' => "Event's result1 value",
+          'precision' => 10,
+          'scale' => 2,
+	),
+        'selections' => array(
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+          'default' => '',
+          'description' => "Event's selections array.",
+	),
+	),
+    'indexes' => array(
+        'gametype_events' => array('aid', 'cid', 'mid', 'gtid'),
+      'module_events' => array('aid', 'cid', 'mid'),
+      'country_events' => array('aid', 'cid'),
+      'area_events' => array('aid'),
+        'event_events' => array('peid'),
+      'event' => array('eid'),
+	),
+    'primary key' => array('rid', 'language'),
+    'foreign keys' => array(
+        'gametype' => array(
+          'table' => 'offers_gametypes',
+          'columns' => array('gtid' => 'gtid'),
+	),
+	),
+	);
+
+	$schema['offers_groups'] = array(
+    'description' => 'Stores events for offers.',
+    'fields' => array(
+      'a' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => "",
+	),
+      'b' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => "",
+	),
+	),
+      'indexes' => array(
+      'group_a_b' => array('a', 'b'),
+        'group_a' => array('a'),
+        'group_b' => array('b'),
+	),
+	);
+
+
+	return $schema;
+}

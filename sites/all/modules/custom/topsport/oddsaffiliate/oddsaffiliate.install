@@ -1,0 +1,82 @@
+<?php
+
+/**
+ * Implements hook_schema().
+ */
+function oddsaffiliate_schema() {
+
+	$schema['affiliate_campaigns'] = array(
+	    'description' => 'Here we keeping all relations: affiliates 1-n users',
+	    'fields' => array(	    	
+			'campaign_id' => array(
+	        	'description' => 'Campaign ID',
+				'type' 		  => 'serial',
+				'unsigned' 	  => TRUE,
+				'not null' 	  => TRUE,
+	),
+			'"created"' => array(
+	        	'description' => 'Timestamp tz',
+				'type' 		  => 'varchar',
+				'not null' 	  => FALSE,
+	),
+			'title' => array(
+	        	'description' => 'Description of camnaign where will be used it.',
+				'type' 		  => 'varchar',
+				'not null' 	  => FALSE,
+	),
+			'uid' => array(
+			    'description' => 'client ID who belongs affiliator',
+				'type' 		  => 'int',
+				'unsigned' 	  => TRUE,
+				'not null' 	  => TRUE,	
+	),
+			'total_visits' => array(
+			    'description' => 'Total almost uniques visits of this campaign',
+				'type' 		  => 'int',
+				'unsigned' 	  => TRUE,
+				'default' 	  => 0,	
+	)
+	),
+	    'primary key' => array( 'campaign_id' ),
+		'indexes' 	  => array( 
+			'campaign_id' => array(	'campaign_id' ),
+		    'uid' 		  => array(	'uid' ) 
+	),
+	);
+
+	$schema['affiliate_users'] = array(
+	    'description' => 'Here we keeping all relations: affiliates 1-n users',
+	    'fields' => array(
+			'id' => array(
+	        	'description' => 'ID',
+				'type' 		  => 'serial',
+				'unsigned' 	  => TRUE,
+				'not null' 	  => TRUE,
+	),
+			'campaign_id' => array(
+	        	'description' => 'Campaign ID',
+				'type' 		  => 'int',
+				'unsigned' 	  => TRUE,
+				'not null' 	  => TRUE,
+	),
+			'uid' => array(
+			    'description' => 'client ID who belongs affiliator',
+				'type' 		  => 'int',
+				'unsigned' 	  => TRUE,
+				'not null' 	  => TRUE,	
+	),
+			'ip' => array(
+			    'description' => 'client IP adress',
+				'type' 		  => 'varchar',
+				'not null' 	  => FALSE,	
+	)
+	),
+	    'indexes' => array(
+			'campaign_id' => array('campaign_id'),
+			'uid' 		  => array('uid')
+	),
+	    'primary key' => array('id'),		
+	);
+
+	return $schema;
+}

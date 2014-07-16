@@ -1,0 +1,241 @@
+<?php
+// $Id: account.module Exp $
+
+define('AC_WEBMONEY_PURSE_WME',  'E296969826981');
+define('AC_WEBMONEY_PURSE_WMZ',  '');
+define('AC_WEBMONEY_WMID', 	     650543980785);
+define('AC_WEBMONEY_SECRET_KEY', 'pastaciau777');
+define('AC_WEBMONEY_MODE', 		 1); // 1 - TESTING MODE; 0 - LIVE PAYMENTS
+
+
+function ac_webmoney_menu(){
+	$items['payment-webmoney-ru-callback'] = array(
+    'title' 		  => 'Payment WebMoney.ru Callback',
+    'access callback' => TRUE,
+    'page callback'   => 'ac_webmoney_payment_callback',
+    'type' 			  => MENU_CALLBACK,
+	);
+	return $items;
+}
+
+function ac_webmoney_account_payment_method(){
+	global $base_url;
+	$icons 			   = $base_url.'/'.drupal_get_path('module', 'ac_webmoney').'/icons/';
+	$methods['webmoney'] = array(
+    'id' 		 => 'webmoney',
+    'name' 		 => t('WebMoney'),
+    'title' 	 => '<img src="'.$icons.'webmoney.png" title="'.t('WebMoney').'" />',
+    'komisiniai' => '0%',
+    'update' 	 => t('Iš karto'),
+    'limit' 	 => t('Min. 10 Lt').'<br/>'.t('Max.&nbsp;50&nbsp;000&nbsp;Lt'),
+    'limit_min'  => 10,
+    'limit_max'  => 50000,
+    'callback'   => 'ac_webmoney_payment_start',
+    'weight' 	 => 2,
+    'category' 	 => 'ewallet',
+    'countries'	 => array(),
+	);
+	return $methods;
+}
+
+function ac_webmoney_payment_start($form, &$form_state){
+	return ac_webmoney_payment_form($form, $form_state);
+}
+
+function ac_webmoney_payment_form($form, &$form_state){
+	$account 				   = $form['#user'];
+	
+	// adding check for blocked from user payment gateway
+	$method = 'webmoney';
+	$title = t('WebMoney');
+	account_deposit_is_active($method, array('@PaymentName' => $title));
+	
+	$payment_form 		   = array();
+	$payment_form['#user']   = $account;
+	$payment_form['#action'] = 'https://merchant.wmtransfer.com/lmi/payment.asp';
+
+	$oid = account_createOrderUser($form, $form_state);
+
+	$request = array(
+	//  ---------------------------------
+	//  ------ Merchant Details ---------
+    'LMI_PAYEE_PURSE'    => AC_WEBMONEY_PURSE_WME,
+    'LMI_MODE' 			 => AC_WEBMONEY_MODE,
+    'LMI_PAYMENT_NO' 	 => $oid,
+    'LMI_SUCCESS_URL' 	 => url('account/deposits/accept', array('absolute' => TRUE)),
+    'LMI_SUCCESS_METHOD' => 1,
+    'LMI_FAIL_URL' 		 => url('account/deposits/cancel', array('absolute' => TRUE)),
+    'LMI_FAIL_METHOD'	 => 1,
+    'LMI_RESULT_URL' 	 => url('payment-webmoney-ru-callback', array('absolute' => TRUE)),   
+	//  ---------------------------------
+	//  ------ Payment Details ----------
+    'LMI_PAYMENT_AMOUNT' => account_currency_api_convert( account_get_currency($account->uid), 'EUR', $form_state['values']['amount']),
+    'LMI_PAYMENT_DESC'   => 'UAB TOP SPORT įmoka Nr.: '.$oid,
+	);
+
+	foreach($request as $key => $value){
+		$payment_form[$key] = array('#type' => 'hidden', '#value' =>  htmlspecialchars($value));
+	}
+
+	$payment_form[] = array(
+    'payment_method_icon' => array(
+		'#markup' => _account_payment_method_data($form_state['values']['payment_method'], 'title'),
+		'#prefix' => '<div>',
+		'#suffix' => '</div>',
+		),
+		
+    'payment_method' => array(
+      '#markup' =>  '<strong>'.t('Įmokos būdas:').'</strong> '._account_payment_method_data($form_state['values']['payment_method'], 'name'),
+      '#prefix' => '<div class="form-item">',
+      '#suffix' => '</div>',
+	),
+    'payment_update' => array(
+      '#markup' => t('Įmokos įskaitymo trukmė').': '._account_payment_method_data($form_state['values']['payment_method'], 'update'),
+	),
+    'amount' => array(
+      '#markup' =>  '<strong>'.t('Suma:').'</strong> '.account_currency_string($form_state['values']['amount'], $form_state['values']['currency'] . (($form_state['values']['currency'] == 'EUR') ? '' : ' ('.account_currency_string(account_currency_api_convert($form_state['values']['currency'], 'EUR', $form_state['values']['amount']), 'EUR').')')),
+      '#prefix' => '<div class="form-item">',
+      '#suffix' => '</div>',
+	),
+	);
+
+	$payment_form['back'] = array(
+    '#markup' => l(t('Atgal'), 'account/deposits', array('attributes' => array('class' => array('form-submit', 'reset')))),
+    '#weight' => '20',
+	);
+
+	$payment_form['submit_action'] = array(
+    '#type' 	=> 'submit',
+    '#value' 	=> t('Patvirtinti'),
+    '#weight'	=> '21',
+    '#states' 	=> array(
+      	'enabled' => array( ':input[name="info_danger"]' => array('checked' => TRUE) ),
+	)
+	);
+	return $payment_form;
+}
+
+function uc_webmoney_payment_cancelled_form() {
+	$form['uc_moneybookers_payment_cancelled_form'] = array(
+    '#value' => '<strong>' . t('Your payment was canceld.') . '</strong><br/>' .
+	t('Feel free to continue shopping on our site.'),
+    '#prefix' => '<div class="moneybookers_infotext">',
+    '#suffix' => '</div>',
+	);
+	$form['submit'] = array(
+    '#type'  => 'submit',
+    '#value' => t('continue'),
+	);
+	$form['#action'] = url('cart');
+	return $form;
+}
+
+/**
+ *
+ * Feedback variables:
+ * Array
+ (
+ [LMI_MODE] => 1
+ [LMI_PAYMENT_AMOUNT] => 100.00
+ [LMI_PAYEE_PURSE] => E296969826981
+ [LMI_PAYMENT_NO] => 210919
+ [LMI_PAYER_WM] => 650543980785
+ [LMI_PAYER_PURSE] => E296969826981
+ [LMI_SYS_INVS_NO] => 828
+ [LMI_SYS_TRANS_NO] => 852
+ [LMI_SYS_TRANS_DATE] => 20111117 19:05:27
+ [LMI_HASH] => D723E27E0EA1190D9BDEF317629BE680399C4667E5533850A249C3D7D2BD027570FCDF7A1238713D2658AAE8ACE15A22D49A84C9F8669FA704C083E7AECAF4B81A2C
+ [LMI_PAYMENT_DESC] => Sąskaitos papildymas UAB TOP SPORT įmoka Nr.: 210919
+ [LMI_LANG] => en-US
+ [LMI_DBLCHK] => SMS
+ [op] => Confirm
+ [form_build_id] => form-v_vPTfx5lE07ufse9rdcWqm135PnIzdsrSqSBDWcJvY
+ [form_token] => y3ss-OlugRgtxzdTqlYGwoiEQNQZFj6lhk5DHH3I9-U
+ [info_danger] => 1
+ [form_id] => account_deposits_form
+ )
+ */
+function ac_webmoney_payment_callback(){
+	watchdog('WebMoney', 'Notification data. <pre>@data</pre>', array('@data' => print_r($_REQUEST, true)));
+
+	//  Does the call have a transaction id? If not, forget it!
+	if (!isset($_POST['LMI_PAYMENT_NO'])) {
+		watchdog('WebMoney', 'Notification attempt without order ID. <pre>@data</pre>',  array('@data' => print_r($_REQUEST, true)), WATCHDOG_ERROR);
+		return;
+	}
+
+	//  Is the md5 hash valid?
+	if ( !ac_webmoney_md5check($_POST['LMI_PAYEE_PURSE'], $_POST['LMI_PAYMENT_AMOUNT'],
+	$_POST['LMI_PAYMENT_NO'], $_POST['LMI_MODE'], $_POST['LMI_SYS_INVS_NO'], $_POST['LMI_SYS_TRANS_NO'],
+	$_POST['LMI_SYS_TRANS_DATE'], $_POST['LMI_PAYER_PURSE'], $_POST['LMI_PAYER_WM'], $_POST['LMI_HASH']
+	))
+	{
+		watchdog('WebMoney', 'Wrong MD5 signature. <pre>@data</pre>',  array('@data' => print_r($_REQUEST, true)), WATCHDOG_ERROR);
+		return;
+	}
+
+	//  Do we have the corresponding order?
+	$order_id = intval($_POST['LMI_PAYMENT_NO']);
+	$uid = account_getOrderUser($order_id);
+	if ($uid == FALSE) {
+		watchdog('WebMoney', 'Notification attempt for non-existent order. <pre>@data</pre>',  array('@data' => print_r($_REQUEST, true)), WATCHDOG_ERROR);
+		return;
+	}
+	$account = user_load($uid);
+	try{
+		// Set currency
+		$shop_purses = array(
+		'E296969826981' => array(
+			'currency' => 'EUR',
+		),
+		'R159092363066' => array(
+			'currency' => 'RUB',
+		),
+		'Z337583161710' => array(
+			'currency' => 'USD',
+		),
+		);
+		$currency = '';
+		if (isset($shop_purses[ $_POST['LMI_PAYEE_PURSE'] ]['currency'])){
+			$currency = $shop_purses[ $_POST['LMI_PAYEE_PURSE'] ]['currency'];
+		}
+		$language = strtoupper(substr($_POST['LMI_LANG'], 0, 2));
+		 
+
+		// 3. save and send data
+		$params = array(
+      'user_id'       => userinfo_get_topsportId($account),
+      'amount'        => account_currency_api_convert($currency, 'LTL', $_POST['LMI_PAYMENT_AMOUNT']),
+      'extra_amount'  => 0,
+      'order_id'      => $order_id,
+      'merchant_id'   => 999, // it does not mater, we can send any int
+      'language'      => $language,
+      'currency'      => 'LTL',//$_POST['paycurrency'],
+      'pay_text'      => $_POST['LMI_PAYMENT_DESC'],
+      'payment'       => 'webmoney',
+      'status'        => 'done',
+      'error'         => '',
+      'client_name'   => account_getCorrectName($account->data['firstname'].($account->data['middlename'] ? ' '.$account->data['middlename'] : '')),
+      'client_surename' => account_getCorrectName($account->data['surname']),    
+		);
+		account_payment_done($account, $params);
+		echo 'OK';
+	}catch (Exception $e){
+		echo get_class($e).': '.$e->getMessage();
+	}
+}
+
+function ac_webmoney_md5check( $LMI_PAYEE_PURSE, $LMI_PAYMENT_AMOUNT, $LMI_PAYMENT_NO,
+$LMI_MODE, $LMI_SYS_INVS_NO, $LMI_SYS_TRANS_NO, $LMI_SYS_TRANS_DATE,
+$LMI_PAYER_PURSE, $LMI_PAYER_WM, $LMI_HASH )
+{
+	$shop_signature = strtoupper(md5(
+	$LMI_PAYEE_PURSE . $LMI_PAYMENT_AMOUNT . $LMI_PAYMENT_NO .
+	$LMI_MODE . $LMI_SYS_INVS_NO . $LMI_SYS_TRANS_NO . $LMI_SYS_TRANS_DATE .
+	AC_WEBMONEY_SECRET_KEY . $LMI_PAYER_PURSE . $LMI_PAYER_WM
+	));
+	if ($shop_signature === strtoupper($LMI_HASH) ) {
+		return true;
+	}
+	return false;
+}

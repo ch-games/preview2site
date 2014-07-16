@@ -1,0 +1,9 @@
+; $Id$
+name = Financials
+description = "Binary options trading"
+dependencies[] = topsport
+core = 7.x
+version = 7.x-0.x-dev
+package = TopSport
+files[] = finance.install
+files[] = finance.module

@@ -1,0 +1,94 @@
+<?php
+// $Id: userinfo.install $
+
+/**
+ * @file
+ * Install, update and uninstall functions for the offers module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function betslip_schema() {
+  $schema ['users_betslip'] = array (
+      'description' => 'Stores users BetSlip data',
+      'fields' => array (
+          'uid' => array (
+              'type' => 'int',
+              'unsigned' => TRUE,
+              'not null' => TRUE,
+              'default' => 0,
+              'description' => "The user's {users}.nid." 
+          ),
+          'event_id' => array (
+              'type' => 'int',
+              'unsigned' => TRUE,
+              'not null' => TRUE,
+              'default' => 0,
+              'description' => "Event ID" 
+          ),
+          'choise' => array (
+              'type' => 'int',
+              'unsigned' => TRUE,
+              'not null' => TRUE,
+              'default' => 0,
+              'description' => "Event ID" 
+          ),
+          'selected' => array (
+              'type' => 'int',
+              'unsigned' => TRUE,
+              'not null' => TRUE,
+              'default' => 1,
+              'description' => "Is betslip Item Selected" 
+          ),
+          'weight' => array (
+              'type' => 'int',
+              'unsigned' => TRUE,
+              'not null' => TRUE,
+              'default' => 0,
+              'description' => "Betslip item weight (order by)" 
+          ),
+          // 'data'=> array(
+          // 'type' => 'blob',
+          // 'not null' => FALSE,
+          // 'size' => 'big',
+          // 'serialize' => TRUE,
+          // 'description' => 'A serialized array of event data.',
+          // ),
+          'primary key' => array (
+              'uid',
+              'event_id',
+              'choise' 
+          ),
+          'foreign keys' => array (
+              'usersslip_users' => array (
+                  'table' => 'users',
+                  'columns' => array (
+                      'uid' => 'uid' 
+                  ) 
+              ),
+              'usersslip_events' => array (
+                  'table' => 'offers_events',
+                  'columns' => array (
+                      'event_id' => 'eid' 
+                  ) 
+              ) 
+          ) 
+      ) 
+  );
+  
+  return $schema;
+}
+
+/**
+ * Add new field (data)
+ */
+function betslip_update_7100() {
+  db_add_field ( 'users_betslip', 'data', array (
+      'type' => 'blob',
+      'not null' => FALSE,
+      'size' => 'big',
+      'serialize' => TRUE,
+      'description' => 'A serialized array of event data.' 
+  ) );
+}

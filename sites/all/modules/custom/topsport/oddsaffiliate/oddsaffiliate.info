@@ -1,0 +1,10 @@
+; $Id$
+name = Odds Affiliate
+description = "Fully new users trackable system"
+dependencies[] = topsport
+core = 7.x
+version = 7.x-0.x-dev
+package = TopSport
+files[] = oddsaffiliate.install
+files[] = oddsaffiliate.module
+files[] = oddsaffiliate.install

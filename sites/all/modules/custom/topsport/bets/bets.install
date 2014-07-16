@@ -1,0 +1,148 @@
+<?php
+// $Id: bets.install $
+
+/**
+ * @file
+ * Install, update and uninstall functions for the offers module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+
+function bets_schema() {
+	/*
+	 $schema['users_bets'] = array(
+		'description' => 'Stores users Bettting data',
+		'fields' => array(
+		'bid' => array(
+		'description' => 'The primary identifier for a bet.',
+		'type' => 'serial',
+		'unsigned' => TRUE,
+		'not null' => TRUE,
+		),
+		'uid' => array(
+		'type' => 'int',
+		'unsigned' => TRUE,
+		'not null' => TRUE,
+		'default' => 0,
+		'description' => "The user's {users}.nid.",
+		),
+		'type' => array(
+		'description' => 'The type of this bet.',
+		'type' => 'varchar',
+		'length' => 32,
+		'not null' => TRUE,
+		'default' => '',
+		),
+		'stake' => array(
+		'type' => 'numeric',
+		'unsigned' => FALSE,
+		'not null' => TRUE,
+		'default' => 0,
+		'description' => "Bet stake",
+		'precision' => 10,
+		'scale' => 2,
+		),
+		'status' => array(
+		'description' => 'Number of status type',
+		'type' => 'int',
+		'not null' => TRUE,
+		'default' => 1,
+		),
+		'created' => array(
+		'description' => 'The Unix timestamp when the node was created.',
+		'type' => 'int',
+		'not null' => TRUE,
+		'default' => 0,
+		),
+		),
+		'primary key' => array('bid'),
+		'foreign keys' => array(
+		'bets_users' => array(
+		'table' => 'users',
+		'columns' => array('uid' => 'uid'),
+		),
+		),
+		);
+
+
+		$schema['users_bets_details'] = array(
+		'description' => 'Stores users Bettting data details',
+		'fields' => array(
+		'bid' => array(
+		'type' => 'int',
+		'unsigned' => TRUE,
+		'not null' => TRUE,
+		'default' => 0,
+		'description' => "The user's bet id.",
+		),
+		'eid' => array(
+		'type' => 'int',
+		'unsigned' => TRUE,
+		'not null' => TRUE,
+		'default' => 0,
+		'description' => "The user's {users}.nid.",
+		),
+		'choise' => array(
+		'description' => '',
+		'type' => 'int',
+		'not null' => TRUE,
+		'default' => 0,
+		),
+		'rate' => array(
+		'description' => '',
+		'type' => 'int',
+		'not null' => TRUE,
+		'default' => 0,
+		),
+		),
+		'primary key' => array('bid', 'eid', 'choise'),
+		'foreign keys' => array(
+		'bets' => array(
+		'table' => 'users_bets',
+		'columns' => array('bid' => 'bid'),
+		),
+		'events' => array(
+		'table' => 'offers_events',
+		'columns' => array('eid' => 'eid'),
+		),
+		),
+		);
+		*/
+
+
+	$schema['bet_limits'] = array(
+		'description' => 'Stores bettting limits',
+		'fields' => array(
+			'cnt' => array(
+        		'type' => 'int',
+        		'unsigned' => TRUE,
+        		'not null' => TRUE,
+        		'default' => 0,
+        		'description' => "Bets count in slip",
+	),
+      		'coef' => array(
+      			'type' => 'numeric',
+      			'unsigned' => FALSE,
+      			'not null' => TRUE,
+      			'default' => 0,
+      			'description' => "Max possible coef",
+      			'precision' => 10,
+      			'scale' => 2,
+	),
+			'win' => array(
+      			'type' => 'numeric',
+      			'unsigned' => FALSE,
+      			'not null' => TRUE,
+      			'default' => 0,
+      			'description' => "Max possible win",
+      			'precision' => 10,
+      			'scale' => 2,
+	),
+	),
+      	'primary key' => array('cnt'),
+	);
+
+	return $schema;
+}

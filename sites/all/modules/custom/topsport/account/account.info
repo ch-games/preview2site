@@ -1,0 +1,10 @@
+; $Id: account.info $
+name = Account functions
+description = "Specific functions for users"
+dependencies[] = topsport
+core = 7.x
+version = 7.x-0.x-dev
+package = TopSport
+files[] = account.install
+files[] = account.module
+files[] = account.pages.inc

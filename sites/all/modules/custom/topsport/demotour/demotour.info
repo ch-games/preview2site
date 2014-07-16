@@ -1,0 +1,8 @@
+; $Id: demotour.info $
+name = Demo turas
+description = "Demo tour page"
+dependencies[] = topsport
+core = 7.x
+version = 7.x
+package = TopSport
+files[] = demotour.module

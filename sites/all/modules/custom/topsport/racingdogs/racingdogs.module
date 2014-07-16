@@ -1,0 +1,590 @@
+<?php
+
+
+define('PID', '100013');
+define('PW', 'mo0Z4dsYk!dj(k=');
+
+define('POSTURL_gameRequest', 'https://rdweb.racingdogs.eu/rdweb/cust/prod/gameRequest.php');
+define('POSTURL_finishRequest', 'https://rdweb.racingdogs.eu/rdweb/cust/prod/finishRequest.php');
+define('POSTURL_statusRequest', 'https://rdweb.racingdogs.eu/rdweb/cust/prod/statusRequest.php');
+
+/**
+ * Implements hook_menu().
+ */
+function racingdogs_menu() {
+
+	$items['racingdogs'] = array(
+    'title' => 'Šunų lenktynės internetu',
+    'page callback' => 'racingdogs_main_page',
+    'access arguments' => array('access content'),
+    'file' => 'racingdogs.pages.inc',
+	);
+
+	$items['racingdogs/game/%'] = array(
+    'title' => 'Šunų lenktynės internetu - Lošimas',
+    'page callback' => 'racingdogs_game_page',
+    'page arguments' => array(2),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+    'file' => 'racingdogs.pages.inc',
+	);
+
+	$items['racingdogs/finish/%'] = array(
+    'title' => 'Šunų lenktynės internetu - Pabaiga',
+    'page callback' => 'racingdogs_finish_page',
+    'page arguments' => array(2),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+    'file' => 'racingdogs.pages.inc',
+	);
+
+
+	$items['account/bets/racingdogs'] = array(
+    'title' => 'Šunų lenktynių statymai',
+    'page callback' => 'racingdogs_stats_page',
+    'access callback' => 'account_page_access',
+    'access arguments' => array('access account racindogs'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'racingdogs.pages.inc',
+    'weight' => 10,
+	);
+
+	$items['admin/racingdogs/finish'] = array(
+    'title' => 'Racingdogs finish page',
+    'description' => 'Close Racingdogs Finished Sessions',
+    'page callback' => 'racingdogs_finished_games_page',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+	);
+
+	$items['admin/racingdogs/updater'] = array(
+    'title' => 'Racingdogs updater',
+    'description' => 'Close Racingdogs Sessions',
+    'page callback' => 'racingdogs_updater_page',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+	);
+	/*
+	 $items['account/racingdogs/%'] = array(
+	 'title' => 'Šunų lenktynės ataskaitos',
+	 'page callback' => 'racingdogs_stats_details_page',
+	 'page arguments' => array(2),
+	 'access arguments' => array('access account racindogs'),
+	 'type' => MENU_LOCAL_TASK,
+	 'file' => 'racingdogs.pages.inc',
+	 'weight' => 10,
+	 );
+	 */
+	return $items;
+
+}
+
+function racingdogs_permission() {
+	return array(
+      'access account racindogs' => array(
+      'title' => t('Šunų lengtynių statistika'),
+      'description' => t('Peržiūrėti Šunų lengtynių statymus.'),
+	),
+	);
+}
+
+function racingdogs_init(){
+    global $user;   
+    if(GeoGamesManager::showGeoContent($user)){
+        $is_current = in_array(current_path(), array('racingdogs'));
+        drupal_add_js('
+            jQuery(document).ready(function() {   				
+                 jQuery("#top-services-navigation").append("<li class=\"menu-45015'.($is_current ? ' active':'').'\"><a href=\"'.url('racingdogs').'\" title=\"'.t('Šunų lenktynės').'\">&nbsp;</a></li>");   
+            });', 'inline');   
+    }
+}
+
+function racingdogs_playForFun_form($form, &$form_state, $account){
+	global $language;
+	/*if ($language->language === 'lt'){
+		return $form; // do nothing
+	}*/
+	$form['#user'] = $account;
+
+	$form['title'] = array(
+    '#markup' => '<h3>'.t('Lošimas pramogai').'</h3>',
+	);
+	
+	$form['game_id'] = array(
+        '#type' => 'radios',
+        '#default_value' => 'dog',
+        '#options' => array('dog' => t('Šunų lenktynės'),'horse' => t('Žirgų lenktynės').'<sup>new</sup>'),
+	 );
+
+//	$form['info_line_1'] = array(
+//    '#markup' => '<p>'.t('Tai būdas išbandyti internetu transliuojamas šunų lenktynes ir išmokti valdyti visas statymų galimybes bei kombinacijas.').'</p>',
+//	);
+//
+//	$form['info_line_2'] = array(
+//    '#markup' => '<p>'.t('Norėdami išbandyti lošimą pramogai, spauskite "Lošti pramogai". Jums bus skirti 500 LTL kreditas išbandyti sistemą. Jei Jūs esate registruotas i-lažybų sistemos vartotojas, lošimo pramogai metu išlošti ar pralošti pinigai niekaip neįtakos Jūsų @sitename balanso.', array('500 LTL' => account_currency_string(500, account_get_currency($account->uid)), '@sitename' => variable_get('site_name'))).'</p>',
+//	);
+
+	$form['action_submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Lošti pramogai'),
+    '#attributes' => array('class' => array('btn-primary')),
+	);
+
+	return $form;
+}
+
+function racingdogs_playForFun_form_submit($form, &$form_state){
+	$custId = ((isset($form['#user']->data['tsuid']) AND $form['#user']->data['tsuid']) ? $form['#user']->data['tsuid'] : 0);
+	$result = racingdogs_post_gameRequest($custId, 50000, true, $form_state['values']['game_id']);   
+
+	if(!empty($result) && isset($result['@attributes'])){
+		$result = $result['@attributes'];
+		db_insert('racingdogs')->fields($result)->execute();
+		if(!isset($result['rdStatus']) OR !in_array($result['rdStatus'], array('0', '1'))){
+			drupal_set_message(t('Nepavyko pradėti lošimo. Pamėginkite dar kartą.'), 'error');
+		}else{
+			drupal_goto('racingdogs/game/'.$result['sessionID']);
+		}
+	}else{
+		drupal_set_message(t('Nepavyko pradėti lošimo. Pamėginkite dar kartą.'), 'error');
+	}
+}
+
+
+function racingdogs_playForMoney_form($form, &$form_state, $account){
+
+	$form['#user'] = $account;
+	global $language;
+    
+//    $form['title'] = array(
+//    '#markup' => '<h3>'.t('Lošimas iš pinigų').'</h3>',
+//	);
+	  
+    $form['game_id'] = array(
+      '#type' => 'radios',
+      '#default_value' => 'dog',
+      '#options' => array('dog' => t('Šunų lenktynės'),'horse' => t('Žirgų lenktynės').'<sup>new</sup>'),
+    );	
+
+	$form['no_user_1'] = array(
+    '#markup' => '<p>'.t('- Jums reikia prisijungti prie @sitename sistemos, kaip klientui, <a href="!url">prisijungti</a>.', array('!url' => url('user/login'),'@sitename' => variable_get('site_name'))).'</p>',
+    '#access' => (!$account->uid),
+	);
+
+	$form['no_user_2'] = array(
+    '#markup' => '<p>'.t('- Jei dar neturite vartotojo jums reikia <a href="!url">užsiregistruoti</a>, pasirašyti lažybų sutartį ir tapti @sitename klientu.', array('!url' => url('user/register'),'@sitename' => variable_get('site_name'))).'</p>',
+    '#access' => (!$account->uid),
+	);
+
+	$form['no_user_3'] = array(
+    '#markup' => '<p>'.t('- Jums reikia pasirašyti lažybų sutartį ir tapti @sitename klientu.', array('@sitename' => variable_get('site_name'))).'</p>',
+    '#access' => ($account->uid AND !(isset($account->data['tsuid']) AND $account->data['tsuid'])),
+	);        
+	
+	$form['amount'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Pervedama suma'),
+    '#field_suffix' => 'LTL',//account_get_currency_symbol(),
+    '#default_value' => '',
+    '#size' => 5,
+    '#maxlength' => 10,
+    '#required' => TRUE,
+    '#description' =>
+	t('Minimali pervedama suma yra 1 LTL.', array(/*'1 LTL' => account_currency_string(1, account_get_currency($account->uid))*/)).'<br/>'.
+	t('Maksimali pervedama suma yra 500 LTL.', array(/*'500 LTL' => account_currency_convert_string($account->uid, 500)*/)).'<br/>'.
+	t('Suma turi būti litų tikslumu.'),
+    '#access' => (isset($account->data['tsuid']) AND $account->data['tsuid']),
+	);
+	$form['action_submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Pradėti lošti'),
+    '#access' => (isset($account->data['tsuid']) AND $account->data['tsuid']),
+    '#attributes' => array('class' => array('btn-primary')),
+	);
+
+	if(empty($form_state['input']) AND account_get_currency($account->uid) != 'LTL'){
+		drupal_set_message(t('Šunų operacijos vykdymos tik litais (LTL).'), 'warning');
+	}
+
+	return $form;
+}
+
+function racingdogs_playForMoney_form_validate(&$form, &$form_state){
+
+	$form_state['values']['amount'] = str_replace(',', '.', $form_state['values']['amount']);
+	$amount = intval($form_state['values']['amount']);
+
+	if((string)$amount === (string)$form_state['values']['amount']){
+		if($amount < 1) {
+			form_set_error('amount', t('Pervedama suma per maža. Minimali pervedama suma 1 LTL', array(/*'1 LTL' => account_currency_string(1, account_get_currency($form['#user']->uid))*/)));
+		}
+		// Max amount from provaider
+		if($amount > 500){
+			form_set_error('amount', t('Pervedama suma turi būti nedidesnė nei 500 LTL', array(/*'500 LTL' => account_currency_string(500, account_get_currency($form['#user']->uid))*/)));
+		}
+		if($amount > $form['#user']->data['balance']){
+			form_set_error('amount', t('Pervedama suma viršyja Jūsų balansą.'));
+		}
+	}else{
+		form_set_error('amount', t('Pervedama suma turi būti sveikas skaičius'));
+	}
+
+}
+
+
+function racingdogs_playForMoney_form_submit(&$form, &$form_state){
+	$custId = ((isset($form['#user']->data['tsuid']) AND $form['#user']->data['tsuid']) ? $form['#user']->data['tsuid'] : 0);
+	$result = racingdogs_post_gameRequest($custId, $form_state['values']['amount'] * 100, false, $form_state['values']['game_id']);  
+	if(!empty($result) && isset($result['@attributes'])){
+		$result = $result['@attributes'];
+        if(strlen($result['rdError']) == 0){
+            $inserted = db_insert('racingdogs')->fields($result)->execute();
+            if($inserted){
+                if(isset($result['rdStatus']) AND in_array($result['rdStatus'], array('0', '1'))){
+                    $query = array(
+                        'user_id' => $custId,
+                        'session_id' => $result['sessionID'],
+                        'amount' => $result['amount'],//account_currency_convert_back(false, $result['amount']),
+                        'currency' => 'LTL',//$result['curr'],
+                        'game_id' => isset($form_state['values']['game_id']) && strlen($form_state['values']['game_id']) ? $form_state['values']['game_id'] : 'dog'
+                    );
+                    $topResponse = racingdogs_beginRDWebSession($query);
+                    userinfo_updateUser($form['#user'], false, TRUE);
+                    if(isset($topResponse['Code'])){
+                        db_update('racingdogs')
+                        ->fields(array('tpbegin' => $topResponse['Code']))
+                        ->condition('sessionid', $result['sessionID'])
+                        ->execute();
+                        if($topResponse['Code'] === '0'){
+                            drupal_goto('racingdogs/game/'.$result['sessionID']);
+                            exit;
+                        }
+                    }
+                }
+            }
+        }else {
+           $error = Racingdogs_ws_errors($result);
+           drupal_set_message($error, 'error');
+        }
+	}
+	drupal_set_message(t('Nepavyko pradėti lošimo. Pamėginkite dar kartą.'), 'error');
+}
+
+
+function racingdogs_sessionsStatsFilter($form, &$form_state){
+	$form['#attributes']['class'][] = 'inline-form';
+	$form['date_type'] = array(
+    '#type' => 'select',
+    '#title' => '',
+    '#options' => array('today' => t('Šiandien'), 'yesterday' => t('Vakar'), '7days' => t('7 dienų'), '30days' => t('30 dienų'),/* 'period' => t('Periodas')*/),
+    '#default_value' => (isset($filter['date_type']) ? $filter['date_type'] : '30days'),
+	);
+
+	$form['date_from'] = array(
+    '#type' => 'date_popup',
+    '#title' => t('Nuo'),
+    '#default_value' => date('Y-m-d'),
+    '#date_type' => DATE_DATETIME,
+    '#date_format' => 'Y-m-d',
+    '#date_increment' => 1,
+    '#date_year_range' => '-1:+0',
+    '#size' => 10,
+    '#states' => array(
+      'visible' => array(
+        'select[name="date_type"]' => array('value' => 'period'),
+	),
+	),
+	);
+
+	$form['date_to'] = array(
+    '#type' => 'date_popup',
+    '#title' => t('iki'),
+    '#default_value' => date('Y-m-d'),
+    '#date_type' => DATE_DATETIME,
+    '#date_format' => 'Y-m-d',
+    '#date_increment' => 1,
+    '#date_year_range' => '-1:+0',
+    '#size' => 10,
+    '#states' => array(
+      'visible' => array(
+        'select[name="date_type"]' => array('value' => 'period'),
+	),
+	),
+	);
+
+	$form['action_submit'] = array(
+        '#type' => 'submit',
+        '#value' => t('Filtruoti'),
+        '#attributes' => array('class' => array('btn btn-primary'))
+	);
+
+	return $form;
+}
+function racingdogs_sessionsStatsFilter_submit(&$form, &$form_state){
+	racingdogs_filterData($form_state['values']);
+	$form_state['redirect'] = FALSE;
+}
+function racingdogs_filterData($values = false){
+	$filterdata = &drupal_static(__FUNCTION__);
+	if($values){
+		$filterdata['date_type'] = $values['date_type'];
+		switch($filterdata['date_type']){
+			case 'today':
+				$dateFrom = strtotime('today');
+				$dateTo = strtotime('tomorrow');
+				break;
+			case 'yesterday':
+				$dateFrom = strtotime('yesterday');
+				$dateTo = strtotime('today');
+				break;
+			case '7days':
+				$dateFrom = strtotime('-7 days');
+				$dateTo = strtotime('tomorrow');
+				break;
+			case 'period':
+				$dateFrom = strtotime($values['date_from']);
+				$dateTo = strtotime($values['date_to']);
+				break;
+			case '30days':
+			default:
+				$dateFrom = strtotime('- 30 days');
+				$dateTo = strtotime('tomorrow');
+				break;
+		}
+		$filterdata['date_from'] = date('Y-m-d', $dateFrom);
+		$filterdata['date_to'] = date('Y-m-d', $dateTo);
+	}elseif(!isset($filterdata)){
+		$filterdata['date_type'] = '30days';
+		$filterdata['date_from'] = date('Y-m-d', strtotime('- 30 days'));
+		$filterdata['date_to'] = date('Y-m-d', strtotime('tomorrow'));
+	}
+	return $filterdata;
+}
+
+function racingdogs_registerFinishedGames(){
+	$finishData = racingdogs_post_finishRequest();
+}
+
+function racingdogs_registerSesssionEnd(&$sessionData){
+	$sessionStatusData = racingdogs_post_statusRequest($sessionData->sessionid);
+	if(isset($sessionStatusData['rdGame'])){
+		$sessionStatusData = $sessionStatusData['rdGame']['@attributes'];
+		$fields = array(
+      'payin' => 'payIn',
+      'payout' => 'payOut',
+      'stake' => 'stake',
+      'win' => 'win',
+      'tipcount' => 'tipCount',
+      'startdt' => 'startDT',
+      'enddt' => 'endDT',
+		);
+
+		foreach($fields as $key => &$field){
+			$field = $sessionStatusData[$field];
+			$sessionData->$key = $field;
+		}
+
+		if($fields['enddt']){
+			db_update('racingdogs')
+			->fields($fields)
+			->condition('sessionid', $sessionData->sessionid)
+			->execute();
+		}
+		racindogs_registerSessionEndTopSport($sessionData);
+		// TODO track GA
+	}
+}
+
+function racindogs_registerSessionEndTopSport(&$sessionData){
+	if($sessionData->enddt AND $sessionData->tpbegin == '0' AND (!$sessionData->tpend OR !in_array($sessionData->tpend, array(0, 6)))){
+		$query = array(
+      'session_id' => $sessionData->sessionid,
+      'pay_in' => account_currency_api_convert($sessionData->curr, 'LTL', $sessionData->payin),
+      'pay_out' => account_currency_api_convert($sessionData->curr, 'LTL', $sessionData->payout),
+      'bet_amount' => account_currency_api_convert($sessionData->curr, 'LTL', $sessionData->stake),
+      'win_amount' => account_currency_api_convert($sessionData->curr, 'LTL', $sessionData->win),
+      'tip_count' => $sessionData->tipcount,
+      'start_timestamp' => date('Y-m-d H:i:s', strtotime('+1 hour', strtotime($sessionData->startdt))),
+      'finish_timestamp' => date('Y-m-d H:i:s', strtotime('+1 hour', strtotime($sessionData->enddt))),
+		);
+		$topResponse = racingdogs_endRDWebSession($query);
+		if(isset($topResponse['Code'])){
+			db_update('racingdogs')
+			->fields(array('tpend' => $topResponse['Code']))
+			->condition('sessionid', $sessionData->sessionid)
+			->execute();
+			if(!in_array($topResponse['Code'], array(0, 6)) AND $sessionData->tpend != $topResponse['Code'] AND !(isset($topResponse['ErrorMessage']) AND strpos($topResponse['ErrorMessage'], '[1CAC7FE3-A19C-4494-BA52-1CAD958B9489]') !== FALSE)){
+				$message = "<br/>".(isset($topResponse['ErrorMessage']) ? $topResponse['ErrorMessage'] : '')."<br/>SESSIONDATA<br/><pre>".print_r($sessionData, true).'</pre>'."<br/>POST<br/><pre>".print_r($query, true).'</pre>'."<br/>ANSWER<br/><pre>".print_r($topResponse, true).'</pre>';
+				watchdog('racingdogs', 'Klaida užbaigiant Racingdogs sesiją !message', array('!message' => $message), WATCHDOG_ERROR);
+				topsport_sendMail('racingdogsend', $message);
+			}
+		}else{
+			watchdog('racingdogs','Negavom Racingdogs sesijos baigimo informacijos iš TopSport ', array(), WATCHDOG_ERROR);
+		}
+	}
+}
+
+function racingdogs_getSessionInfo($sessionid = false, $custid = false, $filter = false, $page = 1){
+	$data = db_select('racingdogs', 'rd')->fields('rd');
+	if($custid){ $data->condition('custid', $custid)->orderBy('sessionid', 'DESC'); }
+	if($sessionid){
+		$data->condition('sessionid', $sessionid);
+		return $data->execute()->fetchObject();
+	}else{
+		$data->condition('fun', 'n');
+		$data->condition('tpbegin', 0);
+		if($filter){
+			$db_and = db_and()
+			->condition('startDT', date('Y-m-d 00:00', strtotime($filter['date_from'])), '>=')
+			->condition('endDT', date('Y-m-d 23:59', strtotime($filter['date_to'])), '<=');
+			$data->condition(db_or()->condition($db_and)->isNull('startDT'));
+		}
+		$data->range(($page-1)*25, '25');
+		return $data->execute()->fetchAll();
+	}
+}
+
+function racingdogs_searchRDWebOperationsAreAllowed(){
+	// avoiding on every request ask back-end about service availability
+	return true;
+	$response = topsport_http_request("searchRDWebOperationsAreAllowed.jsp", null, 'POST', FALSE);
+	if(!$response){ return false; }
+	$result = sx_array(@simplexml_load_string($response));
+	return ($result['Answer'] === 'True');
+}
+
+function racingdogs_beginRDWebSession($query){
+	$response = topsport_http_request("beginRDWebSession.jsp", $query, 'POST');
+	if(!$response){ return false; }
+	$result = sx_array(@simplexml_load_string($response));
+	return $result;
+}
+function racingdogs_endRDWebSession($query){
+	$response = topsport_http_request("endRDWebSession.jsp", $query, 'POST');
+	if(!$response){ return false; }
+	$result = sx_array(@simplexml_load_string($response));
+	return $result;
+}
+
+
+function racingdogs_post_gameRequest($cust, $amount, $fun, $game_id = 'horse'){
+	global $language, $user;
+	
+	list($lang_code) = explode('-', $language->language);
+	$request = array(
+        'PID'       => PID,
+        'PW'        => PW,
+        'CUSTID'    => $cust,
+        'LANG'      => $lang_code,
+        'WITHROOT'  => 'n',
+        'AMOUNT'    => $amount,//account_currency_convert_back($user->uid, $amount, 'LTL', 0),
+        'CURR'      => ($fun ? 'XXX' : 'LTL'/*account_get_currency()*/),
+        'FUN'       => ($fun ? 'y' : 'n'),
+        'VERSION'   => '1.1.1000',
+        'GAME'      => $game_id, 
+        //'GAMETYPE' => 'term'
+	);
+	$data = rd_curl_post(POSTURL_gameRequest, http_build_query($request));
+	return sx_array(@simplexml_load_string($data));
+	//$data = rd_curl_post(POSTURL_gameRequest, topsport_inlineArray($request));
+}
+
+function racingdogs_post_finishRequest(){
+	global $language;
+	$request = array(
+    'PID' => PID,
+    'PW' => PW,
+    'WITHROOT' => 'n',
+	);
+	$data = rd_curl_post(POSTURL_finishRequest, topsport_inlineArray($request));
+	return sx_array(simplexml_load_string($data));
+}
+
+function racingdogs_post_statusRequest($sessionid, $detailed = false){
+	global $language;
+	$request = array(
+    'PID' => PID,
+    'PW' => PW,
+    'WITHROOT' => 'n',
+    'SESSIONID' => $sessionid,
+    'DETAIL' => ($detailed ? 'y' : 'n'),
+	);
+	$data = rd_curl_post(POSTURL_statusRequest, topsport_inlineArray($request));
+	return sx_array(simplexml_load_string($data));
+}
+
+function rd_curl_post($url, $values) {
+
+	$ch = curl_init();
+	curl_setopt($ch, CURLOPT_POST, 1);
+	curl_setopt($ch, CURLOPT_HEADER, 0);
+	curl_setopt($ch, CURLOPT_URL, $url);
+	curl_setopt($ch, CURLOPT_FRESH_CONNECT, 1);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_FORBID_REUSE, 1);
+	curl_setopt($ch, CURLOPT_POST, 1);
+	curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+	curl_setopt($ch, CURLOPT_POSTFIELDS, $values);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+	if(!$result = curl_exec($ch))
+	{
+		trigger_error(curl_error($ch));
+	}
+	curl_close($ch);
+	return $result;
+}
+
+function racingdogs_updater_page(){
+    //exit;
+    // 62.112.201.8
+    // 188.69.226.242
+	$data = db_select('racingdogs', 'rd')->fields('rd');
+	$data->condition('fun', 'n');
+	$data->condition('tpbegin', 0);
+	$data->condition('sessionid', date('YmdHis000', strtotime('- 30 minutes')), '<=');
+	$data->condition(db_or()->condition('tpend', array(0, 6), 'NOT IN')->isNull('tpend'));
+	$sessions = $data->execute()->fetchAll();
+	foreach($sessions as $sessionData){
+		if(!$sessionData->enddt OR ($sessionData->enddt AND $sessionData->tpbegin == '0' AND (!$sessionData->tpend OR !in_array($sessionData->tpend, array(0, 6))))){
+			racingdogs_registerSesssionEnd($sessionData);
+		}
+	}
+	//   watchdog('racingdogs', 'Atidarytų sesijų uždarymas. Rasta atidarytų: %count.', array('%count' => count($sessions)), WATCHDOG_NOTICE);
+}
+
+function racingdogs_cron(){
+	racingdogs_updater_page();
+}
+
+/**
+ * @deprecated: seems like its not using any more
+ */ 
+function racingdogs_finished_games_page(){
+	return 'ok';
+}
+
+
+function Racingdogs_ws_errors($error_code){
+    $errort_description = null;
+    switch ($error_code['rdError']) {
+        case '04003':
+            $errort_description = t('Dar yra neužbaigtų žaidimo sesijų, prašome palaukti ir bandyti vėliau.');
+            break;
+        default:
+            break;
+    }
+    return $errort_description;
+}
+
+function Racingdogs_bews_errors($error_code){
+    $errort_description = null;
+    switch ($error_code) {
+        case 9:
+            $errort_description = t('Pervedama suma yra per didelė.');
+            break;
+        default:
+            break;
+    }
+    return $errort_description;
+}

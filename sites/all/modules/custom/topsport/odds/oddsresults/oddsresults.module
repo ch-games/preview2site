@@ -1,0 +1,530 @@
+<?php 
+use oddsManager as OddsApi;
+
+require_once drupal_get_path('module', 'odds').  '/resultsManager.php';
+
+function oddsresults_menu() {
+	$items['oddresults'] = array(
+      'title' => 'Odds page',
+      'page callback' => 'oddsresults_renderPage',
+      'page arguments' => array(1),
+      'access arguments' => array('access content'),
+	  'type' => MENU_SUGGESTED_ITEM,
+    );
+	
+		
+	return $items;
+}
+
+
+
+function oddsresults_renderPage($type = null, $aid = null, $cid = null, $mid = null, $eid = null)
+{   
+    global $language, $user;
+     
+	$output = '';
+	
+	$resultsManager = new OddsApi\ResultsManager();	
+	$resultsData = array();	
+	$oddsresults_filter_form = drupal_get_form('oddsresults_filter_form');
+    $filter = oddsresults_filter_form_result();
+    
+    $aid = is_numeric($filter['area']);
+    $cid = is_numeric($filter['country']);
+    
+    
+    
+    
+	$output .= '<div class="panel panel-oddsresults">'.
+                '<div class="panel-heading"><h2>'.t('Lažybų rezultatai').'</h2></div>'.
+                '<div class="panel-body">'.render($oddsresults_filter_form).'</div>'.
+            '</div>';
+    if($filter == null && $_SERVER['REQUEST_METHOD'] == 'POST'){
+        return $output;
+    }
+    if($_SERVER['REQUEST_METHOD'] == 'POST'){
+        $filter['only_main'] = 1;
+        $_key = implode(',', array(__CLASS__, __FUNCTION__,$language->language, $type, $filter['area'], $filter['country'], $filter['date']['from'], $filter['date']['to'], $filter['event_name']));
+        if($cache = cache_get($_key, 'cache')){
+        return $output . $cache->data;
+        }
+       $results = oddsresults_loadResults($resultsManager, $filter['area'], $filter['country'], $filter['date']['from'], $filter['date']['to'], $filter['event_name'], $filter['only_main'] == 1, $filter['period'], null, null);
+    } else {
+       $_key = implode(',', array(__CLASS__, __FUNCTION__,$language->language, $type, $aid, $cid, $mid, $eid));
+       if($cache = cache_get($_key, 'cache')){
+        return $output. $cache->data;
+        }
+       $results = oddsresults_loadResults($resultsManager, $aid, $cid, $filter['date']['from'], $filter['date']['to'], $eid, is_numeric($eid)? false: true, null, $mid, $eid);
+    }
+
+	$html = '<div class="panel-sport panel-oddsresults">'.oddsresults_renderResults($results, $_key).'</div>';
+    cache_set($_key, $html, 'cache', strtotime('+ 5 min'));
+  	
+	return $output.$html;
+}
+
+
+function oddsresults_renderResults($results, $key)
+{
+	require_once drupal_get_path('module', 'odds') . '/oddsView.php';
+    require_once drupal_get_path('module', 'odds') . '/OddsViewHelper.php';
+	
+	$oddsView = new OddsView();
+    if($cache = cache_get($key, 'cache')){
+       // return $cache->data;
+    }
+    $data = $oddsView->renderResults($results);
+    //cache_set($key, $data, 'cache', strtotime('+ 5 min'));
+	return $data;			
+	
+}
+
+function oddsresults_loadResults(OddsApi\ResultsManager $resultsManager, $aid, $cid, $date_from, $date_to, $event_name, $only_main, $period, $mid, $eid)
+{    
+    global $language;
+    $date_to = time();
+    switch ($period)
+	{
+		case 'today':
+			$date_from = strtotime('-24 hours');			
+			break;
+		case 'day':
+			$date_from = strtotime('yesterday - 32 hours');
+			$date_to = strtotime('yesterday');
+			break;
+		case 'week':
+			$date_from = strtotime('-7 days');
+			break;
+        default :
+            $date_from = strtotime('-24 hours');
+            break;
+	}	
+	if(!isset($event_name) || !intval($event_name))
+	{	
+        
+		$resultsManager->setTimeInterval($date_from, $date_to);
+		$data = oddsresults_load_data($resultsManager, $only_main, is_numeric($aid)?$aid:null, is_numeric($cid)?$cid:null, is_numeric($mid)?$mid:null, is_numeric($eid)?$eid:null);
+        if(!$data) return array();
+        
+        if(is_numeric($aid) && is_numeric($cid) && is_numeric($mid) ){
+            $t_cid = $resultsManager->findBy('language = $1 and aid = $2 and cid = $3 and mid = $4 LIMIT 1', array($language->language, $aid, $cid, $mid));
+            $tmp[] = array(
+              'id' => $aid,
+              'title' => $t_cid->area,
+              'children' => array(
+                array(
+                  'id' => $cid,
+                  'title' => $t_cid->country,
+                  'children' => array(
+                    array(
+                        'id' => $mid,
+                        'title' => $t_cid->module,
+                        'children' => $data
+                    )
+                  ),
+                )
+              ),
+            );
+            $data = $tmp;            
+        }elseif(is_numeric($aid) && is_numeric($cid) ){
+            $t_cid = $resultsManager->findBy('language = $1 and aid = $2 and cid = $3 LIMIT 1', array($language->language, $aid, $cid));
+            $tmp[] = array(
+              'id' => $aid,
+              'title' => $t_cid->area,
+              'children' => array(
+                array(
+                  'id' => $cid,
+                  'title' => $t_cid->country,
+                  'children' => $data,
+                )
+              ),
+            );
+             $data = $tmp;
+        }elseif(is_numeric($aid)){
+            $t_cid = $resultsManager->findBy('language = $1 and aid = $2  LIMIT 1', array($language->language, $aid));
+            $tmp[] = array(
+              'id' => $aid,
+              'title' => $t_cid->area,
+              'children' => $data,
+            );
+            $data = $tmp;
+        }
+        return $data;
+	}
+	else
+	{
+        $only_main = false; // disable that will show all children
+		$resultsManager->setTimeInterval(null, null); // disable timeframe then looking by event_name
+        $edata = $resultsManager->findByName($event_name, ($eid !== null) ? true : false);                
+		if($edata)
+		{            
+			$data = array(
+				array('id'=>$edata->aid, 'title' => $edata->area, 'children' =>
+					array(
+					array('id'=>$edata->cid, 'title' => $edata->country, 'children' => 
+						array(
+								array(
+									'id'=>$edata->mid, 'title' => $edata->module, 'children' =>
+										oddsresults_load_data($resultsManager, $only_main, $edata->aid, $edata->cid, $edata->mid, $edata->eid)
+								)
+							)
+						)
+					)
+				)
+			);
+			return $data;
+		}
+		return array();
+	}	
+}
+
+function oddsresults_load_data(OddsApi\ResultsManager $resultsManager, $only_main, $aid = null, $cid = null, $mid = null, $eid = null)
+{
+	global $language;
+	$rez = array();
+	
+	if(isset($eid) && $only_main) return null;
+	
+	$args = array('all');
+	if(isset($aid)) $args[] = $aid;
+	if(isset($cid)) $args[] = $cid;
+	if(isset($mid)) $args[] = $mid;
+	if(isset($eid)) $args[] = $eid;
+
+	$cntargs = count($args);
+	$data = $resultsManager->getResults($language->language, $args);
+	
+	foreach ($data as $key => $o)
+	{
+		if($o['type'] == 'category')
+		{
+			switch ($cntargs)
+			{
+				case 1: $aid = $o['id']; break;
+				case 2: $cid = $o['id']; break;
+				case 3: $mid = $o['id']; break;
+				case 4: $eid = $o['id']; break;					
+			}			
+			$rez[] = array('id'=>$o['id'], 'title'=>$o['title'], 'children' => oddsresults_load_data($resultsManager, $only_main, $aid, $cid, $mid, $eid));
+		}
+		elseif($o['type'] == 'result')
+		{
+			$r = array(
+				'id' => $o['id'],
+				'title' => $o['title'],
+                'date' => $o['date'],
+                'name' => $o['name'],
+				'advanced' => $o['advanced'],
+				'selections' => $o['selections'],
+				'result' => $o['result']
+			);
+            
+			if((int)$o['advanced'])
+			{				
+				$r['children'] = oddsresults_load_data($resultsManager, $only_main, $aid, $cid, $mid, $o['id']);
+			}
+			
+			$rez[$o['gametype']][] = $r;
+		}
+	}
+	
+	return $rez;
+}
+
+/* filter results filter form */
+function oddsresults_filter_form($form, &$form_state){
+  //$form['#token'] = FALSE;
+  oddsresults_filter_form_result(array());
+  //   $areasoptions = array('all' => t('Visos'));
+  //   $areasoptions = array();
+  //   $countryoptions = array('all' => t('Visos'));
+
+  global $language;
+  
+  $orManager = new OddsApi\ResultsManager();
+  $areas = array();
+  foreach ($orManager->getResults($language->language, array('all')) as $r)
+  {
+	  $ar = new stdClass();
+	  $t =  explode('/', $r['id']);
+	  $ar->offers_area_id = array_pop($t);
+	  $ar->title = $r['title'];
+	  $areas[] = $ar;
+  }
+
+  $optionsTmp[0] = array('all' => t('Visos'));
+  $optionsTmp[1] = array();
+  $optionsTmp[2] = array();
+  $optionsTotal = count($areas) + 1;
+  $perColumn = ceil($optionsTotal / 3);
+  $k = 0;$i = 1;
+  foreach($areas as $area){
+    $optionsTmp[$k][$area->offers_area_id] = $area->title;
+    $i++;
+    if($i >= $perColumn){$k++; $i = 0; }
+  }
+  $i = 0;$k = 0;
+  while($i < $optionsTotal){
+    $key = key($optionsTmp[$k]);
+    if(isset($key)){ $i++; }
+    $areasoptions[$key] = isset($optionsTmp[$k][$key]) ? $optionsTmp[$k][$key] : null;
+    if(isset($optionsTmp[$k][$key])){ unset($optionsTmp[$k][$key]); }
+    $k++;
+    if($k > 2){ $k = 0; }
+  }
+  // sort by sport ID
+  ksort($areasoptions);
+
+  $form['oddsresults_filter'] = array(
+    '#prefix' => '<div id="odds_result_filter">',
+    '#suffix' => '</div>',
+    '#weight' => -10
+  );
+  $form['oddsresults_filter']['area'] = array(
+    '#type' => 'select',
+    '#title' => t('Sporto šaka'),
+    '#options' => $areasoptions,
+  //     '#empty_value' => '',
+    '#default_value' => 'all',
+    '#ajax' => array('wrapper' => 'oddsresults_filter_country', 'callback' => 'oddsresults_filter_countries', 'progress' => array('type' => null)),
+  //     '#required' => TRUE,   
+  );
+
+  $areaValue = null;
+  
+  if(isset($form_state['values']['area']) && $form_state['values']['area'] && intval($form_state['values']['area'])){
+    $areaValue = intval($form_state['values']['area']);	
+  }
+  $countriesTmp = array(); //offers_getChildCats($areaValue, true);
+  if(isset($areaValue))
+  foreach ($orManager->getResults($language->language, array('all', $areaValue)) as $r)
+  {
+	  $ar = new stdClass();
+	  $t =  explode('/', $r['id']);
+	  $ar->offers_country_id = array_pop($t);
+	  $ar->title = $r['title'];
+	  $countriesTmp[] = $ar;
+  }
+  
+  //print_r($countriesTmp);
+  
+  $countries = array();  
+  foreach($countriesTmp as $cntr){
+    $key = ($cntr->offers_country_id == 0 ? '0' : '1').' '.$cntr->title.' '.$cntr->offers_country_id;
+    $countries[$key] = $cntr;
+  }
+  $xlanguage = language_default();
+  setlocale(LC_ALL, $xlanguage->language .'_'. strtoupper($xlanguage->language) .'.UTF8');
+  ksort($countries, SORT_LOCALE_STRING);
+  setlocale(LC_ALL, NULL);
+
+  //   foreach($countries as $country){
+  //     $countryoptions[$country->offers_country_id] = $country->title;
+  //   }
+  $optionsTotal = count($countries);
+  $optionsTmp[0] = array();
+  $optionsTmp[1] = array();
+  $optionsTmp[2] = array();
+  $k = 0;$i = 0;
+  if($optionsTotal != 1){
+    $i++;
+    $optionsTotal++;
+    $optionsTmp[0] = array('all' => t('Visos'));
+  }
+  $perColumn = ceil($optionsTotal / 3);
+
+  foreach($countries as $country){
+    if($i >= $perColumn){ $k++; $i = 0; }
+    $optionsTmp[$k][$country->offers_country_id] = $country->title;
+    $i++;
+  }
+  $i = 0;$k = 0;
+  $countryoptions = array();
+  while($i < $optionsTotal){
+    $key = key($optionsTmp[$k]);
+    if(isset($key)){ $i++; }
+    $countryoptions[$key] = isset($optionsTmp[$k][$key]) ? $optionsTmp[$k][$key] : null;
+    if(isset($optionsTmp[$k][$key])){ unset($optionsTmp[$k][$key]); }
+    $k++;
+    if($k > 2){ $k = 0; }
+  }
+  // country value sort
+  ksort($countryoptions);
+  $form['oddsresults_filter']['country'] = array(
+    '#type' => 'select',
+    '#title' => t('Šalis'),
+    '#default_value' => 'all',
+    '#options' => $countryoptions,
+  //'#attributes' => array('id' => array('offer_results_country')),
+    '#prefix' => '<div id="oddsresults_filter_country">',
+    '#suffix' => '</div>',
+  );
+  $periodoptions = array(
+    'today' => t('Šiandien'),
+    'day' => t('Vakar'),
+    'week' => t('Paskutinės 7 dienos'),
+   // 'period' => t('Pasirinkti'),
+  );
+  $form['offer_results']['period'] = array(
+    '#type' => 'select',
+    '#title' => t('Laiko intervalas'),
+    '#default_value' => 'today',
+    '#options' => $periodoptions,    
+    '#weight' =>-100 
+  //'#attributes' => array('id' => array('offer_results_country')),
+    //'#prefix' => '</div><div class="filter-line"><div id="oddsresults_filter_period">',
+  );
+//  $sav_dienos = array(
+//    '0' => t('Sek'),
+//    '1' => t('Pir'),
+//    '2' => t('Ant'),
+//    '3' => t('Tre'),
+//    '4' => t('Ket'),
+//    '5' => t('Pen'),
+//    '6' => t('Šeš'),
+//  );
+//  $dates = array();
+//  for($ii=0; $ii < 30; $ii++){
+//    $testdate = mktime(0, 0, 0, date("m"), date("d") - $ii, date("Y"));
+//    $key = date("Y-m-d", $testdate);
+//    $day_title = date("m.d", $testdate).', '.$sav_dienos[date("w",$testdate)];
+//    //if (in_array(date("w", $testdate), array(0,6))) {$day_title = $day_title;}
+//    $datresultses[$key] = $day_title;
+//  }
+//  $form['oddsresults_filter']['date'] = array(
+//    '#tree' => TRUE,
+//  );
+//  $form['oddsresults_filter']['date']['from'] = array(
+//    '#type' => 'select',
+//  //     '#title' => t('Nuo'),
+//    '#default_value' => '',/*date('Y-m-d', strtotime('yesterday')),*/
+//    '#options' => $dates,
+//    '#prefix' => '<div class="inline-form-items">',
+//    '#empty_option' => t('Nuo'),
+//  //     '#empty_value' => '',
+//    '#states' => array(
+//      'visible' => array(
+//        'select[name="period"]' => array('value' => 'period'),
+//  ),
+//  ),
+//  );
+//  $form['oddsresults_filter']['date']['to'] = array(
+//    '#type' => 'select',
+//  //     '#title' => t('iki'),
+//    '#default_value' => '',/*date('Y-m-d', strtotime('today')),*/
+//    '#options' => $dates,
+//    '#suffix' => '</div>',
+//    '#empty_option' => t('iki'),
+//    '#states' => array(
+//      'visible' => array(
+//      'select[name="period"]' => array('value' => 'period'),
+//  ),
+//  ),
+//  );
+  $form['event_name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Arba'),
+    '#default_value' => '',
+    '#size' => 20,
+    '#attributes' => array('placeholder' => t('Įvykio numeris/dalyvis')),
+    //'#weight' => -1000
+  );
+ 
+  /*$form['oddsresults_filter']['only_main'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Rodyti tik pagrindinius įvykius'),
+    '#default_value' => 1,
+    //'#prefix' => '</div><div class="filter-line"><div class="form-checkbox">',
+    //'#suffix' => '</div>',
+  );*/
+  //   $form['hr'] = array('#markup' => '<hr />');
+  $form['oddsresults_filter']['submit_action'] = array(
+    '#type' => 'submit',
+    '#value' => t('Filtruoti'),
+    '#attributes' => array('class' => array('filter-submit-button', 'btn-primary')),
+    '#weight' => 200
+  );
+  $form['#redirect'] = FALSE;
+
+  $form['#action'] = url('oddresults');
+  return $form;
+}
+
+function oddsresults_filter_countries($form, &$form_state){
+  return $form['oddsresults_filter']['country'];
+}
+
+function oddsresults_filter_form_validate($form, &$form_state){
+    if(isset($form_state['values']['period']) 
+            && $form_state['values']['period'] != 'today'
+            && $form_state['values']['area'] == 'all'){
+        form_set_error('area', t('Norint matyti ilgesnį intervalą prašome pasirinkti <strong>sporto šaką</strong>'));
+    }    
+}
+
+function oddsresults_filter_form_submit($form, &$form_state){
+  form_state_values_clean($form_state);
+  switch ($form_state['values']['period']){
+    case 'today':
+      $form_state['values']['date']['from'] = date('Y-m-d', strtotime('-24 hours'));
+      $form_state['values']['date']['to'] = date('Y-m-d', strtotime('tomorrow'));
+      break;
+    case 'day':
+      $form_state['values']['date']['from'] = date('Y-m-d', strtotime('-48 hours'));
+      $form_state['values']['date']['to'] = date('Y-m-d', strtotime('today'));
+      break;
+    case 'week':
+      $form_state['values']['date']['from'] = date('Y-m-d', strtotime('-7 days'));
+      $form_state['values']['date']['to'] = date('Y-m-d', strtotime('tomorrow'));
+      break;
+  }
+  //   if($form_state['values']['only_main']['only_main'] === 'only_main'){
+  //     $form_state['values']['only_main'] = 1;
+  //   }else{
+  //     $form_state['values']['only_main'] = 0;
+  //   }
+  oddsresults_filter_form_result($form_state['values']);
+  $form_state['rebuild'] = TRUE;
+}
+
+/* filter results filter form */
+function oddsresults_search_form($form, &$form_state){
+  $form['oddsresults_filter'] = array(
+    '#prefix' => '<div id="oddsresults_search">',
+    '#suffix' => '<div class="clear"></div></div>',
+  );
+  $form['oddsresults_filter']['event_name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Įvykio numeris/dalyvis'),
+    '#default_value' => '',
+    '#size' => 200,
+  );
+  $form['hr'] = array('#markup' => '<hr />');
+  $form['submit_action'] = array(
+    '#type' => 'submit',
+    '#value' => t('Filtruoti'),
+    '#attributes' => array('class' => array('filter-submit-button')),
+  );
+  $form['#redirect'] = FALSE;
+
+  $form['#action'] = url('oddresults');
+  return $form;
+}
+
+
+
+function oddsresults_search_form_submit($form, &$form_state){
+
+  form_state_values_clean($form_state);
+
+  oddsresults_filter_form_result($form_state['values']);
+  $form_state['rebuild'] = TRUE;
+}
+
+function oddsresults_filter_form_result($values = null){
+  static $oddsresults_filter_form_result;
+  if($values){
+    $oddsresults_filter_form_result = $values;
+  }
+  return $oddsresults_filter_form_result;
+}

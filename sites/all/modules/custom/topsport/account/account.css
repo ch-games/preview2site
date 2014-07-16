@@ -1,0 +1,46 @@
+#edit-account,
+#edit-personal-info,
+#edit-address-info,
+#edit-topsport-info{
+  float: left;
+  width: 550px;
+  margin: 0 5px 5px 0;
+  clear: left;
+}
+form#user-profile-form .form-item{
+  padding: 0;
+  margin: 0 0 5px;
+  clear: both;
+}
+form#user-profile-form .form-item label{
+  float: left;
+  width: 170px;
+}
+form#user-profile-form .form-type-radio{
+  display: inline;
+  margin-right: 10px;
+}
+form#user-profile-form .form-type-radio label{
+  float: none;
+  width: auto;
+}
+.form-type-radio input{
+  float: none;
+  width: auto;
+}
+.form-textarea-wrapper{
+  clear: both;
+}
+
+.form-required-text{
+  clear: both;
+}
+
+form#user-profile-form .form-disabled input.form-autocomplete,
+form#user-profile-form .form-disabled input.form-text,
+form#user-profile-form .form-disabled input.form-file,
+form#user-profile-form .form-disabled textarea.form-textarea,
+form#user-profile-form .form-disabled select.form-select{
+  background: white;
+  color: black;
+}

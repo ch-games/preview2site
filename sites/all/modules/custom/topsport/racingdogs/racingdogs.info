@@ -1,0 +1,8 @@
+; $Id$
+name = Racing Dogs
+description = "Module with Racing Dogs page"
+core = 7.x
+version = 7.x-0.x-dev
+package = TopSport
+files[] = racingdogs.module
+files[] = racingdogs.pages.inc
